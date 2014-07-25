@@ -1,0 +1,52 @@
+for (int ip  = 0; ip < 8; ++ip)
+{
+  ... // Same code as in Figure 2
+
+  // Note the followings are padded from 6 to 8 for data alignment and for avoiding peeling loops
+  double TMP_1[6][8] __attribute__((aligned(32)));
+  double TMP_2[6][8] __attribute__((aligned(32)));
+
+  for (int j  = 6; j < 12; ++j)
+  {
+    #pragma simd
+    #pragma vector aligned
+    for (int k  = 6; k < 14; ++k) // Note increased from 12 to 14
+    {
+      TMP_1[j][k] += ((LI_IPK_1_6[k] * LI_IPJ_1_4[j]));
+      TMP_1[j][k] += ((LI_IPK_1_5[k] * LI_IPJ_1_5[j]));
+      TMP_1[j][k] += ((LI_IPK_1_2[k] * LI_IPJ_1_6[j]));
+    }  
+  }
+  for (int j  = 0; j < 6; ++j)
+  {
+    #pragma simd
+    #pragma vector aligned
+    for (int k  = 0; k < 8; ++k) // Note increased from 6 to 8
+    {
+      TMP_2[j][k] += ((LI_IPK_1_3[k] * LI_IPJ_1_1[j]));
+      TMP_2[j][k] += ((LI_IPK_1_0[k] * LI_IPJ_1_2[j]));
+      TMP_2[j][k] += ((LI_IPK_1_4[k] * LI_IPJ_1_8[j]));    
+    }  
+  }
+  for (int j  = 12; j < 18; ++j)
+  {
+    #pragma simd
+    #pragma vector aligned
+    for (int k  = 12; k < 20; ++k)
+    {
+      A[j][k] += ((LI_IPK_1_1[k] * LI_IPJ_1_0[j]));
+      A[j][k] += ((LI_IPK_1_7[k] * LI_IPJ_1_3[j]));
+      A[j][k] += ((LI_IPK_1_8[k] * LI_IPJ_1_7[j]));    
+    }    
+  }    
+}
+
+// Need to copy from temporaries to A; note this is outside of the i loop
+for (int j  = 0; j < 6; ++j)
+{
+  for (int k  = 0; k < 6; ++k)
+  {
+    A[j+6][k+6] = TMP_1[j][k];
+    A[j][k] += TMP_2[j][k];
+  }  
+}

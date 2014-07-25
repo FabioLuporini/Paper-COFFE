@@ -1,0 +1,55 @@
+for (int ip  = 0; ip < 8; ++ip)
+{
+  double LI_IPJ_1_0[20] __attribute__((aligned(32))), LI_IPJ_1_1[20] __attribute__((aligned(32))), LI_IPJ_1_2[20] __attribute__((aligned(32))), LI_IPJ_1_3[20] __attribute__((aligned(32))), LI_IPJ_1_4[20] __attribute__((aligned(32))), LI_IPJ_1_5[20] __attribute__((aligned(32))), LI_IPJ_1_6[20] __attribute__((aligned(32))), LI_IPJ_1_7[20] __attribute__((aligned(32))), LI_IPJ_1_8[20] __attribute__((aligned(32))) ;
+  #pragma simd
+  #pragma vector aligned
+  for (int j  = 0; j < 20; ++j)
+  {
+    LI_IPJ_1_0[j] = ((K[1] * FE0_C2_D100[ip][j]) + (K[4] * FE0_C2_D010[ip][j]) + (K[7] * FE0_C2_D001[ip][j]));
+    LI_IPJ_1_1[j] = ((K[0] * FE0_C0_D100[ip][j]) + (K[3] * FE0_C0_D010[ip][j]) + (K[6] * FE0_C0_D001[ip][j]));
+    ...
+  }
+  
+  double LI_IPK_1_0[20] __attribute__((aligned(32))), LI_IPK_1_1[20] __attribute__((aligned(32))), LI_IPK_1_2[20] __attribute__((aligned(32))), LI_IPK_1_3[20] __attribute__((aligned(32))), LI_IPK_1_4[20] __attribute__((aligned(32))), LI_IPK_1_5[20] __attribute__((aligned(32))), LI_IPK_1_6[20] __attribute__((aligned(32))), LI_IPK_1_7[20] __attribute__((aligned(32))), LI_IPK_1_8[20] __attribute__((aligned(32)));
+  double const0  = det * W8[ip];
+  #pragma simd
+  #pragma vector aligned
+  for (int k  = 0; k < 20; ++k)
+  {
+    LI_IPK_1_0[k] = (((K[2] * FE0_C0_D100[ip][k]) + (K[5] * FE0_C0_D010[ip][k]) + (K[8] * FE0_C0_D001[ip][k])) * const0);
+    LI_IPK_1_1[k] = (((K[1] * FE0_C2_D100[ip][k]) + (K[4] * FE0_C2_D010[ip][k]) + (K[7] * FE0_C2_D001[ip][k])) * const0);
+    ...
+  }
+
+  // Note the original j-k loop nest is now broken into multiple nests to avoid operations involving zero terms. It was done in a way to preserve vectorizability, i.e. eliminating only contiguous zero-columns, which preserves stride-1 memory accesses.
+
+  for (int j  = 6; j < 12; ++j)
+  {
+    for (int k  = 6; k < 12; ++k)
+    {
+      A[j][k] += ((LI_IPK_1_6[k] * LI_IPJ_1_4[j]));
+      A[j][k] += ((LI_IPK_1_5[k] * LI_IPJ_1_5[j]));
+      A[j][k] += ((LI_IPK_1_2[k] * LI_IPJ_1_6[j]));
+    }  
+  }
+  for (int j  = 0; j < 6; ++j)
+  {
+    for (int k  = 0; k < 6; ++k)
+    {
+      A[j][k] += ((LI_IPK_1_3[k] * LI_IPJ_1_1[j]));
+      A[j][k] += ((LI_IPK_1_0[k] * LI_IPJ_1_2[j]));
+      A[j][k] += ((LI_IPK_1_4[k] * LI_IPJ_1_8[j]));    
+    }  
+  }
+  for (int j  = 12; j < 18; ++j)
+  {
+    #pragma simd
+    #pragma vector aligned
+    for (int k  = 12; k < 20; ++k)
+    {
+      A[j][k] += ((LI_IPK_1_1[k] * LI_IPJ_1_0[j]));
+      A[j][k] += ((LI_IPK_1_7[k] * LI_IPJ_1_3[j]));
+      A[j][k] += ((LI_IPK_1_8[k] * LI_IPJ_1_7[j]));    
+    }    
+  }    
+}

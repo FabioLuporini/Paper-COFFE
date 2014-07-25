@@ -1,0 +1,282 @@
+% v2-acmsmall-sample.tex, dated March 6 2012
+% This is a sample file for ACM small trim journals
+%
+% Compilation using 'acmsmall.cls' - version 1.3 (March 2012), Aptara Inc.
+% (c) 2010 Association for Computing Machinery (ACM)
+%
+% Questions/Suggestions/Feedback should be addressed to => "acmtexsupport@aptaracorp.com".
+% Users can also go through the FAQs available on the journal's submission webpage.
+%
+% Steps to compile: latex, bibtex, latex latex
+%
+% For tracking purposes => this is v1.3 - March 2012
+
+\documentclass[prodmode,acmtecs]{acmsmall} % Aptara syntax
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subfig}
+\usepackage{tabulary}
+\usepackage{lineno}
+
+\usepackage{alltt}
+\renewcommand{\ttdefault}{txtt}
+
+\usepackage{listings}
+\lstset{language=C}
+
+\usepackage[cmex10]{amsmath}
+\usepackage{url}
+
+% Package to generate and customize Algorithm as per ACM style
+\usepackage[ruled]{algorithm2e}
+\renewcommand{\algorithmcfname}{ALGORITHM}
+\SetAlFnt{\small}
+\SetAlCapFnt{\small}
+\SetAlCapNameFnt{\small}
+\SetAlCapHSkip{0pt}
+\IncMargin{-\parindent}
+
+% Metadata Information
+%\acmVolume{9}
+%\acmNumber{4}
+%\acmArticle{39}
+%\acmYear{2010}
+%\acmMonth{3}
+
+% Document starts
+\begin{document}
+
+% Page heads
+\markboth{F. Luporini et al.}{COFFEE: an Optimizing Compiler for Finite Element Local Assembly}
+
+% Title portion
+\title{Expression Re-writing and Code Specialization for Finite Element Integration}
+\author{Fabio Luporini
+\affil{Imperial College London}
+David A. Ham
+\affil{Imperial College London}
+Paul H.J. Kelly
+\affil{Imperial College London}}
+% NOTE! Affiliations placed here should be for the institution where the
+%       BULK of the research was done. If the author has gone to a new
+%       institution, before publication, the (above) affiliation should NOT be changed.
+%       The authors 'current' address may be given in the "Author's addresses:" block (below).
+%       So for example, Mr. Abdelzaher, the bulk of the research was done at UIUC, and he is
+%       currently affiliated with NASA.
+
+\begin{abstract}
+The numerical solution of partial differential equations using the
+finite element method is one of the key applications of high performance
+computing. Local assembly is its characteristic operation. This entails
+the execution of a problem-specific kernel to numerically evaluate an
+integral for each element in the discretized problem domain. Since the
+domain size can be huge, executing efficient kernels is fundamental.
+Their optimization is, however, a challenging issue. Even though affine
+loop nests are generally present, the short trip counts and the
+complexity of mathematical expressions make it hard to determine a
+single or unique sequence of successful transformations. Therefore, we
+present the design and systematic evaluation of COFFEE, a
+domain-specific compiler for local assembly kernels. COFFEE manipulates
+abstract syntax trees generated from a high-level domain-specific
+language for PDEs by introducing domain-aware composable optimizations
+aimed at improving instruction-level parallelism, especially SIMD
+vectorization, and register locality. It then generates C code including
+vector intrinsics. Experiments using a range of finite-element forms of
+increasing complexity show that significant performance improvement is
+achieved.
+%
+%The code is generated from a high level language for PDEs. An
+%invocation of the kernel typically does tensor-like calculators over
+%relatively small matrices; e.g., triply nested loops operating on
+%about a dozen iterations. Because of the DSL context, COFFEE has a lot
+%of flexibility on how it organizes/orders the calculations to tailor
+%execution to a target architecture.
+%
+\end{abstract}
+
+\category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
+  Finite element methods}
+
+\category{G.4}{Mathematical Software}{Parallel and vector
+  implementations}
+
+\terms{Design, Performance}
+
+\keywords{Finite element integration, local assembly, compilers,
+  optimizations, SIMD vectorization}
+
+\acmformat{Fabio Luporini, Ana Lucia Varbanescu, Florian Rathgeber,
+  Gheorghe-Teodor Bercea, J. Ramanujam, David A. Ham, and Paul
+  H. J. Kelly, 2014. COFFEE: an Optimizing Compilerfor Finite Element
+  Local Assembly.}
+
+% At a minimum you need to supply the author names, year and a title.
+% IMPORTANT: Full first names whenever they are known, surname last,
+% followed by a period.  In the case of two authors, 'and' is placed
+% between them.  In the case of three or more authors, the serial
+% comma is used, that is, all author names except the last one but
+% including the penultimate author's name are followed by a comma, and
+% then 'and' is placed before the final author's name.  If only first
+% and middle initials are known, then each initial is followed by a
+% period and they are separated by a space.  The remaining information
+% (journal title, volume, article number, date, etc.) is
+% 'auto-generated'.
+
+\begin{bottomstuff}
+
+This research is partly funded by the MAPDES project, by the
+Department of Computing at Imperial College London, by EPSRC through
+grants EP/I00677X/1, EP/I006761/1, and EP/L000407/1, by NERC grants
+NE/K008951/1 and NE/K006789/1, by the U.S.  National Science
+Foundation through grants 0811457 and 0926687, by the U.S. Army
+through contract W911NF-10-1-000, and by a HiPEAC collaboration
+grant. The authors would like to thank Dr. Carlo Bertolli,
+Dr. Lawrence Mitchell, and Dr. Francis Russell for their invaluable
+suggestions and their contribution to the Firedrake project.
+
+Author's addresses: Fabio Luporini $\&$ Paul H. J. Kelly, Department of Computing,
+Imperial College London; David A. Ham, Department of Computing and
+Department of Mathematics, Imperial College London; 
+\end{bottomstuff}
+
+\maketitle
+
+%Computational cost is a critical limitation in scientific computing,
+%especially for finite element simulations. To provide one particular
+%example we are particularly concerned about, it has been well
+%established that mesh resolution Consequently, our aggressive
+%optimization of local assembly, which may even take up to 60% of the
+%overall FEM's execution time, directly impacts the performance of
+%large-scale scientific simulations running on supercomputers.
+
+\section{Introduction}
+
+
+
+\section{Preliminaries}
+\label{sec:background}
+%Here we discuss about the computational characteristics of
+%computational science kernels. Briefly cite op2 kernels. Emphasis on
+%Finite Element Assembly. Generalization and formalization of a Finite
+%Element Assembly kernel using quadrature representation.
+
+%\NoCaptionOfAlgo
+%\RestoreCaptionOfAlgo
+
+
+\section{Automated Expression Re-writing}
+\label{sec:code-transf}
+
+%\begin{algorithm}[t]
+%\SetAlgorithmName{LISTING}{}
+%\footnotesize
+%\KwSty{void} helmholtz(double A[3][4], double **coords) $\lbrace$\\
+%~~\KwSty{$\#$define} ALIGN $\_\_$attribute$\_\_$((aligned(32))) \\
+%~~// K, det = Compute Jacobian (coords) \\
+%~~\\
+%~~\KwSty{static const double} W[3] ALIGN = $\lbrace$...$\rbrace$\\
+%~~\KwSty{static const double} X$\_$D10[3][4] ALIGN = $\lbrace\lbrace$...$\rbrace\rbrace$\\
+%~~\KwSty{static const double} X$\_$D01[3][4] ALIGN = $\lbrace\lbrace$...$\rbrace\rbrace$\\
+%~~\\
+%~~\KwSty{for} (\KwSty{int} i = 0; i$<$3; i++) $\lbrace$ \\
+%~~~~double LI$\_$0[4] ALIGN;\\
+%~~~~double LI$\_$1[4] ALIGN;\\
+%~~~~\KwSty{for} (\KwSty{int} r = 0; r$<$4; r++) $\lbrace$ \\
+%~~~~~~LI$\_$0[r] = ((K1*X$\_$D10[i][r])+(K3*X$\_$D01[i][r]));\\
+%~~~~~~LI$\_$1[r] = ((K0*X$\_$D10[i][r])+(K2*X$\_$D01[i][r]));\\
+%~~~~$\rbrace$\\
+%~~~~\KwSty{for} (\KwSty{int} j = 0; j$<$3; j++) \\
+%~~~~~~\KwSty{$\#$pragma vector aligned}\\
+%~~~~~~\KwSty{for} (\KwSty{int} k = 0; k$<$4; k++) \\
+%~~~~~~~~A[j][k] += (Y[i][k]*Y[i][j]+LI$\_$0[k]*LI$\_$0[j]+LI$\_$1[k]*LI$\_$1[j])*det*W[i]);\\
+%~~$\rbrace$\\
+%$\rbrace$
+%\caption{Local assembly code for the Helmholtz problem in
+%  Listing~\ref{code:helmholtz} after application of padding, data
+%  alignment, and \emph{licm}, for an AVX architecture. In this
+%  example, sub-expressions invariant to \texttt{j} are identical to
+%  those invariant to \texttt{k}, so they can be precomputed once in
+%  the $r$ loop.}
+%\label{code:helmholtz-licm}
+%\end{algorithm}
+
+\section{Code Specialization}
+
+%\begin{figure}[b]
+%\begin{center}
+%\includegraphics[scale=0.75]{Pictures/coffee-pipeline.pdf}
+%\caption{High-level view of Firedrake. COFFEE is at the core,
+%  receiving ASTs from a modified version of the FEniCS Form compiler
+%  and producing optimized C code kernels.}
+%\label{fig:coffee-pipeline}
+%\end{center}
+%\end{figure}
+
+\section{Performance Evaluation}
+\label{sec:perf-results}
+
+\subsection{Experimental Setup}
+
+%Experiments were run on a single core of two Intel architectures, a
+%Sandy Bridge (I7-2600 CPU, running at 3.4GHz, 32KB L1 cache and 256KB
+%L2 cache) and a Xeon Phi (5110P, running at 1.05Ghz in native mode,
+%32KB L1 cache and 512KB L2 cache). We have chosen these two
+%architectures because of the differences in the number of logical
+%registers and SIMD lanes, which can impact the effectiveness of the
+%optimization strategy. The \texttt{icc 13.1} compiler was used. On the
+%Sandy Bridge, the compilation flags used were \texttt{-O2} and
+%\texttt{-xAVX} for auto-vectorization. On the Xeon Phi, optimization
+%level \texttt{-O3} was used. Other optimization levels performed, in
+%general, slightly worse.
+
+%\newcommand{\licmapresultsnorms}{
+%\begin{tabulary}{1.0\textwidth}{cccccc|cccc}
+%\cline{3-10}
+%& & \multicolumn{4}{c}{\texttt{Sandy Bridge}} & \multicolumn{4}{c}{\texttt{Xeon Phi}} \\
+%\cline{1-10}
+%\texttt{problem} & \texttt{shape} & \texttt{p1} & \texttt{p2} & \texttt{p3} & \texttt{p4} & \texttt{p1} & \texttt{p2} & \texttt{p3} & \texttt{p4} \\[0.1cm]
+%\texttt{Helmholtz} & \texttt{triangle} & 1.32 & 1.88 & 2.87 & 4.13 & 1,50 & 2,41 & 1,30 & 1,96 \\
+%\texttt{Helmholtz} & \texttt{tetrahedron} & 1.35 & 3.32 & 2.66 & 3.27 & 1,41 & 1,50 & 2,79 & 2,81 \\
+%\texttt{Helmholtz} & \texttt{prism} & 2.63 & 2.74 & 2.43 & 2.75 & 2,38 & 2,47 & 2,15 & 1,71\\[0.1cm]
+%%\cline{1-18}
+%\texttt{Diffusion} & \texttt{triangle} & 1.38 & 1.99 & 3.07 & 4.28 & 1,08 & 1,88 & 1,20 & 1,97\\
+%\texttt{Diffusion} & \texttt{tetrahedron} & 1.41 & 3.70 & 3.18 & 3.82 & 1,05 & 1,51 & 2,76 & 3,00\\
+%\texttt{Diffusion} & \texttt{prism} & 2.55 & 3.13 & 2.73 & 2.69 & 2,41 & 2,52 & 2,05 & 2,48\\[0.1cm]
+%%\cline{1-18}
+%\texttt{Burgers} & \texttt{triangle} & 1.56 & 2.28 & 2.61 & 2.77 & 2,84 & 2,26 & 3,96 & 4,27 \\
+%\texttt{Burgers} & \texttt{tetrahedron} & 1.61 & 2.10 & 1.60 & 1.78 & 1,48 & 3,83 & 1,55 & 1,29 \\
+%\texttt{Burgers} & \texttt{prism} & 2.19 & 2.32 & 1.64 & 1.42 & 2,18 & 2,82 & 1,24 & 1,25 \\
+%\cline{1-10}
+%\end{tabulary}
+%}
+%
+%\begin{table*}[t]
+%\tbl{Performance improvement due to generalized loop-invariant code
+%  motion, data alignment, and padding, for different element shapes
+%  (triangle, tetrahedron, prism) and polynomial orders ($p \in [1,
+%    4]$), over the original non-optimized code, for the Helmholtz,
+%  Diffusion and Burgers problems.}{ \scriptsize \licmapresultsnorms }
+%\label{table:perf-results-licmap}
+%\end{table*}
+
+\section{Related Work}
+\label{sec:related-work}
+
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+
+% Bibliography
+\bibliographystyle{ACM-Reference-Format-Journals}
+\bibliography{biblio}
+                             % Sample .bib file with references that match those in
+                             % the 'Specifications Document (V1.5)' as well containing
+                             % 'legacy' bibs and bibs with 'alternate codings'.
+                             % Gerry Murray - March 2012
+
+
+\medskip
+
+\end{document}
