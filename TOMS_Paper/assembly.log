@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.12.18)  25 JUL 2014 17:45
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.12.18)  28 JUL 2014 17:55
 entering extended mode
  %&-line parsing enabled.
 **assembly.tex
@@ -357,55 +357,42 @@ Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
 \c@lstlisting=\count136
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 138.
+(Font)              <8> on input line 118.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 138.
+(Font)              <6> on input line 118.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 138.
-LaTeX Font Info:    Try loading font information for U+lasy on input line 138.
+(Font)              <5> on input line 118.
+LaTeX Font Info:    Try loading font information for U+lasy on input line 118.
  (/usr/share/texmf-texlive/tex/latex/base/ulasy.fd
 File: ulasy.fd 1998/08/17 v2.2e LaTeX symbol font definitions
 )
-LaTeX Font Info:    Try loading font information for OMS+pnc on input line 141.
+LaTeX Font Info:    Try loading font information for OMS+pnc on input line 121.
 
 
 (/usr/share/texmf-texlive/tex/latex/psnfss/omspnc.fd
 File: omspnc.fd 
 )
 LaTeX Font Info:    Font shape `OMS/pnc/m/n' in size <8> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 141.
-LaTeX Font Info:    Try loading font information for OT1+txtt on input line 141
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 121.
+LaTeX Font Info:    Try loading font information for OT1+txtt on input line 121
 .
 
 (/usr/share/texmf-texlive/tex/latex/txfonts/ot1txtt.fd
 File: ot1txtt.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    Try loading font information for OT1+phv on input line 143.
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 123.
 
 
 (/usr/share/texmf-texlive/tex/latex/psnfss/ot1phv.fd
 File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
 )
 LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <12> not available
-(Font)              Font shape `OT1/phv/b/n' tried instead on input line 143.
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 123.
 LaTeX Font Info:    Font shape `OT1/pnc/bx/n' in size <8> not available
-(Font)              Font shape `OT1/pnc/b/n' tried instead on input line 143.
+(Font)              Font shape `OT1/pnc/b/n' tried instead on input line 123.
 LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <9> not available
-(Font)              Font shape `OT1/phv/b/n' tried instead on input line 153.
- (./assembly.bbl
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 133.
 
-! LaTeX Error: Something's wrong--perhaps a missing \item.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.35 \end{thebibliography}
-                          
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-)
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
@@ -414,26 +401,74 @@ Overfull \vbox (72.27pt too high) has occurred while \output is active []
  [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
 Non-PDF special ignored!
 
-] [2] (./assembly.aux) ) 
+]
+LaTeX Font Info:    Font shape `OT1/pnc/bx/n' in size <10> not available
+(Font)              Font shape `OT1/pnc/b/n' tried instead on input line 150.
+
+
+LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 150.
+
+
+LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 153.
+
+(./listings/simple.code
+LaTeX Font Info:    Font shape `OT1/pnc/bx/n' in size <7> not available
+(Font)              Font shape `OT1/pnc/b/n' tried instead on input line 1.
+LaTeX Font Info:    Try loading font information for OML+pnc on input line 1.
+ (/usr/share/texmf-texlive/tex/latex/psnfss/omlpnc.fd
+File: omlpnc.fd 
+)
+LaTeX Font Info:    Font shape `OML/pnc/m/n' in size <7> not available
+(Font)              Font shape `OML/cmm/m/it' tried instead on input line 1.
+LaTeX Font Info:    Font shape `OMS/pnc/m/n' in size <7> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 2.
+)
+(./assembly.bbl
+Underfull \hbox (badness 2635) in paragraph at lines 38--47
+[]\OT1/pnc/m/n/8 Robert C. Kirby, Matthew Kne-p-ley, An-ders Logg, and L. Ridg-
+way Scott. 2005. Op-ti-miz-ing the
+ []
+
+
+Underfull \hbox (badness 2837) in paragraph at lines 38--47
+\OT1/pnc/m/n/8 Eval-u-a-tion of Fi-nite El-e-ment Ma-tri-ces. \OT1/pnc/m/it/8 S
+IAM J. Sci. Com-put. \OT1/pnc/m/n/8 27, 3 (Oct. 2005), 741--758.
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [2])
+Overfull \hbox (27.41771pt too wide) has occurred while \output is active
+\OT1/phv/m/n/9 Optimizing Finite Element Integration through Automated Expressi
+on Re-writing and Code Specialization A:3
+ []
+
+[3] (./assembly.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
 Here is how much of TeX's memory you used:
- 6006 strings out of 495000
- 82867 string characters out of 1180492
- 169522 words of memory out of 3000000
- 9144 multiletter control sequences out of 15000+50000
- 19931 words of font info for 44 fonts, out of 3000000 for 9000
+ 6133 strings out of 495000
+ 84199 string characters out of 1180492
+ 202711 words of memory out of 3000000
+ 9261 multiletter control sequences out of 15000+50000
+ 23251 words of font info for 49 fonts, out of 3000000 for 9000
  36 hyphenation exceptions out of 8191
- 36i,8n,49p,305b,219s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}<
-/usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/te
-xmf-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-texlive/
-fonts/type1/public/txfonts/txtt.pfb></usr/share/texmf-texlive/fonts/type1/urw/h
-elvetic/uhvb8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/helvetic/uhvr8a.pf
-b></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncb8a.pfb></usr/share/tex
-mf-texlive/fonts/type1/urw/ncntrsbk/uncr8a.pfb></usr/share/texmf-texlive/fonts/
-type1/urw/ncntrsbk/uncri8a.pfb>
-Output written on assembly.pdf (2 pages, 81812 bytes).
+ 36i,9n,49p,905b,1274s stack positions out of 5000i,500n,10000p,200000b,50000s
+{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}</usr/share/texmf-texli
+ve/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texmf-texlive/fonts/typ
+e1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-texlive/fonts/type1/public/ams
+fonts/cm/cmsy7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cms
+y8.pfb></usr/share/texmf-texlive/fonts/type1/public/txfonts/txtt.pfb></usr/shar
+e/texmf-texlive/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-texlive/f
+onts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/nc
+ntrsbk/uncb8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncr8a.pfb
+></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncri8a.pfb>
+Output written on assembly.pdf (3 pages, 108212 bytes).
 PDF statistics:
- 42 PDF objects out of 1000 (max. 8388607)
+ 53 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

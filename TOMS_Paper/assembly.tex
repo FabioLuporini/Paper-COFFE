@@ -23,7 +23,7 @@
 \renewcommand{\ttdefault}{txtt}
 
 \usepackage{listings}
-\lstset{language=C}
+\lstset{language=C, breaklines=true}
 
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
@@ -48,10 +48,10 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{COFFEE: an Optimizing Compiler for Finite Element Local Assembly}
+\markboth{F. Luporini et al.}{Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization}
 
 % Title portion
-\title{Expression Re-writing and Code Specialization for Finite Element Integration}
+\title{Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -66,25 +66,7 @@ Paul H.J. Kelly
 %       currently affiliated with NASA.
 
 \begin{abstract}
-The numerical solution of partial differential equations using the
-finite element method is one of the key applications of high performance
-computing. Local assembly is its characteristic operation. This entails
-the execution of a problem-specific kernel to numerically evaluate an
-integral for each element in the discretized problem domain. Since the
-domain size can be huge, executing efficient kernels is fundamental.
-Their optimization is, however, a challenging issue. Even though affine
-loop nests are generally present, the short trip counts and the
-complexity of mathematical expressions make it hard to determine a
-single or unique sequence of successful transformations. Therefore, we
-present the design and systematic evaluation of COFFEE, a
-domain-specific compiler for local assembly kernels. COFFEE manipulates
-abstract syntax trees generated from a high-level domain-specific
-language for PDEs by introducing domain-aware composable optimizations
-aimed at improving instruction-level parallelism, especially SIMD
-vectorization, and register locality. It then generates C code including
-vector intrinsics. Experiments using a range of finite-element forms of
-increasing complexity show that significant performance improvement is
-achieved.
+Abstract goes here
 %
 %The code is generated from a high level language for PDEs. An
 %invocation of the kernel typically does tensor-like calculators over
@@ -106,10 +88,8 @@ achieved.
 \keywords{Finite element integration, local assembly, compilers,
   optimizations, SIMD vectorization}
 
-\acmformat{Fabio Luporini, Ana Lucia Varbanescu, Florian Rathgeber,
-  Gheorghe-Teodor Bercea, J. Ramanujam, David A. Ham, and Paul
-  H. J. Kelly, 2014. COFFEE: an Optimizing Compilerfor Finite Element
-  Local Assembly.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2014. 
+  Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -152,21 +132,60 @@ Department of Mathematics, Imperial College London;
 
 \section{Introduction}
 
+%This paper can be thought of as a continuation of the work presented in~\cite{Luporini}: in particular, we answer the remaining open questions, generalize and formalize an approach to minimize redundant computation using a similar philosophy, we show ~\cite{quadrature1}. 
 
 
 \section{Preliminaries}
 \label{sec:background}
+
+\subsection{Quadrature for Finite Element Local Assembly}
 %Here we discuss about the computational characteristics of
 %computational science kernels. Briefly cite op2 kernels. Emphasis on
 %Finite Element Assembly. Generalization and formalization of a Finite
 %Element Assembly kernel using quadrature representation.
 
-%\NoCaptionOfAlgo
-%\RestoreCaptionOfAlgo
+\subsection{Code Generation for Quadrature Representation}
+Rapid implementation of high performance, robust, and portable code evaluating element matrices using quadrature can be achieved through automated code generation. This has been succesfully proved in the context of the popular FEniCS project~\cite{Fenics}. The FEniCS Form Compiler (FFC) accepts as input the variational form of a partial differential equation and generates C++ code implementing local assembly routines. The variational form is expressed at high-level by means of the domain-specific Unified Form Language (UFL). Local assembly code must be high performance: as the complexity of a form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen functions, the resulting kernels evaluating element matrices become more computationally expensive, which impacts significantly the run-time of the overall computation. 
+
+Achieving high performance is non-trivial due to the complexity of the mathematical expressions involved in the numerical integration and because of the small sizes of loops and accessed arrays. In~\cite{quadrature1},~\cite{Kirby-FEM-opt} and~\cite{Francis}, it is shown how automated code generation allows the introduction of powerful optimizations, which a user cannot be expected to write ``by hand'', as well as the exploration of non-standard integration techniques, based, for instance, on symbolic manipulation. In~\cite{Luporini} we made one step forward by showing that different problems require distinct set of transformations if close-to-peak performance needs to be obtained, and that low-level, domain-aware code transformations, which are not supported by available compilers, are essential to maximize instruction-level parallelism and register locality. 
+
+\subsection{Summary of Low-level Optimizations and Results for Quadrature Representation}
+To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, we summarize in this section the results of our previous work on automated code transformation for quadrature representation.
+
+...TODO...
+
+% Far notare che low-level si, ma sono guidate da high-level knowledge! Questo in risposta alla domanda: ma allora perche' non sfruttare la domain knowledge che hai, che senso ha separare...
+
+% Ci sono due goal: minimizzare flops e specializzare
+
+% Vantaggio di automatizzare rispetto che scrivere a mano
+% which would be practically unfeasible to achieve by hand-written code
+
+\section{Expression Re-writing}
+\label{sec:expr-rewriting}
 
 
-\section{Automated Expression Re-writing}
-\label{sec:code-transf}
+
+\begin{figure}
+\scriptsize
+\lstinputlisting{listings/simple.code}
+\label{original-code}\caption{Original code}
+\end{figure}
+
+\subsection{Re-writing Rules}
+
+\subsection{Avoiding Operations on Zeros}
+
+\section{Code Specialization}
+\label{sec:code-spec}
+
+\subsection{Standard Compiler Transformations}
+
+\subsection{Precomputation of Invariant Terms}
+
+\subsection{Exposing Linear Alegbra Operations}
+
+\subsection{Model-driven Autotuning}
 
 %\begin{algorithm}[t]
 %\SetAlgorithmName{LISTING}{}
@@ -200,8 +219,6 @@ Department of Mathematics, Imperial College London;
 %  the $r$ loop.}
 %\label{code:helmholtz-licm}
 %\end{algorithm}
-
-\section{Code Specialization}
 
 %\begin{figure}[b]
 %\begin{center}
@@ -260,8 +277,7 @@ Department of Mathematics, Imperial College London;
 %\label{table:perf-results-licmap}
 %\end{table*}
 
-\section{Related Work}
-\label{sec:related-work}
+\subsection{Results for Forms of Increasing Complexity}
 
 
 \section{Conclusions}
@@ -271,10 +287,6 @@ Department of Mathematics, Imperial College London;
 % Bibliography
 \bibliographystyle{ACM-Reference-Format-Journals}
 \bibliography{biblio}
-                             % Sample .bib file with references that match those in
-                             % the 'Specifications Document (V1.5)' as well containing
-                             % 'legacy' bibs and bibs with 'alternate codings'.
-                             % Gerry Murray - March 2012
 
 
 \medskip

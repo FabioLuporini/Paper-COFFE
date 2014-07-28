@@ -32,4 +32,53 @@
 \ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
 \ifx \showURL      \undefined \def \showURL       #1{#1}          \fi
 
+\bibitem[\protect\citeauthoryear{Kirby, Knepley, Logg, and Scott}{Kirby
+  et~al\mbox{.}}{2005}]%
+        {Kirby-FEM-opt}
+{Robert~C. Kirby}, {Matthew Knepley}, {Anders Logg}, {and} {L.~Ridgway Scott}.
+  2005.
+\newblock \showarticletitle{Optimizing the Evaluation of Finite Element
+  Matrices}.
+\newblock {\em SIAM J. Sci. Comput.\/} {27}, 3 (Oct. 2005), 741--758.
+\newblock
+\showISSN{1064-8275}
+\showDOI{%
+\url{http://dx.doi.org/10.1137/040607824}}
+
+
+\bibitem[\protect\citeauthoryear{Logg, Mardal, Wells, et~al\mbox{.}}{Logg
+  et~al\mbox{.}}{2012}]%
+        {Fenics}
+{Anders Logg}, {Kent-Andre Mardal}, {Garth~N. Wells}, {and} {others}. 2012.
+\newblock {\em Automated Solution of Differential Equations by the Finite
+  Element Method}.
+\newblock Springer.
+\newblock
+\showISBNx{978-3-642-23098-1}
+\showDOI{%
+\url{http://dx.doi.org/10.1007/978-3-642-23099-8}}
+
+
+\bibitem[\protect\citeauthoryear{Olgaard and Wells}{Olgaard and Wells}{2010}]%
+        {quadrature1}
+{Kristian~B. Olgaard} {and} {Garth~N. Wells}. 2010.
+\newblock \showarticletitle{Optimizations for quadrature representations of
+  finite element tensors through automated code generation}.
+\newblock {\em ACM Trans. Math. Softw.\/} {37}, 1, Article 8 (Jan. 2010), 23
+  pages.
+\newblock
+\showISSN{0098-3500}
+\showDOI{%
+\url{http://dx.doi.org/10.1145/1644001.1644009}}
+
+
+\bibitem[\protect\citeauthoryear{Russell and Kelly}{Russell and Kelly}{2013}]%
+        {Francis}
+{Francis~P. Russell} {and} {Paul H.~J. Kelly}. 2013.
+\newblock \showarticletitle{Optimized Code Generation for Finite Element Local
+  Assembly Using Symbolic Manipulation}.
+\newblock {\it {ACM} Trans. Math. Software} {39}, 4 (2013).
+\newblock
+
+
 \end{thebibliography}

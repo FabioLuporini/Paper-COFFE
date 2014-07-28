@@ -1,48 +1,51 @@
 This is BibTeX, Version 0.99c (TeX Live 2009/Debian)
 The top-level auxiliary file: assembly.aux
 The style file: ACM-Reference-Format-Journals.bst
-I found no \citation commands---while reading file assembly.aux
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
-You've used 0 entries,
+Warning--I didn't find a database entry for "Luporini"
+Warning--require articleno with numpages field in Kirby-FEM-opt
+Warning--empty address in Fenics
+Warning--page numbers missing in both pages and numpages fields in Francis
+You've used 4 entries,
             5290 wiz_defined-function locations,
-            1219 strings with 14142 characters,
-and the built_in function-call counts, 83 in all, are:
-= -- 0
-> -- 0
-< -- 0
-+ -- 0
-- -- 0
-* -- 0
-:= -- 8
-add.period$ -- 0
-call.type$ -- 0
-change.case$ -- 0
-chr.to.int$ -- 0
-cite$ -- 0
-duplicate$ -- 1
-empty$ -- 1
-format.name$ -- 0
-if$ -- 2
+            1262 strings with 15113 characters,
+and the built_in function-call counts, 3917 in all, are:
+= -- 531
+> -- 180
+< -- 1
++ -- 56
+- -- 64
+* -- 278
+:= -- 449
+add.period$ -- 21
+call.type$ -- 4
+change.case$ -- 27
+chr.to.int$ -- 4
+cite$ -- 7
+duplicate$ -- 279
+empty$ -- 205
+format.name$ -- 80
+if$ -- 926
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 0
-newline$ -- 34
-num.names$ -- 0
-pop$ -- 1
+missing$ -- 13
+newline$ -- 75
+num.names$ -- 32
+pop$ -- 91
 preamble$ -- 1
-purify$ -- 0
+purify$ -- 47
 quote$ -- 0
-skip$ -- 1
+skip$ -- 83
 stack$ -- 0
-substring$ -- 0
-swap$ -- 0
-text.length$ -- 0
+substring$ -- 249
+swap$ -- 23
+text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 0
-warning$ -- 0
-while$ -- 0
+type$ -- 50
+warning$ -- 3
+while$ -- 27
 width$ -- 0
-write$ -- 33
-(There was 1 error message)
+write$ -- 109
+(There were 4 warnings)
