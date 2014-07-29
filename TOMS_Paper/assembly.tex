@@ -149,8 +149,17 @@ Rapid implementation of high performance, robust, and portable code evaluating e
 
 Achieving high performance is non-trivial due to the complexity of the mathematical expressions involved in the numerical integration and because of the small sizes of loops and accessed arrays. In~\cite{quadrature1},~\cite{Kirby-FEM-opt} and~\cite{Francis}, it is shown how automated code generation allows the introduction of powerful optimizations, which a user cannot be expected to write ``by hand'', as well as the exploration of non-standard integration techniques, based, for instance, on symbolic manipulation. In~\cite{Luporini} we made one step forward by showing that different problems require distinct set of transformations if close-to-peak performance needs to be obtained, and that low-level, domain-aware code transformations, which are not supported by available compilers, are essential to maximize instruction-level parallelism and register locality. 
 
-\subsection{Summary of Low-level Optimizations and Results for Quadrature Representation}
-To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, we summarize in this section the results of our previous work on automated code transformation for quadrature representation.
+\subsection{Summary of Low-level Optimizations for Quadrature Representation}
+\label{sec:summary-opts}
+To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, in this section we summarize the results of our previous work on automated code transformations for quadrature representation.
+
+...TODO...
+
+The work in~\cite{Luporini} resulted in the development of COFFEE\footnote{COFFEE stands for COmpiler For FinitE Element local assembly.}, a compiler for the optimization of local assembly kernels relying on quadrature representation.  
+
+...TODO...
+
+Temporary arrays can be placed at the right depth in the sorrounding loop nest to store values of sub-expressions that are invariant to one or more loops. 
 
 ...TODO...
 
@@ -161,20 +170,54 @@ To neatly distinguish the contributions of this paper from those in~\cite{Lupori
 % Vantaggio di automatizzare rispetto che scrivere a mano
 % which would be practically unfeasible to achieve by hand-written code
 
+
+\section{A Compiler for Optimizing Quadrature-based Integration}
+In order to generate high performance code, mathematical expressions evaluating the element tensor must be optimized with regards to several interrelated aspects: 1) minimization of floating point operations, 2) instruction-level parallelism, and 3) data locality. In this paper, we tackle these three points building on our previous work (\cite{Luporini}). 
+
+...We propose a novel structure of how we think a platform-independent, domain-specific optimizing compiler should look like....
+
+...The Expression Re-writer is a software module implemented in COFFEE dealing with the first point...
+
+...The Code Specializer (henceforth CS) is...
+A key point is that the ER has to perform transformations that do not break the code specializer. Having indirections is really dangerous...
+
 \section{Expression Re-writing}
 \label{sec:expr-rewriting}
+As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of a mathematical expression. The Expression Re-writer (henceforth ER) that we have designed and implemented in COFFEE enhances this technique making two steps forward. 
 
+Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many ways an expression can be re-written into, and the search space can become considerably big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewriting-rules}, we formalize the set of re-writing rules that COFFEE follows to transform an expression. 
 
+Secondly, the ER re-structures the loop nest so as to eliminate arithmetic operations over array columns that are statically known to be zero-valued. Zero columns in tabulated basis functions appear, for example, when taking derivatives on a reference element or when using mixed elements. A code transformation eliminating floating point operations on zeros was presented in~\cite{quadrature1}; however, by using indirection arrays in the generated code, it breaks many of the optimizations that can be applied at the Code Specializer level, including SIMD vectorization. In Section~\ref{sec:zeros}, we show a novel approach to avoiding computation on zeros based on symbolic execution.
 
+%In COFFEE, the application of the re-writing rules preceds the elimination of operations on zeros. 
+
+%It is worth noting how writing these transformations ``by hand'' would be practically unfeasible, especially when the expressions are particularly complex.
+%
+%
+%In this section, we describe our efforts in producing a more effective tool capable of explore how to leverage automated code generation to expose more opportunities to the code hoister. 
+%
+%Automated code generation, however, Mathematical expressions can be transformed to decrease the number of arithmetic operations required to evaluate the element tensor. A first 
+%
+%Minimizing the number of floating point operations for evaluating the element tensor of a generic form
+%
+
+\subsection{Re-writing Rules}
+\label{sec:rewriting-rules}
 \begin{figure}
 \scriptsize
 \lstinputlisting{listings/simple.code}
 \label{original-code}\caption{Original code}
 \end{figure}
 
-\subsection{Re-writing Rules}
+Consider the simplified yet representative example of the element matrix computation in Figure~\ref{original-code}. ...TODO: describe. We will use this example throughout the rest of the paper for illustrative purpose. 
 
-\subsection{Avoiding Operations on Zeros}
+A first glimpse of the code easily suggests that the sub-expression ... . A closer look also highlights that ... .
+Also, ...can precompute once. And doing that in a loop, at the expense of extra memory, to trigger autovect. These observations lie at the heart of the generalized loop-invariant code motion technique presented in~\cite{Luporini}. 
+
+
+
+\subsection{Avoiding Iteration on Zero-blocks with Symbolic Execution}
+\label{sec:zeros}
 
 \section{Code Specialization}
 \label{sec:code-spec}

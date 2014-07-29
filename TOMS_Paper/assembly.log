@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.12.18)  28 JUL 2014 17:55
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.12.18)  29 JUL 2014 17:57
 entering extended mode
  %&-line parsing enabled.
 **assembly.tex
@@ -409,21 +409,33 @@ LaTeX Font Info:    Font shape `OT1/pnc/bx/n' in size <10> not available
 LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 150.
 
 
-LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 153.
+LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 154.
 
-(./listings/simple.code
+
+LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 158.
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 158.
+
+LaTeX Warning: Citation `Luporini' on page 2 undefined on input line 175.
+
+
+LaTeX Warning: Reference `sec:rewriting-rules' on page 2 undefined on input lin
+e 188.
+
+[2] (./listings/simple.code
 LaTeX Font Info:    Font shape `OT1/pnc/bx/n' in size <7> not available
 (Font)              Font shape `OT1/pnc/b/n' tried instead on input line 1.
 LaTeX Font Info:    Try loading font information for OML+pnc on input line 1.
- (/usr/share/texmf-texlive/tex/latex/psnfss/omlpnc.fd
+
+(/usr/share/texmf-texlive/tex/latex/psnfss/omlpnc.fd
 File: omlpnc.fd 
 )
 LaTeX Font Info:    Font shape `OML/pnc/m/n' in size <7> not available
 (Font)              Font shape `OML/cmm/m/it' tried instead on input line 1.
 LaTeX Font Info:    Font shape `OMS/pnc/m/n' in size <7> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 2.
-)
-(./assembly.bbl
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 4.
+) (./assembly.bbl
 Underfull \hbox (badness 2635) in paragraph at lines 38--47
 []\OT1/pnc/m/n/8 Robert C. Kirby, Matthew Kne-p-ley, An-ders Logg, and L. Ridg-
 way Scott. 2005. Op-ti-miz-ing the
@@ -435,10 +447,7 @@ Underfull \hbox (badness 2837) in paragraph at lines 38--47
 IAM J. Sci. Com-put. \OT1/pnc/m/n/8 27, 3 (Oct. 2005), 741--758.
  []
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [2])
+)
 Overfull \hbox (27.41771pt too wide) has occurred while \output is active
 \OT1/phv/m/n/9 Optimizing Finite Element Integration through Automated Expressi
 on Re-writing and Code Specialization A:3
@@ -446,29 +455,33 @@ on Re-writing and Code Specialization A:3
 
 [3] (./assembly.aux)
 
+LaTeX Warning: There were undefined references.
+
+
 LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 6133 strings out of 495000
- 84199 string characters out of 1180492
- 202711 words of memory out of 3000000
- 9261 multiletter control sequences out of 15000+50000
- 23251 words of font info for 49 fonts, out of 3000000 for 9000
+ 6132 strings out of 495000
+ 84215 string characters out of 1180492
+ 188731 words of memory out of 3000000
+ 9258 multiletter control sequences out of 15000+50000
+ 23463 words of font info for 51 fonts, out of 3000000 for 9000
  36 hyphenation exceptions out of 8191
- 36i,9n,49p,905b,1274s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 36i,9n,49p,905b,1272s stack positions out of 5000i,500n,10000p,200000b,50000s
 {/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}</usr/share/texmf-texli
 ve/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texmf-texlive/fonts/typ
-e1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-texlive/fonts/type1/public/ams
-fonts/cm/cmsy7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cms
-y8.pfb></usr/share/texmf-texlive/fonts/type1/public/txfonts/txtt.pfb></usr/shar
-e/texmf-texlive/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-texlive/f
-onts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/nc
-ntrsbk/uncb8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncr8a.pfb
-></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncri8a.pfb>
-Output written on assembly.pdf (3 pages, 108212 bytes).
+e1/public/amsfonts/cm/cmr6.pfb></usr/share/texmf-texlive/fonts/type1/public/ams
+fonts/cm/cmr8.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy
+7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/
+share/texmf-texlive/fonts/type1/public/txfonts/txtt.pfb></usr/share/texmf-texli
+ve/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-texlive/fonts/type1/ur
+w/helvetic/uhvr8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncb8a
+.pfb></usr/share/texmf-texlive/fonts/type1/urw/ncntrsbk/uncr8a.pfb></usr/share/
+texmf-texlive/fonts/type1/urw/ncntrsbk/uncri8a.pfb>
+Output written on assembly.pdf (3 pages, 116897 bytes).
 PDF statistics:
- 53 PDF objects out of 1000 (max. 8388607)
+ 57 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
