@@ -15,9 +15,11 @@
 
 \usepackage{graphicx}
 \usepackage{caption}
-\usepackage{subfig}
+\usepackage{subfigure}
+\usepackage{setspace}
 \usepackage{tabulary}
 \usepackage{lineno}
+\usepackage{xfrac}
 
 \usepackage{alltt}
 \renewcommand{\ttdefault}{txtt}
@@ -48,10 +50,10 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization}
+\markboth{F. Luporini et al.}{Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization}
 
 % Title portion
-\title{Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization}
+\title{Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -89,7 +91,7 @@ Abstract goes here
   optimizations, SIMD vectorization}
 
 \acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2014. 
-  Optimizing Finite Element Integration through Automated Expression Re-writing and Code Specialization.}
+  Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -176,18 +178,18 @@ In order to generate high performance code, mathematical expressions evaluating 
 
 ...We propose a novel structure of how we think a platform-independent, domain-specific optimizing compiler should look like....
 
-...The Expression Re-writer is a software module implemented in COFFEE dealing with the first point...
+...The Expression Rewriter is a software module implemented in COFFEE dealing with the first point...
 
 ...The Code Specializer (henceforth CS) is...
 A key point is that the ER has to perform transformations that do not break the code specializer. Having indirections is really dangerous...
 
-\section{Expression Re-writing}
+\section{Expression Rewriting}
 \label{sec:expr-rewriting}
-As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of a mathematical expression. The Expression Re-writer (henceforth ER) that we have designed and implemented in COFFEE enhances this technique making two steps forward. 
+As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of a mathematical expression. The Expression Rewriter (henceforth ER) that we have designed and implemented in COFFEE enhances this technique by making two steps forward, which allow more redundant computation to be avoided. 
 
-Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many ways an expression can be re-written into, and the search space can become considerably big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewriting-rules}, we formalize the set of re-writing rules that COFFEE follows to transform an expression. 
+Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many possibilities of rewriting an expression, and the search space can quickly become too big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewriting-rules}, we formalize the set of rewrite rules that COFFEE follows to transform an expression. 
 
-Secondly, the ER re-structures the loop nest so as to eliminate arithmetic operations over array columns that are statically known to be zero-valued. Zero columns in tabulated basis functions appear, for example, when taking derivatives on a reference element or when using mixed elements. A code transformation eliminating floating point operations on zeros was presented in~\cite{quadrature1}; however, by using indirection arrays in the generated code, it breaks many of the optimizations that can be applied at the Code Specializer level, including SIMD vectorization. In Section~\ref{sec:zeros}, we show a novel approach to avoiding computation on zeros based on symbolic execution.
+Secondly, the ER re-structures the loop nest so as to eliminate arithmetic operations over array columns that are statically known to be zero-valued. Zero columns in tabulated basis functions appear, for example, when taking derivatives on a reference element or when using mixed elements. A code transformation eliminating floating point operations on zeros was presented in~\cite{quadrature1}; however, the issue with it is that by using indirection arrays in the generated code, it breaks many of the optimizations that can be applied at the Code Specializer level, including SIMD vectorization. In Section~\ref{sec:zeros}, we show a novel approach to avoiding computation on zeros based on symbolic execution.
 
 %In COFFEE, the application of the re-writing rules preceds the elimination of operations on zeros. 
 
@@ -201,20 +203,94 @@ Secondly, the ER re-structures the loop nest so as to eliminate arithmetic opera
 %Minimizing the number of floating point operations for evaluating the element tensor of a generic form
 %
 
-\subsection{Re-writing Rules}
+\subsection{Objectives of the Expression Rewriter}
 \label{sec:rewriting-rules}
+
 \begin{figure}
 \scriptsize
 \lstinputlisting{listings/simple.code}
-\label{original-code}\caption{Original code}
+\label{fig:original-code}\caption{Original code}
 \end{figure}
 
-Consider the simplified yet representative example of the element matrix computation in Figure~\ref{original-code}. ...TODO: describe. We will use this example throughout the rest of the paper for illustrative purpose. 
+Consider the simplified example of the element matrix computation in Figure~\ref{fig:original-code}, which is an excerpt from a real Burgers problem. In practice, depending on the problem, the expression tree could be much more complex, with multiple levels of nesting. The example is however representative for a large class of problems, so we will use it throughout the rest of the paper for illustrative purpose. 
 
-A first glimpse of the code easily suggests that the sub-expression ... . A closer look also highlights that ... .
-Also, ...can precompute once. And doing that in a loop, at the expense of extra memory, to trigger autovect. These observations lie at the heart of the generalized loop-invariant code motion technique presented in~\cite{Luporini}. 
+A first glimpse of the code suggests that the sub-expression \texttt{F[i][j]*d + G[i][j]*e} is invariant with respect to the innermost loop, so it should be hoisted at the level of the outer loop \texttt{j}. This is a standard compiler transformation, which is supported by any available compilers. With a closer look we notice that the sub-expression \texttt{a*C[i][k] + b*E[i][k]} is also invariant, although, in this case, with respect to the outer loop \texttt{j}. In~\cite{Luporini}, we have showed that a \textit{generalized} loop-invariant code motion transformation - that is, given a non-trivial expression, the capability of analyzing all of its sub-expressions with respect to the enclosing loops to determine what code is hoistable- is not supported by available compilers. Moreover, the lack of cost models to ascertain both the optimal place where to hoist an expression and whether or not vectorizing it at the price of extra temporary memory is a fundamental limiting factor. We have addressed these problems by implementing a generalized loop-invariant code motion transformation in COFFEE.
+
+We now consider the case of forms that ``hide'' further opportunities for code hoisting. Such forms are by no means exotic: for example, the pattern described next is commonly found in elastic problems. By examining again the example in Figure~\ref{fig:original-code}, we notice that the basis function array \texttt{B}, iterating along the iteration space \texttt{[i,j]}, appears twice in the expression. If we expand the products in which \texttt{B} is accessed, we can apply product commutativity and then factorize the expression as in Figure~\ref{fig:factorized-code}. This has two effects: firstly, it reduces the total number of arithmetic operations performed; secondly, and most importantly, it exposes a new sub-expression \texttt{(A[i][k]/c + T2[k]*f)} invariant with respect to loop \texttt{j}. Therefore, code hoisting can be performed.
+
+\begin{figure}
+\scriptsize
+\lstinputlisting{listings/factorized.code}
+\label{fig:factorized-code}\caption{Factorized code}
+\end{figure}
+
+The second observation we make concerns the register pressure induced by the expression. Once loop-invariant terms are lifted, we can think about data locality and, in particular, register allocation. Assume the local assembly kernel is executed on a state-of-the-art architecture having 16 logical registers, e.g. an Intel Haswell. Each value appearing in the expression is loaded and kept in a register as long as possible. For instance, the scalar value \texttt{g} is loaded once, whereas the term \texttt{det*W[i]} is precomputed and loaded in a register at every $i$ iteration. This implies that at every iteration of the \texttt{jk} loop nest, 12$\%$ of the available registers are spent just to store constant values. In more complicated expressions, the percentage of registers destined to store loop-invariant terms can be even higher. Registers are, however, a precious resource, especially when evaluating intensive expressions. The smaller is the number of free registers, the worse is the instruction-level parallelism achieved: for example, a shortage of registers can increase the pressure on the L1 cache (i.e. it can worsen data locality), or it may prevent the effective application of standard transformations like loop unrolling. The ER works around this problem by suitably expanding terms and introducing, where necessary, new temporary values. 
+
+%An analogous analysis applies to processors with larger numbers of registers, since using loop unroll or loop unroll-and-jam to expose more instruction-level parallelism would increase the requirements on registers.
+
+\begin{figure}
+\scriptsize
+\lstinputlisting{listings/toexpand.code}
+\label{fig:toexpand-code}\caption{Expandable code}
+\end{figure}
+
+Consider the variant of the running (transformed) example shown in Figure~\ref{fig:toexpand-code}. Again, this is a representative example of what happens in real finite element forms. We can easily distribute \texttt{det*W[i]} over the three operands on the left-hand side of the multiplication, and then absorb it in the pre-computation of \texttt{T1}, resulting in the code illustrated in Figure~\ref{fig:expanded-1-code}. Freeing the register destined to the constant \texttt{g} is more complicated: we cannot absorb it in the pre-computation of \texttt{T1} because the same array is accessed in the evaluation of \texttt{(T1[ j]*A[i][k])}. The solution is to add another temporary as in Figure~\ref{fig:expanded-2-code}. Generalizing, this is a problem of data dependencies; in order to solve it, we employ a dependency graph in which we add a direct edge from identifier \texttt{A} to identifier \texttt{B} to denote that the evaluation of \texttt{B} depends on \texttt{A}. The dependency graph is initially empty; every time a new temporary is created due to loop-invariant code motion or expansion of terms is performed, it is updated by suitably adding vertices and edges.
+
+\begin{figure}[t]
+\tiny
+\centering     
+\subfigure[Expanded 1 code]{\label{fig:expanded-1-code}\lstinputlisting{listings/expanded-1.code}}
+~~
+\subfigure[Expanded 2 code]{\label{fig:expanded-2-code}\lstinputlisting{listings/expanded-2.code}}
+\caption{Expanded code.}\label{fig:expanded-code}
+\end{figure}
+
+\subsection{Rewrite Rules}
+In general, assembly expressions produced by automated code generation can be much more complex (more terms and operations involved) and nested. Our goal is to establish a portable, platform- and compiler-independent, and systematic way of reducing the strength of an expression. The technique should be simple; definitely it must be robust to be integrated in an optimizing domain-specific compiler capable of supporting real problems. Ideally, it should be naturally extendible to problems that will be supported in next releases of state-of-the-art frameworks like Firedrake and FEniCS: for instance, explicit support for outer-product finite elements will enable generation of kernels with much deeper loop nests, and the ER should transparently be able to deal with these structures as well. 
+
+To address these issues, we have based the implementation of the ER in COFFEE on a set of formal rewrite rules. By applying these rules, it is possible to derive how an expression will be transformed, as well as what and where (i.e. at which level in the loop nest) temporaries will be introduced. When applying a rule, the ER needs to update the state of the loop nest, to reflect, for example, the use of a new temporary and the newly created data dependencies. We define, therefore, the state of a loop nest $L = (\sigma, G)$, where $G = (V, E)$ represents the dependency graph, while $\sigma$ maps invariant sub-expressions to identifiers of temporary arrays. We also introduce the \textit{conditional hoister} operator $[]$ on $\sigma : Inv \rightarrow S$ such that
+\begin{gather*}
+\sigma[\sfrac{v}{x}] = 
+\begin{cases}
+\sigma(x) \text{~~~~~~~~if $x \in Inv$; $v$ is ignored}\\
+v \text{~~~~~~~~~~~~~if $x$ $\notin$ $Inv$; $\sigma$(x) = v}\\
+\end{cases}
+\end{gather*}
+That is, intuitively, if the invariant expression \texttt{x} has already been hoisted, then return the temporary identifiers that hosts its value; otherwise, hoist the expression. There is a special case when $v = \perp$, used to delete entries in $\sigma$. Specifically:
+\begin{gather*}
+\sigma[\sfrac{\perp}{x}] = 
+\begin{cases}
+\sigma(x) \text{~~~~~~~~if $x \in Inv$; $\sigma = \sigma \setminus (x, \sigma(x))$}\\
+t \text{~~~~~~~~~~~~~~if $x$ $\notin$ $Inv$; $t \notin Inv$}\\
+\end{cases}
+\end{gather*}
+In other words, the previously hoisted expression \texttt{x} is removed (if any) and the temporary identifier that was hosting its value is returned. This is useful to express updates of invariant expressions.
+Rewrite rules for the ER are provided in Figure~\ref{fig:rewrite-rules}; obvious rules are omitted for brevity. Conceptually, the ER visits the expression tree from the root, which is the outermost operation, and applies the transformations dictated by the rewrite rules. As an example, one can try instantiating the rules in the code of Figures~\ref{fig:original-code} and~\ref{fig:toexpand-code}; eventually, the optimized code in Figures~\ref{fig:factorized-code} and~\ref{fig:expanded-2-code} is obtained, respectively. 
+
+\begin{figure}
+\small
+\centering
+\begin{spacing}{1.5}
+\begin{align*}
+[a_i \cdot b_j]_{(\sigma, G)} &\rightarrow [a_i \cdot b_j]_{(\sigma, G)} ~~&~~&\\
+[(a_i + b_j)\cdot \alpha]_{(\sigma, G)} &\rightarrow [(a_i \cdot \alpha + b_j \cdot \alpha)]_{(\sigma, G)} ~~&~~ &\\
+[a_i \cdot b_j + a_i \cdot c_j]_{(\sigma, G)} &\rightarrow [(a_i \cdot (b_j + c_j)]_{(\sigma, G)} ~~&~~ &\\
+[a_i + b_i]_{(\sigma, G)} &\rightarrow [t_i]_{(\sigma', G')} ~~&~~ &t_i = \sigma[\sfrac{t_i'}{a_i + b_i}], G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, b_i)\rbrace)\\
+[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma[\sfrac{\sigma[\sfrac{\perp}{a_i}]}{a_i \cdot \alpha}], a_i \notin in(G), \\
+~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
+[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma[\sfrac{t_i'}{a_i \cdot \alpha}], a_i \in in(G), \\
+~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
+\end{align*}
+\end{spacing}
+\caption{Rewrite rules.}\label{fig:rewrite-rules}
+\end{figure}
+ 
+% blablabla molto complesse, nestings etc expose etc allora rewrite rules
+
+% we will show the effects of this stuff over plain LICM in section
 
 
+% hoisting constants release registers!!!!
 
 \subsection{Avoiding Iteration on Zero-blocks with Symbolic Execution}
 \label{sec:zeros}
@@ -322,6 +398,7 @@ Also, ...can precompute once. And doing that in a loop, at the expense of extra 
 
 \subsection{Results for Forms of Increasing Complexity}
 
+% Mass DGEMM utile explicit method etc
 
 \section{Conclusions}
 \label{sec:conclusions}

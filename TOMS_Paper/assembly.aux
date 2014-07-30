@@ -15,33 +15,53 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Summary of Low-level Optimizations for Quadrature Representation}{2}}
 \newlabel{sec:summary-opts}{{2.3}{2}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}A Compiler for Optimizing Quadrature-based Integration}{2}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Expression Re-writing}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Expression Rewriting}{2}}
 \newlabel{sec:expr-rewriting}{{4}{2}}
 \citation{quadrature1}
+\citation{Luporini}
+\@writefile{lol}{\contentsline {lstlisting}{listings/simple.code}{3}}
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:original-code}{{\caption@xref {fig:original-code}{ on input line 212}}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Original code\relax }}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Objectives of the Expression Rewriter}{3}}
+\newlabel{sec:rewriting-rules}{{4.1}{3}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/factorized.code}{4}}
+\newlabel{fig:factorized-code}{{\caption@xref {fig:factorized-code}{ on input line 224}}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Factorized code\relax }}{4}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/toexpand.code}{4}}
+\newlabel{fig:toexpand-code}{{\caption@xref {fig:toexpand-code}{ on input line 234}}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Expandable code\relax }}{4}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{Kirby-FEM-opt}{\citeauthoryear {Kirby, Knepley, Logg, and Scott}{Kirby et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2005}}
+\newlabel{fig:expanded-1-code}{{4(a)}{5}}
+\newlabel{sub@fig:expanded-1-code}{{(a)}{5}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/expanded\textendash 1.code}{5}}
+\newlabel{fig:expanded-2-code}{{4(b)}{5}}
+\newlabel{sub@fig:expanded-2-code}{{(b)}{5}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/expanded\textendash 2.code}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Expanded code.\relax }}{5}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Expanded 1 code}}}{5}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Expanded 2 code}}}{5}}
+\newlabel{fig:expanded-code}{{4}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Rewrite Rules}{5}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{quadrature1}{\citeauthoryear {Olgaard and Wells}{Olgaard and Wells}{2010}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\lastpage{3}
-\@writefile{lol}{\contentsline {lstlisting}{listings/simple.code}{3}}
-\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{original-code}{{\caption@xref {original-code}{ on input line 207}}{3}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Original code\relax }}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Re-writing Rules}{3}}
-\newlabel{sec:rewriting-rules}{{4.1}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Avoiding Iteration on Zero-blocks with Symbolic Execution}{3}}
-\newlabel{sec:zeros}{{4.2}{3}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Code Specialization}{3}}
-\newlabel{sec:code-spec}{{5}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Standard Compiler Transformations}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Precomputation of Invariant Terms}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Exposing Linear Alegbra Operations}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Model-driven Autotuning}{3}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{3}}
-\newlabel{sec:perf-results}{{6}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Results for Forms of Increasing Complexity}{3}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{3}}
-\newlabel{sec:conclusions}{{7}{3}}
+\lastpage{6}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Rewrite rules.\relax }}{6}}
+\newlabel{fig:rewrite-rules}{{5}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Avoiding Iteration on Zero-blocks with Symbolic Execution}{6}}
+\newlabel{sec:zeros}{{4.3}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Code Specialization}{6}}
+\newlabel{sec:code-spec}{{5}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Standard Compiler Transformations}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Precomputation of Invariant Terms}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Exposing Linear Alegbra Operations}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Model-driven Autotuning}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{6}}
+\newlabel{sec:perf-results}{{6}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Results for Forms of Increasing Complexity}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{6}}
+\newlabel{sec:conclusions}{{7}{6}}

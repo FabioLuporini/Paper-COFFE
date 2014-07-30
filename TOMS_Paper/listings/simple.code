@@ -1,4 +1,5 @@
 for (int i=0; i<I; ++i)
   for (int j=0; j<T; ++j)
     for (int k=0; k<T; ++k)
-      A[j][k] += B[i][j]*C[i][k] + (B[i][j]*D[i][k])*F;
+      A[j][k] += ((((a*A[i][j])+(b*B[i][j]))*A[i][k]*g)+(((A[i][k])/c)*A[i][j])+((((d*D[i][k])+(e*E[i][k]))*A[i][j])*f))*det*W[i]
+
