@@ -207,9 +207,9 @@ Secondly, the ER re-structures the loop nest so as to eliminate arithmetic opera
 \label{sec:rewriting-rules}
 
 \begin{figure}
-\scriptsize
+\tiny
 \lstinputlisting{listings/simple.code}
-\label{fig:original-code}\caption{Original code}
+\caption{Original code}\label{fig:original-code}
 \end{figure}
 
 Consider the simplified example of the element matrix computation in Figure~\ref{fig:original-code}, which is an excerpt from a real Burgers problem. In practice, depending on the problem, the expression tree could be much more complex, with multiple levels of nesting. The example is however representative for a large class of problems, so we will use it throughout the rest of the paper for illustrative purpose. 
@@ -219,9 +219,9 @@ A first glimpse of the code suggests that the sub-expression \texttt{F[i][j]*d +
 We now consider the case of forms that ``hide'' further opportunities for code hoisting. Such forms are by no means exotic: for example, the pattern described next is commonly found in elastic problems. By examining again the example in Figure~\ref{fig:original-code}, we notice that the basis function array \texttt{B}, iterating along the iteration space \texttt{[i,j]}, appears twice in the expression. If we expand the products in which \texttt{B} is accessed, we can apply product commutativity and then factorize the expression as in Figure~\ref{fig:factorized-code}. This has two effects: firstly, it reduces the total number of arithmetic operations performed; secondly, and most importantly, it exposes a new sub-expression \texttt{(A[i][k]/c + T2[k]*f)} invariant with respect to loop \texttt{j}. Therefore, code hoisting can be performed.
 
 \begin{figure}
-\scriptsize
+\tiny
 \lstinputlisting{listings/factorized.code}
-\label{fig:factorized-code}\caption{Factorized code}
+\caption{Factorized code}\label{fig:factorized-code}
 \end{figure}
 
 The second observation we make concerns the register pressure induced by the expression. Once loop-invariant terms are lifted, we can think about data locality and, in particular, register allocation. Assume the local assembly kernel is executed on a state-of-the-art architecture having 16 logical registers, e.g. an Intel Haswell. Each value appearing in the expression is loaded and kept in a register as long as possible. For instance, the scalar value \texttt{g} is loaded once, whereas the term \texttt{det*W[i]} is precomputed and loaded in a register at every $i$ iteration. This implies that at every iteration of the \texttt{jk} loop nest, 12$\%$ of the available registers are spent just to store constant values. In more complicated expressions, the percentage of registers destined to store loop-invariant terms can be even higher. Registers are, however, a precious resource, especially when evaluating intensive expressions. The smaller is the number of free registers, the worse is the instruction-level parallelism achieved: for example, a shortage of registers can increase the pressure on the L1 cache (i.e. it can worsen data locality), or it may prevent the effective application of standard transformations like loop unrolling. The ER works around this problem by suitably expanding terms and introducing, where necessary, new temporary values. 
@@ -229,9 +229,9 @@ The second observation we make concerns the register pressure induced by the exp
 %An analogous analysis applies to processors with larger numbers of registers, since using loop unroll or loop unroll-and-jam to expose more instruction-level parallelism would increase the requirements on registers.
 
 \begin{figure}
-\scriptsize
+\tiny
 \lstinputlisting{listings/toexpand.code}
-\label{fig:toexpand-code}\caption{Expandable code}
+\caption{Expandable code}\label{fig:toexpand-code}
 \end{figure}
 
 Consider the variant of the running (transformed) example shown in Figure~\ref{fig:toexpand-code}. Again, this is a representative example of what happens in real finite element forms. We can easily distribute \texttt{det*W[i]} over the three operands on the left-hand side of the multiplication, and then absorb it in the pre-computation of \texttt{T1}, resulting in the code illustrated in Figure~\ref{fig:expanded-1-code}. Freeing the register destined to the constant \texttt{g} is more complicated: we cannot absorb it in the pre-computation of \texttt{T1} because the same array is accessed in the evaluation of \texttt{(T1[ j]*A[i][k])}. The solution is to add another temporary as in Figure~\ref{fig:expanded-2-code}. Generalizing, this is a problem of data dependencies; in order to solve it, we employ a dependency graph in which we add a direct edge from identifier \texttt{A} to identifier \texttt{B} to denote that the evaluation of \texttt{B} depends on \texttt{A}. The dependency graph is initially empty; every time a new temporary is created due to loop-invariant code motion or expansion of terms is performed, it is updated by suitably adding vertices and edges.
@@ -285,69 +285,68 @@ Rewrite rules for the ER are provided in Figure~\ref{fig:rewrite-rules}; obvious
 \caption{Rewrite rules.}\label{fig:rewrite-rules}
 \end{figure}
  
-% blablabla molto complesse, nestings etc expose etc allora rewrite rules
+%TODO: each level in sigma is then taken and wrapped in a loop 
+ 
+% blablabla molto complesse, nestings etc expose etc allora rewrite rules 
 
 % we will show the effects of this stuff over plain LICM in section
 
 
 % hoisting constants release registers!!!!
 
-\subsection{Avoiding Iteration on Zero-blocks with Symbolic Execution}
+\subsection{Avoiding Iteration on Zero-blocks by Symbolic Execution}
 \label{sec:zeros}
+The second task of the ER consists of skipping arithmetic operations over blocks of zero-valued entries in basis function and derivatives of basis functions arrays. Zero columns in such arrays arise, for example, when taking derivatives on a reference element and when employing mixed elements. In~\cite{quadrature1}, a code transformation to eliminate floating point operations on zero columns was introduced; the technique was implemented in FEniCS. We will evaluate our approach and compare it to this pioneering work in Section~\ref{sec:perf-results}. We propose a strategy in which we avoid the use of indirection arrays in the generated code (e.g. \texttt{A[B[i]]}, where \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in \texttt{A}), which otherwise would break the optimizations applicable at the Code Specializer level, especially SIMD vectorization. 
+
+\begin{figure}[t]
+\tiny
+\centering     
+\subfigure[Factorized, showing zeros, code]{\label{fig:withzeros-code}\lstinputlisting{listings/withzeros.code}}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\subfigure[Factorized, skipping zeros, code]{\label{fig:withzeros-skipped-code}\lstinputlisting{listings/skipzeros.code}}
+\caption{Without and with skipping zeros}\label{fig:skip-code}
+\end{figure}
+
+Consider Figure~\ref{fig:withzeros-code}, which is an enriched version of the transformed Burgers excerpt in Figure~\ref{fig:factorized-code}. The code is instantiated for the specific case of polynomial order 1, Lagrange elements on a 2D mesh. The array \texttt{D} represents a tabulated derivative of a basis function at the various quadrature points. We notice the presence of 4 zero-columns. Any multiplications or additions along these columns could (should) be skipped in order to minimize irrelevant floating point operations. One solution, as anticipated, is not to generate the zero columns, i.e. to generate a dense 6$\times$2 array, to reduce the size of the iteration space over test and trial functions (from 6 to 2), and to use an indirection array (e.g. $ind = \lbrace 3, 5\rbrace$) to access the right entries in the element tensor $A$. As explained, this prevents, among the various optimizations, effective code vectorizability, because memory loads and store would eventually reference non-contiguous locations. 
+%on the other hand, reshrinki tutto su un array solo...
+
+Our approach is based on domain knowledge and symbolic execution. We discern the origin of zero-columns: for example, those due to taking derivatives on the reference element from those inherent to using mixed (vector) elements. In the running Burgers example, the use of vector function spaces require the generation of a zero-block (columns 0, 1, 2 in the array \texttt{D}) to preserve the correctness of the element matrix evaluation while iterating along the space of test and trial functions. The two key observations are that 1) the number of zero-columns caused by mixed elements is much larger then that due to derivatives, and 2) such columns are contiguous in memory. Based on this, we decide to skip any computation involving zero-columns induced by mixed elements, whereas we still iterate over any other zero-columns. Consequently, the only modifications to the code that are eventually needed are adjusting loop bounds and introducing offsets when accessing the element matrix, as shown in Figure~\ref{fig:withzeros-skipped-code}. In general, multiple iteration spaces over test and trial functions (i.e. \texttt{jk} loops), characterized by their own loop bounds, may be needed, increasing loop overhead and decreasing data locality for the element matrix.
+
+The implementation is based on symbolic execution. The ER expects information from the higher layer about where the zero-blocks are located, in each tabulated basis function. This could come in the form of code annotation if the input to COFFEE were provided as a C string (as shown in Figure~\ref{fig:withzeros-skipped-code}) or by suitably decorating basis functions nodes in the abstract syntax tree representing the local assembly routine. Then, each statement in the local assembly loop nest is symbolically executed. For example, consider the statement \texttt{T2[r] = ((d*D[i][k])+(e*E[i][k]));} in Figure~\ref{fig:withzeros-skipped-code}. Array \texttt{D} has non-zeros in positions $NZ_D = [3,5]$; we also assume \texttt{E} has non-zeros in positions $NZ_E = [0,2]$. Multiplications by scalar do not affect the propagation of zero columns. On the other hand, when summing the two operands \texttt{d*D[i][k]} and \texttt{e*E[i][k]}, we record that the target identifier \texttt{T2} will have non-zero columns in positions $NZ_D \cup NZ_E = [0-5]$. Exploiting the $NZ$ information associated with each identifier, the assembly expression is split into several sets of sub-expressions, each set characterized by accesses to the same range of non-zero columns and, therefore, iterating over a suitably-sized iteration space. In our example, there is just one set, which contains two sub-expressions, enclosed in a doubly nested loop of size 3$\times$3.
+
+
 
 \section{Code Specialization}
 \label{sec:code-spec}
+The Code Specializer is the second software component of COFFEE. It provides a range of code transformations tailored for optimizing instruction-level parallelism and register locality. As summarized in Section~\ref{sec:summary-opts} and described in~\cite{Luporini}, padding and data alignment, expression splitting, and outer-product vectorization, which is a domain-aware implementation of vector-register tiling, are examples of optimizations that the Code Specializer is capable of applying. In this paper, we enrich this set of transformations as detailed in the following sections.
 
-\subsection{Standard Compiler Transformations}
+\subsection{Vector-expansion of Invariant Terms}
+The Expression Rewriter's loop-invariant code motion hoists invariant sub-expressions in the body of the outermost loop along which they iterate. If such a sub-expression computes a value depending on the outermost loop only, then the only way of vectorizing it - if we exclude superword level parallelism~\cite{SLP}, which is in general not applicable to our kernels - is by vector-expansion of terms. 
 
-\subsection{Precomputation of Invariant Terms}
+\begin{figure}[t]
+\tiny
+\centering     
+\subfigure[To vector expand code]{\label{fig:tovectexpand-code}\lstinputlisting{listings/tovectexpand.code}}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\subfigure[Vector-expanded code]{\label{fig:vectexpanded-code}\lstinputlisting{listings/vectexpanded.code}}
+\caption{Before and after vector expansion}\label{fig:skip-code}
+\end{figure}
+
+An example is given in Figure~\ref{fig:tovectexpand-code}: \texttt{F1, F2, F3, T1} are all scalar quantities, and their computation will not be auto-vectorized (as explained in Section~\ref{sec:perf-results}, we experimented with the Intel and GNU compilers). The argument that the cost of evaluating such expressions is not relevant because their computational cost is $O(I)$, while the evaluation of the element matrix has a cost of $O(I \cdot T^2)$, is too superficial, in general. There are notable cases, for instance problems based on hyperlasticity, for which the Expression Rewriter produces a significantly-large number of invariant scalar terms, which dramatically impact the execution time.
+
+We have implemented a procedure that vector-expands scalar expressions, while lifting them outside of the loop nest as shown in Figure~\ref{fig:vectexpanded-code}. The dependency graph is queried to assess the legality of the transformation. At the price of extra memory, vector-expanded terms can now be vectorized by the compiler. 
+
+% Expose vectorizability of the outermost loop 
+% Render the loop nest perfect
 
 \subsection{Exposing Linear Alegbra Operations}
 
+% can i just add a rewrite rule to expose these stuff?
+
+
 \subsection{Model-driven Autotuning}
+%\subsection{Standard Compiler Transformations}
 
-%\begin{algorithm}[t]
-%\SetAlgorithmName{LISTING}{}
-%\footnotesize
-%\KwSty{void} helmholtz(double A[3][4], double **coords) $\lbrace$\\
-%~~\KwSty{$\#$define} ALIGN $\_\_$attribute$\_\_$((aligned(32))) \\
-%~~// K, det = Compute Jacobian (coords) \\
-%~~\\
-%~~\KwSty{static const double} W[3] ALIGN = $\lbrace$...$\rbrace$\\
-%~~\KwSty{static const double} X$\_$D10[3][4] ALIGN = $\lbrace\lbrace$...$\rbrace\rbrace$\\
-%~~\KwSty{static const double} X$\_$D01[3][4] ALIGN = $\lbrace\lbrace$...$\rbrace\rbrace$\\
-%~~\\
-%~~\KwSty{for} (\KwSty{int} i = 0; i$<$3; i++) $\lbrace$ \\
-%~~~~double LI$\_$0[4] ALIGN;\\
-%~~~~double LI$\_$1[4] ALIGN;\\
-%~~~~\KwSty{for} (\KwSty{int} r = 0; r$<$4; r++) $\lbrace$ \\
-%~~~~~~LI$\_$0[r] = ((K1*X$\_$D10[i][r])+(K3*X$\_$D01[i][r]));\\
-%~~~~~~LI$\_$1[r] = ((K0*X$\_$D10[i][r])+(K2*X$\_$D01[i][r]));\\
-%~~~~$\rbrace$\\
-%~~~~\KwSty{for} (\KwSty{int} j = 0; j$<$3; j++) \\
-%~~~~~~\KwSty{$\#$pragma vector aligned}\\
-%~~~~~~\KwSty{for} (\KwSty{int} k = 0; k$<$4; k++) \\
-%~~~~~~~~A[j][k] += (Y[i][k]*Y[i][j]+LI$\_$0[k]*LI$\_$0[j]+LI$\_$1[k]*LI$\_$1[j])*det*W[i]);\\
-%~~$\rbrace$\\
-%$\rbrace$
-%\caption{Local assembly code for the Helmholtz problem in
-%  Listing~\ref{code:helmholtz} after application of padding, data
-%  alignment, and \emph{licm}, for an AVX architecture. In this
-%  example, sub-expressions invariant to \texttt{j} are identical to
-%  those invariant to \texttt{k}, so they can be precomputed once in
-%  the $r$ loop.}
-%\label{code:helmholtz-licm}
-%\end{algorithm}
-
-%\begin{figure}[b]
-%\begin{center}
-%\includegraphics[scale=0.75]{Pictures/coffee-pipeline.pdf}
-%\caption{High-level view of Firedrake. COFFEE is at the core,
-%  receiving ASTs from a modified version of the FEniCS Form compiler
-%  and producing optimized C code kernels.}
-%\label{fig:coffee-pipeline}
-%\end{center}
-%\end{figure}
 
 \section{Performance Evaluation}
 \label{sec:perf-results}

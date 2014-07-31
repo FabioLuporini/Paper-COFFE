@@ -6,7 +6,7 @@ for (int i=0; i<I; ++i) {
   }
   for (int j=0; j<T; ++j) {
     for (int k=0; k<T; ++k) {
-      A[j][k] += (T2[j]*A[i][k])+(T2[k]*A[i][j])+(T1[j]*A[i][k]);
+      M[j][k] += (T2[j]*A[i][k])+(T2[k]*A[i][j])+(T1[j]*A[i][k]);
     }
   }
 }
