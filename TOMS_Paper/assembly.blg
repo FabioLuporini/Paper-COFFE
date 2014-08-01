@@ -5,47 +5,48 @@ Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
 Warning--I didn't find a database entry for "Luporini"
 Warning--require articleno with numpages field in Kirby-FEM-opt
+Warning--require articleno with numpages field in SLP
 Warning--empty address in Fenics
 Warning--page numbers missing in both pages and numpages fields in Francis
-You've used 4 entries,
+You've used 5 entries,
             5290 wiz_defined-function locations,
-            1262 strings with 15113 characters,
-and the built_in function-call counts, 3917 in all, are:
-= -- 531
-> -- 180
+            1274 strings with 15419 characters,
+and the built_in function-call counts, 5017 in all, are:
+= -- 656
+> -- 218
 < -- 1
-+ -- 56
-- -- 64
-* -- 278
-:= -- 449
-add.period$ -- 21
-call.type$ -- 4
-change.case$ -- 27
-chr.to.int$ -- 4
-cite$ -- 7
-duplicate$ -- 279
-empty$ -- 205
-format.name$ -- 80
-if$ -- 926
++ -- 68
+- -- 80
+* -- 344
+:= -- 572
+add.period$ -- 26
+call.type$ -- 5
+change.case$ -- 33
+chr.to.int$ -- 5
+cite$ -- 9
+duplicate$ -- 383
+empty$ -- 276
+format.name$ -- 100
+if$ -- 1179
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 13
-newline$ -- 75
-num.names$ -- 32
-pop$ -- 91
+missing$ -- 18
+newline$ -- 85
+num.names$ -- 40
+pop$ -- 126
 preamble$ -- 1
-purify$ -- 47
+purify$ -- 58
 quote$ -- 0
-skip$ -- 83
+skip$ -- 114
 stack$ -- 0
-substring$ -- 249
-swap$ -- 23
+substring$ -- 347
+swap$ -- 34
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 50
-warning$ -- 3
-while$ -- 27
+type$ -- 64
+warning$ -- 4
+while$ -- 38
 width$ -- 0
-write$ -- 109
-(There were 4 warnings)
+write$ -- 131
+(There were 5 warnings)

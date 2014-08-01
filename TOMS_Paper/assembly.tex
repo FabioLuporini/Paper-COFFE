@@ -146,6 +146,8 @@ Department of Mathematics, Imperial College London;
 %Finite Element Assembly. Generalization and formalization of a Finite
 %Element Assembly kernel using quadrature representation.
 
+% ASSEMBLY EXPRESSION == THE EXPRE// COMPUTATION OF ELEMENT MATRIX
+
 \subsection{Code Generation for Quadrature Representation}
 Rapid implementation of high performance, robust, and portable code evaluating element matrices using quadrature can be achieved through automated code generation. This has been succesfully proved in the context of the popular FEniCS project~\cite{Fenics}. The FEniCS Form Compiler (FFC) accepts as input the variational form of a partial differential equation and generates C++ code implementing local assembly routines. The variational form is expressed at high-level by means of the domain-specific Unified Form Language (UFL). Local assembly code must be high performance: as the complexity of a form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen functions, the resulting kernels evaluating element matrices become more computationally expensive, which impacts significantly the run-time of the overall computation. 
 
@@ -178,10 +180,21 @@ In order to generate high performance code, mathematical expressions evaluating 
 
 ...We propose a novel structure of how we think a platform-independent, domain-specific optimizing compiler should look like....
 
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.6]{pictures/coffee-scheme}
+\caption{Outline of COFFEE}\label{fig:coffee-outline}
+\end{center}
+\end{figure}
+
+
+The high-level structure of COFFEE is shown in Figure~\ref{fig:coffee-outline}. 
+
 ...The Expression Rewriter is a software module implemented in COFFEE dealing with the first point...
 
 ...The Code Specializer (henceforth CS) is...
 A key point is that the ER has to perform transformations that do not break the code specializer. Having indirections is really dangerous...
+
 
 \section{Expression Rewriting}
 \label{sec:expr-rewriting}
@@ -314,14 +327,15 @@ Our approach is based on domain knowledge and symbolic execution. We discern the
 
 The implementation is based on symbolic execution. The ER expects information from the higher layer about where the zero-blocks are located, in each tabulated basis function. This could come in the form of code annotation if the input to COFFEE were provided as a C string (as shown in Figure~\ref{fig:withzeros-skipped-code}) or by suitably decorating basis functions nodes in the abstract syntax tree representing the local assembly routine. Then, each statement in the local assembly loop nest is symbolically executed. For example, consider the statement \texttt{T2[r] = ((d*D[i][k])+(e*E[i][k]));} in Figure~\ref{fig:withzeros-skipped-code}. Array \texttt{D} has non-zeros in positions $NZ_D = [3,5]$; we also assume \texttt{E} has non-zeros in positions $NZ_E = [0,2]$. Multiplications by scalar do not affect the propagation of zero columns. On the other hand, when summing the two operands \texttt{d*D[i][k]} and \texttt{e*E[i][k]}, we record that the target identifier \texttt{T2} will have non-zero columns in positions $NZ_D \cup NZ_E = [0-5]$. Exploiting the $NZ$ information associated with each identifier, the assembly expression is split into several sets of sub-expressions, each set characterized by accesses to the same range of non-zero columns and, therefore, iterating over a suitably-sized iteration space. In our example, there is just one set, which contains two sub-expressions, enclosed in a doubly nested loop of size 3$\times$3.
 
-
+...TODO...: dire come si riaggiustano gli indici quando si vuole usare AVX ma la parte dense non e' multiplo del vector length - se non e' paddata la tail, allora si decrementa lo starting index di un pochino, tanto sono zeri...
 
 \section{Code Specialization}
 \label{sec:code-spec}
 The Code Specializer is the second software component of COFFEE. It provides a range of code transformations tailored for optimizing instruction-level parallelism and register locality. As summarized in Section~\ref{sec:summary-opts} and described in~\cite{Luporini}, padding and data alignment, expression splitting, and outer-product vectorization, which is a domain-aware implementation of vector-register tiling, are examples of optimizations that the Code Specializer is capable of applying. In this paper, we enrich this set of transformations as detailed in the following sections.
 
 \subsection{Vector-expansion of Invariant Terms}
-The Expression Rewriter's loop-invariant code motion hoists invariant sub-expressions in the body of the outermost loop along which they iterate. If such a sub-expression computes a value depending on the outermost loop only, then the only way of vectorizing it - if we exclude superword level parallelism~\cite{SLP}, which is in general not applicable to our kernels - is by vector-expansion of terms. 
+\label{sec:vect-exp}
+The Expression Rewriter's loop-invariant code motion hoists invariant sub-expressions in the body of the outermost loop along which they iterate. If such a sub-expression computes a value depending on the outermost loop only, then the only way of vectorizing it -- if we exclude superword level parallelism~\cite{SLP}, which is in general not applicable to our kernels -- is by vector-expansion of terms. 
 
 \begin{figure}[t]
 \tiny
@@ -340,12 +354,29 @@ We have implemented a procedure that vector-expands scalar expressions, while li
 % Render the loop nest perfect
 
 \subsection{Exposing Linear Alegbra Operations}
+In~\cite{Luporini}, we introduced the idea of transforming the element matrix evaluation into a sequence of calls to highly-optimized dense matrices multiply routines (henceforte DGEMM), for instance MKL or ATLAS BLAS. We compared COFFEE's optimizations with hand-written MKL-based kernels, showing how the small sizes of the involved arrays impair DGEMM calls. The study was conducted only in the case of a specific Helmholtz equation. There are cases, however, in which tabulated basis functions sizes grow up to a point for which certain BLAS implementations allow to achieve a better performance. For example, this may be the case of relatively-high polynomial orders or when the form is characterized by the presence of a number of pre-multiplying functions. To explore these extreme yet meaningful scenarios, we have developed an algorithm to reduce any generic element matrix evaluation to a sequence of DGEMM calls. 
 
-% can i just add a rewrite rule to expose these stuff?
+The algorithm is shown in Figure~\ref{fig:algo-dgemm}. By using the rewrite rules in Figure~\ref{fig:rewrite-rules}, it can be proved that the Expression Rewriter can always reduce an assembly expression to a summation, over each quadrature point, of outer products along the test and trial functions. Each outer product is then isolated, i.e. the assembly expression is split into chunks, each chunk representing an outer product. Terms in the bodies of the various enclosing loops (e.g. coefficients evaluation at quadrature point, temporaries introduced by the Expression Rewriter) are vector-expanded and hoisted outside of the loop nest, as explained in Section~\ref{sec:vect-exp}. This implies that the loop nest is now perfect; that is, there is no intervening code among the various loops. The element matrix evaluation became a sequence of perfect loop nests, each loop nest computing a dense matrix-matrix multiply between temporaries hoisted by the Expression Rewriter or tabulated basis functions. Eventually, the storage layout of the involved operands is changed so as to be conforming to the BLAS interface (e.g. two dimensional arrays are flatten as one dimensional arrays). The translation of each loop nest into a DGEMM call is the last, straightforward step. 
+
+% 
+\subsection{Model-driven Dynamic Autotuning}
+We have demonstrated in~\cite{Luporini} that there is no optimial set of code transformations. What sequence of transformations applying to a given problem depends on a broad range of factors, including mathematical structure of the input form, polynomial order of employed function spaces, presence of pre-multiplying functions, and, of course, the characteristics of the underlying architecture. COFFEE allows the user to abstract from finding the optimal combination of transformations for a given problem by resorting to its model-driven, dynamic autotuner. This is based on the idea that spending order of seconds to determine the fastest kernel implementation in a set of possible variants is a negligible overhead when it comes to iterate over real-life unstructured meshes, which can contain even up to trillions of elements~\cite{Rossinelli2013}.
+
+In~\cite{Luporini}, we proposed a simple cost model that COFFEE could use to choose, given a problem, the transformations that were likely to maximize the performance. With this paper, however, we have added a significant number of options to the set of possible optimizations, which makes the selection problem far more challenging. The sole Expression Rewriter, for instance, could apply rewrite rules up to a number of pre-established depths, leading to the generation of many possible code variants.
+
+We believe autotuning is an effective approach to tackling this problem. For each problem, not only does it allow to determine the best combination of transformations out of the set presented so far, also it enables exploring parametric low-level optimizations, such as loop unroll, unroll-and-jam, and interchange, by trying multiple unroll factors and loop permutations. By leveraging the cost model defined in our previous study, domain-awarness, and a set of heuristics, we manage to keep the autotuner overhead at a minimum, whilst achieving significant speed ups over purely cost-model-driven implementations. 
 
 
-\subsection{Model-driven Autotuning}
+
+%1) dual approach to cost-model - more reliable? Easier...when zero-avoidance and low order, what is it best to do?
+%2) self-building
+%3) deeper exploration, to explore aggressive standard low-level transformations
+%4) dynamic and heuristic-driven: 
+%     - depending on kernel size, more or less unroll factors are used
+%     - domain knowledge: no interchange test-trial functions loops
+%     - no unroll innermost loop
 %\subsection{Standard Compiler Transformations}
+
 
 
 \section{Performance Evaluation}
