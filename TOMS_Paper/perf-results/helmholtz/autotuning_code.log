@@ -1,0 +1,96 @@
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+
+Compilation command:
+icc /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code.c -std=gnu99 -O3 -xHost -I/homes/fl1612/Projects/Firedrake/firedrake/firedrake -xAVX -ip -I/usr/local/atlas/include -o /tmp/coffee_dump/autotune_form_cell_integral_0_otherwise/autotuning_code -lrt -lm -L/usr/local/atlas/lib -lmkl_rt
+

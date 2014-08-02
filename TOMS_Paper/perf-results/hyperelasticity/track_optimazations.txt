@@ -1,0 +1,6 @@
+(3, False, (None, None), True, None, False, None, False): 5
+(3, False, (None, None), True, None, False, None, False): 5
+(3, False, (None, None), True, None, False, None, False): 5
+(3, False, (None, None), True, None, False, None, False): 5
+(2, False, (None, None), True, (2, 0), False, (1, 1, 1), False): 1
+(2, False, (None, None), True, (1, 0), False, (1, 1, 1), False): 1
