@@ -51,22 +51,16 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization}
+\markboth{F. Luporini et al.}{Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization}
 
 % Title portion
-\title{Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization}
+\title{Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
 \affil{Imperial College London}
 Paul H.J. Kelly
 \affil{Imperial College London}}
-% NOTE! Affiliations placed here should be for the institution where the
-%       BULK of the research was done. If the author has gone to a new
-%       institution, before publication, the (above) affiliation should NOT be changed.
-%       The authors 'current' address may be given in the "Author's addresses:" block (below).
-%       So for example, Mr. Abdelzaher, the bulk of the research was done at UIUC, and he is
-%       currently affiliated with NASA.
 
 \begin{abstract}
 Abstract goes here
@@ -92,7 +86,7 @@ Abstract goes here
   optimizations, SIMD vectorization}
 
 \acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2014. 
-  Optimizing Finite Element Integration through Automated Expression Rewriting and Code Specialization.}
+  Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -141,13 +135,57 @@ Department of Mathematics, Imperial College London;
 \section{Preliminaries}
 \label{sec:background}
 
-\subsection{Quadrature for Finite Element Local Assembly}
-%Here we discuss about the computational characteristics of
-%computational science kernels. Briefly cite op2 kernels. Emphasis on
-%Finite Element Assembly. Generalization and formalization of a Finite
-%Element Assembly kernel using quadrature representation.
+%is the computation of contributions of a specific cell in the discretized domain to the linear system which yields the PDE solution. The process consists of numerically evaluating problem-specific integrals to produce a matrix and a vector [Olgaard and Wells 2010; AMCG 2010], whose sizes depend on the order of the method. This operation is applied to all cells in the discretized domain. In this work we focus on local matrices, or “element matrices”, which are more costly to compute than element vectors.
 
-% ASSEMBLY EXPRESSION == THE EXPRE// COMPUTATION OF ELEMENT MATRIX
+\subsection{Quadrature for Finite Element Local Assembly}
+We summarize the basic concepts sustaining the finite element method following the notation adopted in~\cite{quadrature1} and~\cite{Francis}. We consider the weak formulation of a linear variational problem
+\begin{equation}
+\begin{split}
+Find\ u\ \in U\ such\ that \\
+a(u, v) = L(v), \forall v \in V
+\end{split}
+\end{equation}
+where $a$ and $L$ are called bilinear and linear form, respectively. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are discrete function spaces. For simplicity, we assume $U = V$ and $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$
+\begin{equation}
+A\textbf{u} = b
+\end{equation}
+in which $A$ and $b$ discretize $a$ and $L$ respectively:
+\begin{equation}
+\centering
+\begin{split}
+A_{ij} = a(\phi_i(x), \phi_j(x)) \\
+b_i = L(\phi_i(x))
+\end{split}
+\end{equation}
+The matrix $A$ and the vector $b$ are computed in the so called assembly phase. Then, in a subsequent phase, the linear system is solved, usually by means of an iterative method, and $\textbf{u}$ is eventually evaluated. 
+
+We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of the paper: this is about computing the contributions that an element in the discretized domain provide to the approximated solution of the equation. Global assembly, on the other hand, is the process of suitably ``inserting'' such contributions in $A$ and $b$. 
+
+Without loss of generality, we illustrate local assembly in a real example, the evaluation of the local assembly (or, equivalently, element) matrix for a Laplacian operator. Consider the weighted Laplace equation
+\begin{equation}
+- \nabla \cdot (w \nabla u) = 0
+\end{equation}
+in which $u$ is unknown, while $w$ is prescribed. The bilinear form associated with the weak variational form of the equation is:
+\begin{equation}
+a(v, u) = \int_\Omega w \nabla v \cdot \nabla u\ \mathrm{d}x
+\end{equation}
+The domain $\Omega$ of the equation is partitioned into a set of cells (elements) $T$ such that $\bigcup T = \Omega$ and $\bigcap T = \emptyset$. By defining $\lbrace \phi_i^K \rbrace$ as the set of local basis functions spanning $U$ on the element $K$, we can express the local element matrix as
+\begin{equation}
+\label{stiffness}
+A_{ij}^K = \int_K w \nabla \phi_i^K \cdot \nabla \phi_j^K\ \mathrm{d}x
+\end{equation}
+The local element vector $L$ can be determined in an analogous way. 
+%From the computational perspective, its evaluation is however less expensive than that of $A$.
+
+Quadrature schemes are conveniently used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies a change of variables from reference coordinates $X_0$ to real coordinates $x = F_K (X_0)$ is necessary any time a new element is evaluated. The numerical integration routine based on quadrature representation over an element $K$ can be expressed as follows
+\begin{equation}
+\label{quadrature}
+\scriptsize
+A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\beta=1}^d \frac{\partial X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial \phi_i^K(X^q)}{\partial X_{\alpha_1}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \frac{\partial \phi_j^K(X^q)}{\partial X_{\alpha_2}} det F_K' W^q
+\end{equation}
+where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
+
+...TODO...: say that "assembly expression" =THE EXPRE// COMPUTATION OF ELEMENT MATRIX
 
 \subsection{Code Generation for Quadrature Representation}
 Rapid implementation of high performance, robust, and portable code evaluating element matrices using quadrature can be achieved through automated code generation. This has been successfully proved in the context of the popular FEniCS project~\cite{Fenics}. The FEniCS Form Compiler (FFC) accepts as input the variational form of a partial differential equation and generates C++ code implementing local assembly routines. The variational form is expressed at high-level by means of the domain-specific Unified Form Language (UFL). Local assembly code must be high performance: as the complexity of a form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen functions, the resulting kernels evaluating element matrices become more computationally expensive, which impacts significantly the run-time of the overall computation. 
@@ -391,47 +429,13 @@ Also, the following heuristics, which capture properties of our computational do
 
 \subsection{Experimental Setup}
 
-%Experiments were run on a single core of two Intel architectures, a
-%Sandy Bridge (I7-2600 CPU, running at 3.4GHz, 32KB L1 cache and 256KB
-%L2 cache) and a Xeon Phi (5110P, running at 1.05Ghz in native mode,
-%32KB L1 cache and 512KB L2 cache). We have chosen these two
-%architectures because of the differences in the number of logical
-%registers and SIMD lanes, which can impact the effectiveness of the
-%optimization strategy. The \texttt{icc 13.1} compiler was used. On the
-%Sandy Bridge, the compilation flags used were \texttt{-O2} and
-%\texttt{-xAVX} for auto-vectorization. On the Xeon Phi, optimization
-%level \texttt{-O3} was used. Other optimization levels performed, in
-%general, slightly worse.
+Experiments were run on a single core of an Intel architecture, a Sandy Bridge I7-2600 CPU, running at 3.4GHz, 32KB L1 cache and 256KB L2 cache. The Intel \texttt{icc 14.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost, -xAVX, -ip}.
 
-%\newcommand{\licmapresultsnorms}{
-%\begin{tabulary}{1.0\textwidth}{cccccc|cccc}
-%\cline{3-10}
-%& & \multicolumn{4}{c}{\texttt{Sandy Bridge}} & \multicolumn{4}{c}{\texttt{Xeon Phi}} \\
-%\cline{1-10}
-%\texttt{problem} & \texttt{shape} & \texttt{p1} & \texttt{p2} & \texttt{p3} & \texttt{p4} & \texttt{p1} & \texttt{p2} & \texttt{p3} & \texttt{p4} \\[0.1cm]
-%\texttt{Helmholtz} & \texttt{triangle} & 1.32 & 1.88 & 2.87 & 4.13 & 1,50 & 2,41 & 1,30 & 1,96 \\
-%\texttt{Helmholtz} & \texttt{tetrahedron} & 1.35 & 3.32 & 2.66 & 3.27 & 1,41 & 1,50 & 2,79 & 2,81 \\
-%\texttt{Helmholtz} & \texttt{prism} & 2.63 & 2.74 & 2.43 & 2.75 & 2,38 & 2,47 & 2,15 & 1,71\\[0.1cm]
-%%\cline{1-18}
-%\texttt{Diffusion} & \texttt{triangle} & 1.38 & 1.99 & 3.07 & 4.28 & 1,08 & 1,88 & 1,20 & 1,97\\
-%\texttt{Diffusion} & \texttt{tetrahedron} & 1.41 & 3.70 & 3.18 & 3.82 & 1,05 & 1,51 & 2,76 & 3,00\\
-%\texttt{Diffusion} & \texttt{prism} & 2.55 & 3.13 & 2.73 & 2.69 & 2,41 & 2,52 & 2,05 & 2,48\\[0.1cm]
-%%\cline{1-18}
-%\texttt{Burgers} & \texttt{triangle} & 1.56 & 2.28 & 2.61 & 2.77 & 2,84 & 2,26 & 3,96 & 4,27 \\
-%\texttt{Burgers} & \texttt{tetrahedron} & 1.61 & 2.10 & 1.60 & 1.78 & 1,48 & 3,83 & 1,55 & 1,29 \\
-%\texttt{Burgers} & \texttt{prism} & 2.19 & 2.32 & 1.64 & 1.42 & 2,18 & 2,82 & 1,24 & 1,25 \\
-%\cline{1-10}
-%\end{tabulary}
-%}
-%
-%\begin{table*}[t]
-%\tbl{Performance improvement due to generalized loop-invariant code
-%  motion, data alignment, and padding, for different element shapes
-%  (triangle, tetrahedron, prism) and polynomial orders ($p \in [1,
-%    4]$), over the original non-optimized code, for the Helmholtz,
-%  Diffusion and Burgers problems.}{ \scriptsize \licmapresultsnorms }
-%\label{table:perf-results-licmap}
-%\end{table*}
+...TODO... Problems chosen...
+
+...TODO... We don't compare to tensor contraction by transitivity on olegaards work 
+
+\subsection{Results for Forms of Increasing Complexity}
 
 In Figure~\ref{fig:helmholtz}, ...
 
@@ -444,8 +448,6 @@ In Figure~\ref{fig:helmholtz}, ...
 %\subfigure[]{\includesvg[scale=0.25]{perf-results/FiredrakeFormsCoffee_bar_q1_p4_formhelmholtz_speedup}}
 %\caption{Helmholtz results.}\label{fig:helmholtz}
 %\end{figure}
-
-\subsection{Results for Forms of Increasing Complexity}
 
 % Mass DGEMM utile explicit method etc
 
