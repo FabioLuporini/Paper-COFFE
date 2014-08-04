@@ -1,52 +1,56 @@
-This is BibTeX, Version 0.99c (TeX Live 2009/Debian)
+This is BibTeX, Version 0.99d (TeX Live 2012)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: assembly.aux
 The style file: ACM-Reference-Format-Journals.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
 Warning--I didn't find a database entry for "Luporini"
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--require articleno with numpages field in Kirby-FEM-opt
 Warning--require articleno with numpages field in SLP
 Warning--empty address in Fenics
 Warning--page numbers missing in both pages and numpages fields in Francis
-You've used 5 entries,
+Warning--require articleno with numpages field in nek5000
+You've used 9 entries,
             5290 wiz_defined-function locations,
-            1274 strings with 15419 characters,
-and the built_in function-call counts, 5017 in all, are:
-= -- 656
-> -- 218
-< -- 1
-+ -- 68
-- -- 80
-* -- 344
-:= -- 572
-add.period$ -- 26
-call.type$ -- 5
-change.case$ -- 33
-chr.to.int$ -- 5
-cite$ -- 9
-duplicate$ -- 383
-empty$ -- 276
-format.name$ -- 100
-if$ -- 1179
+            1306 strings with 16539 characters,
+and the built_in function-call counts, 9202 in all, are:
+= -- 1134
+> -- 468
+< -- 3
++ -- 148
+- -- 168
+* -- 684
+:= -- 1101
+add.period$ -- 46
+call.type$ -- 9
+change.case$ -- 68
+chr.to.int$ -- 9
+cite$ -- 14
+duplicate$ -- 694
+empty$ -- 498
+format.name$ -- 200
+if$ -- 2119
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 18
-newline$ -- 85
-num.names$ -- 40
-pop$ -- 126
+missing$ -- 30
+newline$ -- 124
+num.names$ -- 72
+pop$ -- 235
 preamble$ -- 1
-purify$ -- 58
+purify$ -- 113
 quote$ -- 0
-skip$ -- 114
+skip$ -- 190
 stack$ -- 0
-substring$ -- 347
-swap$ -- 34
-text.length$ -- 1
+substring$ -- 609
+swap$ -- 57
+text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 64
-warning$ -- 4
-while$ -- 38
+type$ -- 120
+warning$ -- 5
+while$ -- 65
 width$ -- 0
-write$ -- 131
-(There were 5 warnings)
+write$ -- 214
+(There were 6 warnings)
