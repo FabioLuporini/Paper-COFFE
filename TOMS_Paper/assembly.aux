@@ -24,33 +24,30 @@
 \newlabel{stiffness}{{6}{4}}
 \newlabel{quadrature}{{7}{4}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}COFFEE: a Compiler for Optimizing Quadrature-based Finite Element Integration}{4}}
+\newlabel{sec:summary-opts}{{2.2}{4}}
 \citation{Luporini}
 \citation{Luporini}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Outline of COFFEE\relax }}{5}}
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
 \newlabel{fig:coffee-outline}{{1}{5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Summary of Optimizations for Automated Quadrature Representation}{5}}
-\newlabel{sec:summary-opts}{{2.3}{5}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Expression Rewriting}{5}}
-\newlabel{sec:expr-rewriting}{{3}{5}}
 \citation{quadrature1}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Expression Rewriting}{6}}
+\newlabel{sec:expr-rewriting}{{3}{6}}
 \citation{Luporini}
-\newlabel{fig:original-code}{{2(a)}{6}}
-\newlabel{sub@fig:original-code}{{(a)}{6}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/simple.code}{6}}
-\newlabel{fig:factorized-code}{{2(b)}{6}}
-\newlabel{sub@fig:factorized-code}{{(b)}{6}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/factorized.code}{6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Original and factorized code.\relax }}{6}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Original code}}}{6}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Factorized code}}}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Objectives of the Expression Rewriter}{6}}
-\newlabel{sec:rewriting-rules}{{3.1}{6}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/toexpand.code}{7}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Expandable code\relax }}{7}}
-\newlabel{fig:toexpand-code}{{3}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Rewrite Rules}{7}}
-\citation{quadrature1}
+\newlabel{fig:original-code}{{2(a)}{7}}
+\newlabel{sub@fig:original-code}{{(a)}{7}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/simple.code}{7}}
+\newlabel{fig:factorized-code}{{2(b)}{7}}
+\newlabel{sub@fig:factorized-code}{{(b)}{7}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/factorized.code}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Original and factorized code.\relax }}{7}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Original code}}}{7}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Factorized code}}}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Objectives of the Expression Rewriter}{7}}
+\newlabel{sec:rewriting-rules}{{3.1}{7}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/toexpand.code}{8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Expandable code\relax }}{8}}
+\newlabel{fig:toexpand-code}{{3}{8}}
 \newlabel{fig:expanded-1-code}{{4(a)}{8}}
 \newlabel{sub@fig:expanded-1-code}{{(a)}{8}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/expanded\textendash 1.code}{8}}
@@ -61,60 +58,62 @@
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Expanded 1 code}}}{8}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Expanded 2 code}}}{8}}
 \newlabel{fig:expanded-code}{{4}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Avoiding Iteration on Zero-blocks by Symbolic Execution}{8}}
-\newlabel{sec:zeros}{{3.3}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Rewrite Rules}{8}}
+\citation{quadrature1}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Rewrite rules.\relax }}{9}}
 \newlabel{fig:rewrite-rules}{{5}{9}}
-\newlabel{fig:withzeros-code}{{6(a)}{9}}
-\newlabel{sub@fig:withzeros-code}{{(a)}{9}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/withzeros.code}{9}}
-\newlabel{fig:withzeros-skipped-code}{{6(b)}{9}}
-\newlabel{sub@fig:withzeros-skipped-code}{{(b)}{9}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/skipzeros.code}{9}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Without and with skipping zeros\relax }}{9}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Factorized, showing zeros, code}}}{9}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Factorized, skipping zeros, code}}}{9}}
-\newlabel{fig:skip-code}{{6}{9}}
+\newlabel{fig:withzeros-code}{{6(a)}{10}}
+\newlabel{sub@fig:withzeros-code}{{(a)}{10}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/withzeros.code}{10}}
+\newlabel{fig:withzeros-skipped-code}{{6(b)}{10}}
+\newlabel{sub@fig:withzeros-skipped-code}{{(b)}{10}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/skipzeros.code}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Without and with skipping zeros\relax }}{10}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Factorized, showing zeros, code}}}{10}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Factorized, skipping zeros, code}}}{10}}
+\newlabel{fig:skip-code}{{6}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Avoiding Iteration on Zero-blocks by Symbolic Execution}{10}}
+\newlabel{sec:zeros}{{3.3}{10}}
 \citation{Luporini}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Code Specialization}{10}}
-\newlabel{sec:code-spec}{{4}{10}}
 \citation{SLP}
-\citation{Luporini}
-\newlabel{fig:tovectexpand-code}{{7(a)}{11}}
-\newlabel{sub@fig:tovectexpand-code}{{(a)}{11}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/tovectexpand.code}{11}}
-\newlabel{fig:vectexpanded-code}{{7(b)}{11}}
-\newlabel{sub@fig:vectexpanded-code}{{(b)}{11}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/vectexpanded.code}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Before and after vector expansion\relax }}{11}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {To vector expand code}}}{11}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Vector-expanded code}}}{11}}
-\newlabel{fig:skip-code}{{7}{11}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Code Specialization}{11}}
+\newlabel{sec:code-spec}{{4}{11}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Vector-expansion of Invariant Terms}{11}}
 \newlabel{sec:vect-exp}{{4.1}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Exposing Linear Alegbra Operations}{11}}
 \citation{Luporini}
+\citation{Luporini}
+\newlabel{fig:tovectexpand-code}{{7(a)}{12}}
+\newlabel{sub@fig:tovectexpand-code}{{(a)}{12}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/tovectexpand.code}{12}}
+\newlabel{fig:vectexpanded-code}{{7(b)}{12}}
+\newlabel{sub@fig:vectexpanded-code}{{(b)}{12}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/vectexpanded.code}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Before and after vector expansion\relax }}{12}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {To vector expand code}}}{12}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Vector-expanded code}}}{12}}
+\newlabel{fig:skip-code}{{7}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Exposing Linear Alegbra Operations}{12}}
 \citation{Luporini}
 \citation{Rossinelli2013}
 \citation{nek5000}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Model-driven Dynamic Autotuning}{12}}
 \citation{Luporini}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Model-driven Dynamic Autotuning}{13}}
 \citation{Luporini}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{firedrake-code}{\citeauthoryear {{Firedrake contributors}}{{Firedrake contributors}}{2014}}
 \bibcite{Kirby-FEM-opt}{\citeauthoryear {Kirby, Knepley, Logg, and Scott}{Kirby et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2005}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Performance Evaluation}{13}}
-\newlabel{sec:perf-results}{{5}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Results for Forms of Increasing Complexity}{13}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{13}}
-\newlabel{sec:conclusions}{{6}{13}}
 \bibcite{petsc-integration-gpu}{\citeauthoryear {Knepley and Terrel}{Knepley and Terrel}{2013}}
 \bibcite{SLP}{\citeauthoryear {Larsen and Amarasinghe}{Larsen and Amarasinghe}{2000}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{quadrature1}{\citeauthoryear {Olgaard and Wells}{Olgaard and Wells}{2010}}
 \bibcite{Rossinelli2013}{\citeauthoryear {Rossinelli, Hejazialhosseini, Hadjidoukas, Bekas, Curioni, Bertsch, Futral, Schmidt, Adams, and Koumoutsakos}{Rossinelli et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2013}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Performance Evaluation}{14}}
+\newlabel{sec:perf-results}{{5}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Results for Forms of Increasing Complexity}{14}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{14}}
+\newlabel{sec:conclusions}{{6}{14}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
 \bibcite{nek5000}{\citeauthoryear {Shin, Hall, Chame, Chen, Fischer, and Hovland}{Shin et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2010}}
-\lastpage{14}
+\lastpage{15}

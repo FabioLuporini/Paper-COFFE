@@ -129,18 +129,13 @@ Department of Mathematics, Imperial College London;
 
 \section{Introduction}
 
-
-
-% Quadrature. Tensor. Quadrature <, >, = Tensor
-%code evaluating element matrices using quadrature
-
 The need for rapidly implementing high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proved successful in the context of the FEniCS~\cite{Fenics} and Firedrake~\cite{firedrake-code} projects, which have become incredibly popular over the last years. In these frameworks, the weak variational form of a given problem is expressed at high-level by means of a domain-specific language. Such a mathematical specification is suitably manipulated and then passed as input to a form compiler, whose goal is to generate a representation of local assembly operations. These operations numerically evaluate problem-specific integrals in order to compute so called local matrices and vectors, which represent the contributions from each element in the discretized domain to the equation solution. Local assembly code must be high performance: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen function spaces, the resulting assembly kernels become more and more expensive, covering a significant fraction of overall computation run-time. 
 
 Achieving high performance implementations is, however, non-trivial. The complexity of mathematical expressions involved in the numerical integration, which varies from problem to problem, and the small size of the loop nest in which such integral is computed obstruct the optimization process. Also, traditional vendor compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent assembly expressions. This has led to development of a number of higher-level approaches to optimize local assembly kernels.  In~\cite{quadrature1}, it is shown how automated code generation can be leveraged to introduce domain-specific optimizations, which a user cannot be expected to write ``by hand''. \cite{Kirby-FEM-opt} and~\cite{Francis} have studied, instead, different optimization techniques based on a mathematical reformulation of the problem. In~\cite{Luporini}, we have made one step forward by showing that different problems, on different platforms, require distinct set of transformations if close-to-peak performance needs to be obtained, and that low-level, domain-aware code transformations are essential to maximize instruction-level parallelism and register locality. The problem of optimizing local assembly routines has been tackled recently also for GPUs, for instance in~\cite{petsc-integration-gpu}.
 
 Our research has resulted in the development of a compiler, COFFEE\footnote{COFFEE stands for COmpiler For FinitE Element local assembly.}, fully integrated with the Firedrake framework. While clearly separating the mathematical domain, which remains captured in the higher-level form compiler, from the optimization process, COFFEE also aims to be platform-agnostic. The code transformations occur on an intermediate representation of the assembly code, which is ultimately translated into platform-specific code. Domain knowledge is exploited in two ways: for simplifying the implementation of a broad range of code transformations, and, obviously, to make them extremely effective. Domain knowledge is conveyed to COFFEE from the higher level (the form compiler in the case of Firedrake, although any user-provided code would be acceptable) through suitable annotations attached to the input. For example, when the input is in the form of an abstract syntax tree produced by the form compiler, specific nodes are decorated so as to drive the optimization process. Although COFFEE has been thought of as a multi-platform optimizing compiler, our performance evaluation so far has been restricted to standard CPU platforms only. We emphasize once more, however, that the transformations applicable by both the Expression Rewriter (Section~\ref{sec:expr-rewriting}) and the Code Specializer (Section~\ref{sec:code-spec}) would work on generic accelerators as well.
 
-In this paper, we build on the work presented in~\cite{Luporini} and present a novel structured approach to the optimization of automatically-generated finite element integration routines. We argue that peak performance can be achieved only by passing through a two-step optimization procedure: 1) expression rewriting, to minimize floating point operations, 2) and code specialization, to obtain, for instance, effective register utilization and SIMD vectorization. The code transformations introduced in~\cite{Luporini} are reused: as explained in Section~\ref{sec:summary-opts}, padding and data alignment, expression splitting, and vector-register tiling become sub-steps of code specialization; on the other hand, generalized loop-invariant code motion is a step of the expression rewriting process. More importantly, we complement and generalize our previous work with the following contributions.
+In this paper, we build on the work presented in~\cite{Luporini} and present a novel structured approach to the optimization of automatically-generated finite element integration routines based on quadrature representation. We argue that peak performance can be achieved only by passing through a two-step optimization procedure: 1) expression rewriting, to minimize floating point operations, 2) and code specialization, to obtain, for instance, effective register utilization and SIMD vectorization. The code transformations introduced in~\cite{Luporini} are reused: as explained in Section~\ref{sec:summary-opts}, padding and data alignment, expression splitting, and vector-register tiling become sub-steps of code specialization; on the other hand, generalized loop-invariant code motion is a step of the expression rewriting process. More importantly, we complement and generalize our previous work with the following contributions.
 
 Expression rewriting is based on a formal set of rewrite rules. Our first contribution consists of a framework that aggressively exploits associativity, distributivity, and commutativity of arithmetic operators to expose ``hidden'' loop-invariant sub-expressions. Secondly, we show how to make use of domain knowledge to avoid computation over zero-valued regions in vector-valued basis functions arrays, while preserving code vectorizability. These transformations will allow outperforming the results obtained in~\cite{Luporini} as well as those achievable by using FEniCS' built-in optimizations, presented in~\cite{quadrature1}. 
 
@@ -212,13 +207,12 @@ A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \su
 \end{equation}
 where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
 
-...TODO...: say that "assembly expression" =THE EXPRE// COMPUTATION OF ELEMENT MATRIX
+In the next sections, we will often refer to the (local) element matrix evaluation, such as Equation~\ref{quadrature} for the weighted Lapalce operator, as the \textit{assembly expression} of the variational problem.
 
 
 \subsection{COFFEE: a Compiler for Optimizing Quadrature-based Finite Element Integration}
-In order to generate high performance code, mathematical expressions evaluating the element tensor must be optimized with regards to several interrelated aspects: 1) minimization of floating point operations, 2) instruction-level parallelism, and 3) data locality. In this paper, we tackle these three points building on our previous work (\cite{Luporini}). 
-
-...We propose a novel structure of how we think a platform-independent, domain-specific optimizing compiler should look like....
+\label{sec:summary-opts}
+If high performance code needs to be generated, assembly expressions must be optimized with regards to three interrelated aspects: 1) arithmetic intensity, 2) instruction-level parallelism, and 3) data locality. In this paper, we tackle these three points building on our previous work (\cite{Luporini}).
 
 \begin{figure}
 \begin{center}
@@ -227,45 +221,35 @@ In order to generate high performance code, mathematical expressions evaluating 
 \end{center}
 \end{figure}
 
+COFFEE is a mature, platform-independent compiler capable of optimizing local assembly code. Its high-level structure can be outlined as in Figure~\ref{fig:coffee-outline}. The input is either suitably-annoted C code, explicitly provided by the user, or a decorated abstract syntax tree (henceforth AST) representation of an assembly kernel, automatically generated by the higher level in the stack. We have integrated COFFEE with the Firedrake framework; here, the input to COFFEE is originated by the FEniCS Form Compiler in the form of an AST. Decoration of special AST nodes, or equivalently annotation of C code, is extensively used to convey domain knowledge to COFFEE. This is used to introduce more effective, specialized optimizations, as well as to simplify implementation.
 
-The high-level structure of COFFEE is shown in Figure~\ref{fig:coffee-outline}. 
+Two conceptually distinct software modules can be individuated: the Expression Rewriter and the Code Specializer. The former targets arithmetic intensity. Its role is to transform the assembly expression and, therefore, the enclosing loop nest, so as to minimize the number of floating point operations that are performed to evaluate the element matrix (or vector). The latter is tailored to optimizing for instruction-level parallelism, particularly SIMD vectorization, and data (register) locality. The Expression Rewriter manipulates and transforms the original AST, which is then provided to the Code Specializer. As described later, we have invested some effort to ensure that the code transformations applied in the expression rewriting stage do not break any code specialization opportunity. This for example would not be the case if the Expression Rewriter coincided with the FEniCS Form Compiler's built-in optimization system; we will clarify this aspect in Section~\ref{sec:zeros}.
 
-...The Expression Rewriter is a software module implemented in COFFEE dealing with the first point...
+To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, in this section we summarize the results of our previous work. Moreover, in Section~\ref{sec:perf-results}, we will explicitly compare the performance achieved with the transformations presented in this paper to~\cite{Luporini} (as well as to FEniCS' built-in optimizations).
 
-...The Code Specializer (henceforth CS) is...
-A key point is that the ER has to perform transformations that do not break the code specializer. Having indirections is really dangerous...
+In our previous work, we have demonstrated the effectiveness of a set of optimizations for finite element quadrature-based integration routines originated through automated code generation. We have also shown how different subset of optimizations are needed to achieve close-to-peak performance in different problems. In particular, we can summarize our study as follows
 
+\begin{itemize}
+\item \emph{Generalized Loop-invariant Code Motion}. Compiler's loop-invariant code motion algorithms may not be general enough to optimize assembly expressions, in which different sub-expressions are invariant with respect to more than one loop in the enclosing nest. As briefly described in Section~\ref{sec:expr-rewriting}, we work around this limitation, while also achieving vectorization of invariant code.
+\item \emph{Padding and data alignment}. The small size of the loop nest require all of the involved arrays to be padded to a multiple of the vector register length so as to maximize the effectiveness of SIMD code. Data alignment can be enforced as a consequence of padding. 
+\item \emph{Vector-register Tiling}. Blocking at the level of vector registers, which we perform exploiting the specific memory access pattern of the assembly expressions (i.e. a domain-aware transformation), improves data locality beyond traditional unroll-and-jam optimizations. This is especially true for relatively high polynomial order (i.e. greater than 2) or when pre-multiplying functions are present.
+\item \emph{Expression Splitting}. In certain assembly expressions the register pressure is significantly high: when the number of basis functions arrays (or, equivalently, temporaries introduced by loop-invariant code motion) and constants is large, spilling to L1 cache is a consequence for architectures with a relatively low number of logical registers (e.g. 16/32). We exploit sum's associativity to ``split'' the assembly expression into multiple sub-expressions, which are computed individually.
+\end{itemize}
 
-\subsection{Summary of Optimizations for Automated Quadrature Representation}
-\label{sec:summary-opts}
-...TODO... : clearly state, once more, we operate in the regime of automated code generation
+In Figure~\ref{fig:coffee-outline}, we show where these transformations are logically applied in COFFEE; also, the contributions of this work are highlighted. In the next two sections, we describe the new functionalities of, respectively, the Expression Rewriter and the Code Specializer.
 
-To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, in this section we summarize the results of our previous work on automated code transformations for quadrature representation.
-
-...TODO...
-
-The work in~\cite{Luporini} resulted in the development of COFFEE, a compiler for the optimization of local assembly kernels relying on quadrature representation.  
-
-...TODO...
-
-Temporary arrays can be placed at the right depth in the sorrounding loop nest to store values of sub-expressions that are invariant to one or more loops. 
-
-...TODO...
+%Temporary arrays can be placed at the right depth in the sorrounding loop nest to store values of sub-expressions that are invariant to one or more loops. 
 
 % Far notare che low-level si, ma sono guidate da high-level knowledge! Questo in risposta alla domanda: ma allora perche' non sfruttare la domain knowledge che hai, che senso ha separare...
-
-% Ci sono due goal: minimizzare flops e specializzare
 
 % Vantaggio di automatizzare rispetto che scrivere a mano
 % which would be practically unfeasible to achieve by hand-written code
 
 
 
-
-
 \section{Expression Rewriting}
 \label{sec:expr-rewriting}
-As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of a mathematical expression. The Expression Rewriter (henceforth ER) that we have designed and implemented in COFFEE enhances this technique by making two steps forward, which allow more redundant computation to be avoided. 
+As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of an assembly expression. The Expression Rewriter (henceforth ER) that we have designed and implemented in COFFEE enhances this technique by making two steps forward, which allow more redundant computation to be avoided. 
 
 Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many possibilities of rewriting an expression, and the search space can quickly become too big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewriting-rules}, we formalize the set of rewrite rules that COFFEE follows to transform an expression. 
 
@@ -413,7 +397,7 @@ The Expression Rewriter's loop-invariant code motion hoists invariant sub-expres
 \caption{Before and after vector expansion}\label{fig:skip-code}
 \end{figure}
 
-An example is given in Figure~\ref{fig:tovectexpand-code}: \texttt{F1, F2, F3, T1} are all scalar quantities, and their computation will not be auto-vectorized (as explained in Section~\ref{sec:perf-results}, we experimented with the Intel and GNU compilers). The argument that the cost of evaluating such expressions is not relevant because their computational cost is $O(I)$, while the evaluation of the element matrix has a cost of $O(I \cdot T^2)$, is too superficial, in general. There are notable cases, for instance problems based on hyperelasticity, for which the Expression Rewriter produces a significantly-large number of invariant scalar terms, which dramatically impact the execution time.
+An example is given in Figure~\ref{fig:tovectexpand-code}: \texttt{F1, F2, F3, T1} are all scalar quantities, and their computation will not be auto-vectorized (as explained in Section~\ref{sec:perf-results}, we experimented with the Intel and GNU compilers). The argument that the cost of evaluating such expressions is not relevant because their computational cost is $O(I)$, while the evaluation of the element matrix has a cost of $O(I T^2)$, is too superficial, in general. There are notable cases, for instance problems based on hyperelasticity, for which the Expression Rewriter produces a significantly-large number of invariant scalar terms, which dramatically impact the execution time.
 
 We have implemented a procedure that vector-expands scalar expressions, while lifting them outside of the loop nest as shown in Figure~\ref{fig:vectexpanded-code}. The dependency graph is queried to assess the legality of the transformation. At the price of extra memory, vector-expanded terms can now be vectorized by the compiler. 
 
@@ -466,6 +450,8 @@ Experiments were run on a single core of an Intel architecture, a Sandy Bridge I
 ...TODO... We don't compare to tensor contraction by transitivity on olegaards work 
 
 \subsection{Results for Forms of Increasing Complexity}
+
+% Quadrature. Tensor. Quadrature <, >, = Tensor
 
 In Figure~\ref{fig:helmholtz}, ...
 
