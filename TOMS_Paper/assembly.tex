@@ -295,7 +295,7 @@ The second observation we make concerns the register pressure induced by the exp
 \caption{Expandable code}\label{fig:toexpand-code}
 \end{figure}
 
-Consider the variant of the running (transformed) example shown in Figure~\ref{fig:toexpand-code}. Again, this is a representative example of what happens in real finite element forms. We can easily distribute \texttt{det*W[i]} over the three operands on the left-hand side of the multiplication, and then absorb it in the pre-computation of \texttt{T1}, resulting in the code illustrated in Figure~\ref{fig:expanded-1-code}. Freeing the register destined to the constant \texttt{g} is more complicated: we cannot absorb it in the pre-computation of \texttt{T1} because the same array is accessed in the evaluation of \texttt{(T1[ j]*A[i][k])}. The solution is to add another temporary as in Figure~\ref{fig:expanded-2-code}. Generalizing, this is a problem of data dependencies; in order to solve it, we employ a dependency graph in which we add a direct edge from identifier \texttt{A} to identifier \texttt{B} to denote that the evaluation of \texttt{B} depends on \texttt{A}. The dependency graph is initially empty; every time a new temporary is created due to loop-invariant code motion or expansion of terms is performed, it is updated by suitably adding vertices and edges.
+Consider the variant of the running (transformed) example shown in Figure~\ref{fig:toexpand-code}. Again, this is a representative example of what happens in real finite element forms. We can easily distribute \texttt{det*W[i]} over the three operands on the left-hand side of the multiplication, and then absorb it in the pre-computation of \texttt{T1}, resulting in the code illustrated in Figure~\ref{fig:expanded-1-code}. Freeing the register destined to the constant \texttt{g} is more complicated: we cannot absorb it in the pre-computation of \texttt{T1} because the same array is accessed in the evaluation of \texttt{(T1[j]*A[i][k])}. The solution is to add another temporary as in Figure~\ref{fig:expanded-2-code}. Generalizing, this is a problem of data dependencies; in order to solve it, we employ a dependency graph in which we add a direct edge from identifier \texttt{A} to identifier \texttt{B} to denote that the evaluation of \texttt{B} depends on \texttt{A}. The dependency graph is initially empty; every time a new temporary is created due to loop-invariant code motion or expansion of terms is performed, it is updated by suitably adding vertices and edges.
 
 \begin{figure}[t]
 \tiny
@@ -309,7 +309,7 @@ Consider the variant of the running (transformed) example shown in Figure~\ref{f
 \subsection{Rewrite Rules}
 In general, assembly expressions produced by automated code generation can be much more complex (more terms and operations involved) and nested. Our goal is to establish a portable, platform- and compiler-independent, and systematic way of reducing the strength of an expression. The technique should be simple; definitely it must be robust to be integrated in an optimizing domain-specific compiler capable of supporting real problems. Ideally, it should be naturally extendible to problems that will be supported in next releases of state-of-the-art frameworks like Firedrake and FEniCS: for instance, explicit support for outer-product finite elements will enable generation of kernels with much deeper loop nests, and the ER should transparently be able to deal with these structures as well. 
 
-To address these issues, we have based the implementation of the ER in COFFEE on a set of formal rewrite rules. By applying these rules, it is possible to derive how an expression will be transformed, as well as what and where (i.e. at which level in the loop nest) temporaries will be introduced. When applying a rule, the ER needs to update the state of the loop nest, to reflect, for example, the use of a new temporary and the newly created data dependencies. We define, therefore, the state of a loop nest $L = (\sigma, G)$, where $G = (V, E)$ represents the dependency graph, while $\sigma$ maps invariant sub-expressions to identifiers of temporary arrays. We also introduce the \textit{conditional hoister} operator $[]$ on $\sigma : Inv \rightarrow S$ such that
+To address these issues, we have based the implementation of the ER in COFFEE on a set of formal rewrite rules. By applying these rules, it is possible to derive how an expression will be transformed, as well as what and where (i.e. at which level in the loop nest) temporaries will be introduced. When applying a rule, the ER needs to update the state of the loop nest, to reflect, for example, the use of a new temporary and the newly created data dependencies. We define, therefore, the state of a loop nest $L = (\sigma, G)$, where $G = (V, E)$ represents the dependency graph, while $\sigma$ maps invariant sub-expressions to identifiers of temporary arrays. The notation $\sigma_i$ refers to invariants hoisted at the level of loop $i$. We also introduce the \textit{conditional hoister} operator $[]$ on $\sigma : Inv \rightarrow S$ such that
 \begin{gather*}
 \sigma[\sfrac{v}{x}] = 
 \begin{cases}
@@ -326,20 +326,25 @@ t \text{~~~~~~~~~~~~~~if $x$ $\notin$ $Inv$; $t \notin Inv$}\\
 \end{cases}
 \end{gather*}
 In other words, the previously hoisted expression \texttt{x} is removed (if any) and the temporary identifier that was hosting its value is returned. This is useful to express updates of invariant expressions.
+
+A generic (sub-)expression is represented with roman letter \texttt{a, b, ...}; constant terms are considered a special case, so greek letters \texttt{$\alpha$, $\beta$} are used instead. The iteration vector $i = [i_0, i_1, ...]$ is the ordered sequence of the indices of the loops enclosing an (sub-)expression. We will refer to $i_0$ as the outermost enclosing loop. The notation $a_i$, therefore, indicates that the expression $a$ assume distinct values while iterating along the loops in $i$; its outermost loop is silently assumed to be $i_0$. 
+
 Rewrite rules for the ER are provided in Figure~\ref{fig:rewrite-rules}; obvious rules are omitted for brevity. Conceptually, the ER visits the expression tree from the root, which is the outermost operation, and applies the transformations dictated by the rewrite rules. As an example, one can try instantiating the rules in the code of Figures~\ref{fig:original-code} and~\ref{fig:toexpand-code}; eventually, the optimized code in Figures~\ref{fig:factorized-code} and~\ref{fig:expanded-2-code} is obtained, respectively. 
+
 
 \begin{figure}
 \small
 \centering
-\begin{spacing}{1.5}
+\begin{spacing}{1.35}
 \begin{align*}
+~~~~~~&Rule &~~&~~~~~~~~~~~~~~~~~~~~~~~~Precondition \\
 [a_i \cdot b_j]_{(\sigma, G)} &\rightarrow [a_i \cdot b_j]_{(\sigma, G)} ~~&~~&\\
 [(a_i + b_j)\cdot \alpha]_{(\sigma, G)} &\rightarrow [(a_i \cdot \alpha + b_j \cdot \alpha)]_{(\sigma, G)} ~~&~~ &\\
 [a_i \cdot b_j + a_i \cdot c_j]_{(\sigma, G)} &\rightarrow [(a_i \cdot (b_j + c_j)]_{(\sigma, G)} ~~&~~ &\\
-[a_i + b_i]_{(\sigma, G)} &\rightarrow [t_i]_{(\sigma', G')} ~~&~~ &t_i = \sigma[\sfrac{t_i'}{a_i + b_i}], G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, b_i)\rbrace)\\
-[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma[\sfrac{\sigma[\sfrac{\perp}{a_i}]}{a_i \cdot \alpha}], a_i \notin in(G), \\
+[a_i + b_i]_{(\sigma, G)} &\rightarrow [t_i]_{(\sigma', G')} ~~&~~ &t_i = \sigma_{i_0}[\sfrac{t_i'}{a_i + b_i}], G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, b_i)\rbrace)\\
+[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma_{i_0}[\sfrac{\sigma[\sfrac{\perp}{a_i}]}{a_i \cdot \alpha}], a_i \notin in(G), \\
 ~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
-[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma[\sfrac{t_i'}{a_i \cdot \alpha}], a_i \in in(G), \\
+[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma_{i_0}[\sfrac{t_i'}{a_i \cdot \alpha}], a_i \in in(G), \\
 ~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
 \end{align*}
 \end{spacing}
@@ -455,20 +460,56 @@ Experiments were run on a single core of an Intel architecture, a Sandy Bridge I
 
 In Figure~\ref{fig:helmholtz}, ...
 
-%\begin{figure}[t]
-%\tiny
-%\centering     
-%\subfigure[]{\includesvg[scale=0.25]{perf-results/FiredrakeFormsCoffee_bar_q1_p1_formhelmholtz_speedup}}
-%\subfigure[]{\includesvg[scale=0.25]{perf-results/FiredrakeFormsCoffee_bar_q1_p2_formhelmholtz_speedup}}
-%\subfigure[]{\includesvg[scale=0.25]{perf-results/FiredrakeFormsCoffee_bar_q1_p3_formhelmholtz_speedup}}
-%\subfigure[]{\includesvg[scale=0.25]{perf-results/FiredrakeFormsCoffee_bar_q1_p4_formhelmholtz_speedup}}
-%\caption{Helmholtz results.}\label{fig:helmholtz}
-%\end{figure}
+\begin{figure}[t]
+\centering     
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q1_p1_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q1_p2_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q1_p3_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q1_p4_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q2_p1_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q2_p2_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q2_p3_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q2_p4_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q3_p1_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q3_p2_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q3_p3_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q3_p4_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q4_p1_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q4_p2_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q4_p3_formhelmholtz_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/helmholtz/FiredrakeFormsCoffee_bar_q4_p4_formhelmholtz_speedup}}
+\caption{Helmholtz results.}\label{fig:helmholtz}
+\end{figure}
+
+In Figure~\ref{fig:elasticity}, ...
+
+\begin{figure}[t]
+\centering     
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q1_p1_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q1_p2_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q1_p3_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q1_p4_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q2_p1_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q2_p2_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q2_p3_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q2_p4_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q3_p1_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q3_p2_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q3_p3_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q3_p4_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q4_p1_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q4_p2_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q4_p3_formelasticity_speedup}}
+\subfigure{\includegraphics[scale=0.17]{perf-results/elasticity/FiredrakeFormsCoffee_bar_q4_p4_formelasticity_speedup}}
+\caption{Elasticity results.}\label{fig:elasticity}
+\end{figure}
 
 % Mass DGEMM utile explicit method etc
 
 \section{Conclusions}
 \label{sec:conclusions}
+
+We have presented ...
 
 
 % Bibliography
