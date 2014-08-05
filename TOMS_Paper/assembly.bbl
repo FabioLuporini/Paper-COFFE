@@ -95,6 +95,17 @@
 \url{http://dx.doi.org/10.1007/978-3-642-23099-8}}
 
 
+\bibitem[\protect\citeauthoryear{Luporini, Varbanescu, Rathgeber, Bercea,
+  Ramanujam, Ham, and Kelly}{Luporini et~al\mbox{.}}{2014}]%
+        {Luporini}
+{Fabio Luporini}, {Ana~Lucia Varbanescu}, {Florian Rathgeber}, {Gheorghe-Teodor
+  Bercea}, {J. Ramanujam}, {David~A. Ham}, {and} {Paul H.~J. Kelly}. 2014.
+\newblock \showarticletitle{COFFEE: an Optimizing Compiler for Finite Element
+  Local Assembly}.
+\newblock  (2014).
+\newblock
+
+
 \bibitem[\protect\citeauthoryear{Olgaard and Wells}{Olgaard and Wells}{2010}]%
         {quadrature1}
 {Kristian~B. Olgaard} {and} {Garth~N. Wells}. 2010.
