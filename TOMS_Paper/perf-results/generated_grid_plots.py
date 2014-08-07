@@ -28,47 +28,88 @@ for info, vals in sorted(timings.items()):
     q, p, name, opt = info
     _timings[(q, p)][opt] = vals
     
-fig = plt.figure()
-grid = Grid(fig, rect=111, nrows_ncols=(4, 4), axes_pad=0.25, label_mode='L')
-for ax, plot_times in zip(grid, sorted(_timings.items())):
-    info, vals = plot_times
-    q, p = info
-    base = vals[(0, False, False, False)]
-    ffco = vals[(0, False, False, True)]
-    licm = vals[(1, True, False, False)]
-    auto = vals[(0, False, True, False)]
+if sys.argv[1] in ['helmholtz', 'poisson', 'elasticity']:
+    fig = plt.figure()
+    grid = Grid(fig, rect=111, nrows_ncols=(4, 4), axes_pad=0.25, label_mode='L')
+    for ax, plot_times in zip(grid, sorted(_timings.items())):
+        info, vals = plot_times
+        q, p = info
+        base = vals[(0, False, False, False)]
+        ffco = vals[(0, False, False, True)]
+        licm = vals[(1, True, False, False)]
+        auto = vals[(0, False, True, False)]
 
-    # Plot parameters
-    N = 3  # We show speedup of ffco, licm, and auto over base
-    ind = np.arange(N)  # the x locations for the groups
-    width = 0.15  # the width of the bars
-    fontsize = 15
+        # Plot parameters
+        N = 3  # We show speedup of ffco, licm, and auto over base
+        ind = np.arange(N)  # the x locations for the groups
+        width = 0.15  # the width of the bars
+        fontsize = 15
 
-    # Compute speed ups
-    nf0 = (base['nf 0']/ffco['nf 0'], base['nf 0']/licm['nf 0'], base['nf 0']/auto['nf 0'])
-    nf1 = (base['nf 1']/ffco['nf 1'], base['nf 1']/licm['nf 1'], base['nf 1']/auto['nf 1'])
-    nf2 = (base['nf 2']/ffco['nf 2'], base['nf 2']/licm['nf 2'], base['nf 2']/auto['nf 2'])
-    nf3 = (base['nf 3']/ffco['nf 3'], base['nf 3']/licm['nf 3'], base['nf 3']/auto['nf 3'])
+        # Compute speed ups
+        nf0 = (base['nf 0']/ffco['nf 0'], base['nf 0']/licm['nf 0'], base['nf 0']/auto['nf 0'])
+        nf1 = (base['nf 1']/ffco['nf 1'], base['nf 1']/licm['nf 1'], base['nf 1']/auto['nf 1'])
+        nf2 = (base['nf 2']/ffco['nf 2'], base['nf 2']/licm['nf 2'], base['nf 2']/auto['nf 2'])
+        nf3 = (base['nf 3']/ffco['nf 3'], base['nf 3']/licm['nf 3'], base['nf 3']/auto['nf 3'])
 
-    # Draw the bars
-    nf0_bars = ax.bar(ind, nf0, width)
-    nf1_bars = ax.bar(ind+width, nf1, width, color=plt.rcParams['axes.color_cycle'][2])
-    nf2_bars = ax.bar(ind+2*width, nf2, width, color=plt.rcParams['axes.color_cycle'][3])
-    nf3_bars = ax.bar(ind+3*width, nf3, width, color=plt.rcParams['axes.color_cycle'][4])
+        # Draw the bars
+        nf0_bars = ax.bar(ind, nf0, width)
+        nf1_bars = ax.bar(ind+width, nf1, width, color=plt.rcParams['axes.color_cycle'][2])
+        nf2_bars = ax.bar(ind+2*width, nf2, width, color=plt.rcParams['axes.color_cycle'][3])
+        nf3_bars = ax.bar(ind+3*width, nf3, width, color=plt.rcParams['axes.color_cycle'][4])
 
-    # Plot
-    ax.set_title('p = %d' % p, fontsize=fontsize)
-    ax.set_ylabel('q = %d' % q, fontsize=fontsize)
-    ax.set_xticks(ind+2*width)
-    ax.set_xticklabels(('ffc', 'fix', 'auto'), fontsize=fontsize-2)
-    ax.axhline(y=1, color='black', linestyle='--', linewidth=0.75)
-    if q > 1:
-       ax.title.set_visible(False)
+        # Plot
+        ax.set_title('p = %d' % p, fontsize=fontsize)
+        ax.set_ylabel('q = %d' % q, fontsize=fontsize, color='black')
+        ax.set_xticks(ind+2*width)
+        ax.set_xticklabels(('ffc', 'fix', 'auto'), fontsize=fontsize-2)
+        ax.grid(axis='x')
+        ax.axhline(y=1, color='black', linestyle='--', linewidth=0.75)
+        if q > 1:
+           ax.title.set_visible(False)
 
-    # Legend
+    plt.legend((nf0_bars, nf1_bars, nf2_bars, nf3_bars), ['nf0', 'nf1', 'nf2', 'nf3'],
+                bbox_to_anchor=(-1.62, -1.20, 0.95, 1), fancybox=True, ncol=4, prop={'size':6})
+    plt.tight_layout()
+    plt.show()
+elif sys.argv[1] in ['hyperelasticity']:
+    fig = plt.figure()
+    grid = Grid(fig, rect=111, nrows_ncols=(4, 4), axes_pad=0.25, label_mode='L')
+    for ax, plot_times in zip(grid, sorted(_timings.items())):
+        info, vals = plot_times
+        q, p = info
+        base = vals[(0, False, False, False)]
+        ffco = vals[(0, False, False, True)]
+        licm = vals[(1, True, False, False)]
+        auto = vals[(0, False, True, False)]
 
-plt.legend((nf0_bars, nf1_bars, nf2_bars, nf3_bars), ['nf0', 'nf1', 'nf2', 'nf3'],
-            bbox_to_anchor=(-1.62, -1.20, 0.95, 1), fancybox=True, shadow=True, ncol=4,
-            prop={'size':6})
-plt.tight_layout()
-plt.show()
+        # Plot parameters
+        N = 3  # We show speedup of ffco, licm, and auto over base
+        ind = np.arange(N)  # the x locations for the groups
+        width = 0.15  # the width of the bars
+        fontsize = 15
+
+        # Compute speed ups
+        nf0 = (base['nf 0']/ffco['nf 0'], base['nf 0']/licm['nf 0'], base['nf 0']/auto['nf 0'])
+        nf1 = (base['nf 1']/ffco['nf 1'], base['nf 1']/licm['nf 1'], base['nf 1']/auto['nf 1'])
+
+        # Draw the bars
+        nf0_bars = ax.bar(ind, nf0, width)
+        nf1_bars = ax.bar(ind+width, nf1, width, color=plt.rcParams['axes.color_cycle'][2])
+
+        # Plot
+        ax.set_title('p = %d' % p, fontsize=fontsize)
+        ax.set_ylabel('q = %d' % q, fontsize=fontsize, color='black')
+        ax.set_xticks(ind+width)
+        ax.set_xticklabels(('ffc', 'fix', 'auto'), fontsize=fontsize-2)
+        ax.grid(axis='x')
+        ax.axhline(y=1, color='black', linestyle='--', linewidth=0.75)
+        if q > 1:
+           ax.title.set_visible(False)
+
+    plt.legend((nf0_bars, nf1_bars), ['nf0', 'nf1'],
+                bbox_to_anchor=(-1.85, -1.20, 0.95, 1), fancybox=True, ncol=4, prop={'size':6})
+    plt.tight_layout()
+    plt.show()
+else:
+    print "Unrecognized problem name, exiting..."
+    sys.exit(0)
