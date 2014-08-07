@@ -410,13 +410,13 @@ where $x0, x1, y0, y1, ...$ are tabulated basis functions or vector-expanded tem
 % 
 \subsection{Model-driven Dynamic Autotuning}
 \label{sec:autotune}
-We have demonstrated in~\cite{Luporini} that an optimal set of code transformations does not exist. What sequence of transformations applying to a problem to optimize its performance depends on a broad range of factors, including mathematical structure of the input form, polynomial order of employed function spaces, presence of pre-multiplying functions, and, of course, the characteristics of the underlying architecture. 
+We have demonstrated in~\cite{Luporini} that determining the sequence of transformations that  maximizes the performance of a problem requires investigating a broad range of factors, including mathematical structure of the input form, polynomial order of employed function spaces, presence of pre-multiplying functions, and, of course, the characteristics of the underlying architecture. 
 
-In~\cite{Luporini}, we proposed a simple cost model that COFFEE could use to choose, given a problem, the transformations that were likely to maximize the performance. By having added a significant number of options to the set of possible optimizations, the selection problem is now far more challenging. The sole Expression Rewriter, for instance, could apply rewrite rules up to a set of pre-established depths, leading to the generation of many possible code variants.
+In~\cite{Luporini}, we proposed a simple cost model to select, for a given a problem, the optimal combination of transformations. In this paper, we have added a significant number of options to the set of possible optimizations, so the selection problem is now far more challenging. The sole Expression Rewriter, for instance, could generate many possible code variants by applying rewrite rules to different extents. We found difficult extending the cost model to effectively cover such a large search space. 
 
-We tackle this problem by compiler autotuning. For each problem, not only does it allow to determine the best combination of transformations out of the set presented so far, also it enables exploring parametric low-level optimizations, such as loop unroll, unroll-and-jam, and interchange, by trying multiple unroll factors and loop permutations. By leveraging the cost model defined in our previous study, domain-awareness, and a set of heuristics, we manage to keep the autotuner overhead at a minimum, whilst achieving significant speed ups over the purely cost-model-based implementation. In particular, our autotuner usually requires order of seconds to determine the fastest kernel implementation, a negligible overhead when it comes to iterate over real-life unstructured meshes, which can contain up to trillions of elements (e.g. ~\cite{Rossinelli2013}).
+We tackle the optimization selection problem by compiler autotuning. Not only does it allow to determine the best combination of transformations out of the set presented so far, also it enables exploring parametric low-level optimizations, such as loop unroll, unroll-and-jam, and interchange, by trying different unroll factors and loop permutations. By leveraging the cost model defined in our previous study, domain-awareness, and a set of heuristics, we manage to keep the autotuner overhead at a minimum, whilst achieving significant speed ups over the purely cost-model-based implementation. In particular, our autotuner usually requires order of seconds to determine the fastest kernel implementation, a negligible overhead when it comes to iterate over real-life unstructured meshes, which can contain up to trillions of elements (e.g. ~\cite{Rossinelli2013}).
 
-The structure of the autotuner is outlined in Figure~\ref{fig:autotuner}. COFFEE analyzes the input problem and decides what variants it is worth testing, as described later. It then provides the autotuner with all of the possible variants, in the form of abstract syntax trees. The autotuner is a template-based code generator. By inspecting an abstract syntax tree, it determines how to generate ``wrapping'' code that, repeatedly in a \emph{while} loop executed a pre-established amount of time (order of milliseconds), 1) initializes kernel's input variables with fictitious values and 2) calls the kernel. At the exit of the \emph{while} loop, the times the kernel was invoked is recorded. Eventually, the variant executing the largest number of iterations is designated as the fastest implementation. Suitable compiler directives are used to prevent inlining of all function calls: this avoids the situation in which some variants are inlined and some are not, which would fake the autotuner's output. 
+COFFEE analyzes the input problem and decides what variants it is worth testing, as described later. Each variant is obtained by requesting specific transformations to the Expression Rewriter and the Code Specializer. The possible variants are then provided to the autotuner, in the form of abstract syntax trees. The autotuner is a template-based code generator. By inspecting an abstract syntax tree, it determines how to generate ``wrapping'' code that 1) initializes kernel's input variables with fictitious values and 2) calls the kernel. These two points are executed repeatedly in a \emph{while} loop for a pre-established amount of time (order of milliseconds). At the exit of the \emph{while} loop, the times the kernel was invoked is recorded. Eventually, the variant executed the largest number of iterations is designated as the fastest implementation. Suitable compiler directives are used to prevent inlining of all function calls: this avoids the situation in which some variants are inlined and some are not, which would fake the autotuner's output. 
 
 The autotuning process is dynamic: depending on the complexity of the input problem, more or less variants are tried. General heuristics, which can be considered a revisited version of those presented in~\cite{nek5000}, are applied
 \begin{itemize}
@@ -424,13 +424,13 @@ The autotuning process is dynamic: depending on the complexity of the input prob
 \item The unroll factors must divide the loop bounds evenly to avoid the introduction of reminder (scalar) loops.
 \item The innermost loop is never explicitly unrolled. This is because we expect auto-vectorization along this loop, so memory accesses should be kept unit-stride. 
 \end{itemize}
-Also, the following heuristics, which capture properties of our computational domain, are used
+The autotuner is also domain-aware: the following heuristics, which capture properties of the computational domain, are exploited
 \begin{itemize}
-\item When both test and trial functions derive from the same function space, the lengths of their corresponding loops are identical. In this case, since for the employed storage layout the memory accesses are symmetrical along these two loops, their interchange is pruned from the search space. 
-\item In general, if relatively high polynomial orders are employed, the loop nest is larger. In these cases, in order to avoid testing too many unroll factors, we impose a bound $X$ on the loop nest's overall unroll factor, which we found empirically. For example, the sum of the unroll factors of all outer loops cannot exceed $X$.
-\item On the other hand, if the polynomial order is low, i.e. for smaller loop nests, we prune variants that we know will be low-performing, e.g. those resorting to BLAS.
-\item We select two levels of expression rewriting. In the ``base'' level, generalized loop-invariant code motion only is applied. This means that only a subset of the rewrite rules exposed in~\ref{fig:rewrite-rules} are applicable. In the ``aggressive'' level, all of the rewrite rules are applied. 
-\item For the expression splitting optimization described in~\cite{Luporini} and summarized in Section~\ref{sec:summary-opts}, we test only only three split factors, namely 1, 2, 4. Also, if the input problem uses mixed function spaces, the iteration space is already split by the Expression Rewriter to avoid computation over zero-columns; in these cases, we do not further apply expression splitting.
+\item The lengths of test and trial functions loops are identical in some cases, for example when they originate from the same function space. In such cases, since for the employed storage layout the memory access pattern is symmetrical along these two loops, we prune their interchange from the search space. 
+\item The larger is the polynomial order of the method, the larger is the assembly loop nest. In these cases, we impose a bound on the loop nest's overall unroll factor (which we found empirically) to avoid uselessly testing too many unroll factors. 
+\item On the other hand, if the polynomial order is low, i.e. when the loop nest is small, we prune variants that we know will be low-performing, e.g. those resorting to BLAS.
+\item We select two levels of expression rewriting. In the ``base'' level, only generalized loop-invariant code motion, as described in~\cite{Luporini}, is applied. This means that only a subset of the rewrite rules exposed in~\ref{fig:rewrite-rules} will be considered. In the ``aggressive'' level, all of the rewrite rules are applied. Many other trade-offs, which we do not explore, would be feasibile, however. 
+\item For the expression splitting optimization described in~\cite{Luporini} and summarized in Section~\ref{sec:summary-opts}, we test only three split factors, namely 1, 2, 4. Also, if the input problem uses mixed function spaces, the iteration space is already split by the Expression Rewriter to avoid computation over zero-columns; in these cases, we do not further apply expression splitting.
 \item Based on the cost model, the padding and data alignment optimization is always applied. 
 \end{itemize}
 
@@ -444,14 +444,31 @@ Also, the following heuristics, which capture properties of our computational do
 
 Experiments were run on a single core of an Intel architecture, a Sandy Bridge I7-2600 CPU, running at 3.4GHz, 32KB L1 cache and 256KB L2 cache. The Intel \texttt{icc 14.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost, -xAVX, -ip}.
 
-...TODO... Problems chosen...
+We analyze the run-time performance of four fundamental real problems, which comprise the differential operators that are most common in finite element methods. In particular, our study includes problems based upon the Helmholtz and Poisson equations, as well as elasticity- and hyperelasticity-like forms. The Unified Form Language code for these forms is available at~\cite{Code-location}. 
 
-...TODO... We don't compare to tensor contraction by transitivity on olegaards work 
+We evaluate the effect of three sets of optimizations over the original code; that is, the code generated by the FEniCS Form Compiler when no optimizations are applied. In particular, we analyze the impact of the FEniCS Form Compiler's built-in optimizations (henceforth \texttt{ffc}), the impact of COFFEE's transformations as presented in~\cite{Luporini} (referred to as \texttt{fix}, in the following), and the effect of Expression Rewriting and Code Specialization as described in this work (henceforth \texttt{auto}, to denote the use of autotuning). This way, we also highlight the advances achieved over our previous work. 
 
-\subsection{Results for Forms of Increasing Complexity}
+The values that we report include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh has been made small enough to fit the L3 cache, so as to minimize the noise due to any operations that are not part of the element matrix evaluation itself. It has been discussed in many places already (e.g.~\cite{quadrature1}) that as the complexity of a form increseas, the cost of local assembly becomes dominant. All codes were executed in the context of the Firedrake framework.
 
-% Quadrature. Tensor. Quadrature <, >, = Tensor
+We do not compare to the FEniCS Form Compiler's tensor contraction mode~\cite{Kirby-FEM-opt} because of three reasons: first, in~\cite{quadrature1} it has been demonstrated the superiority of quadrature as the complexity of a form increases, so it would be superflous to repeat the same analysis. Second, our aim is to show the effect of low-level optimizations on the code, especially SIMD vectorization, which is not feasible in tensor mode. Third, tensor mode code generation fails due to hardware limitations in many of the test cases that we show below.
 
+We vary several aspects of each form, which follows the approach and the notation of~\cite{quadrature1} and~\cite{Francis}
+\begin{itemize}
+\item The polynomial order of basis functions, $q \in \lbrace1, 2, 3, 4\rbrace$
+\item The polynomial order of coefficient (also called pre-multiplying) functions, $p \in \lbrace1, 2, 3, 4\rbrace$
+\item The number of coefficient functions $nf \in \lbrace0, 1, 2, 3\rbrace$
+\end{itemize}
+On the other hand, other aspects are fixed 
+\begin{itemize}
+\item The space of both basis and coefficient functions is Lagrange
+\item The mesh is three-dimensional, made of tetrahedrons, for a total of 4374 cells
+\end{itemize}
+
+Each figure reported in the following is a grid of plots. Each grid has two axes: $p$ varies along the horizontal axis, while $q$ varies along the vertical axis. The top-left plot will show values for $q=1, p=1$; the plot on its right will be $q=1, p=2$ and so on. The diagonal of the grid shows plots for which both basis and coefficient functions originate from the same function space. 
+
+A plot reports speed-ups over non-optimized FEniCS-Form-Compiler-generated code. There are three groups of bars, each group referring to a particular version of the code (\texttt{ffc, fix, auto}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. Therefore, a grid can be read in many different ways, which allows us to make structured considerations on the effect of the various optimizations. 
+
+\subsection{Performance of Forms}
 In Figure~\ref{fig:helmholtz}, ...
 
 \begin{figure}[t]  
@@ -465,6 +482,23 @@ In Figure~\ref{fig:elasticity}, ...
 \includegraphics[scale=0.7]{perf-results/elasticity}
 \caption{Elasticity results.}\label{fig:elasticity}
 \end{figure}
+
+In Figure~\ref{fig:poisson}, ...
+
+\begin{figure}[t]  
+\includegraphics[scale=0.7]{perf-results/poisson}
+\caption{Poisson results.}\label{fig:poisson}
+\end{figure}
+
+In Figure~\ref{fig:hyperelasticity}, ...
+
+\begin{figure}[t]  
+\includegraphics[scale=0.7]{perf-results/hyperelasticity}
+\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
+\end{figure}
+
+\subsection{Details on the Autotuning Process}
+
 % Mass DGEMM utile explicit method etc
 
 \section{Conclusions}
