@@ -476,47 +476,57 @@ The four chosen forms allow us to perform an in-depth evaluation of different cl
 
 We first comment on results of general applicability. We note there is a trend of COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
 
+\paragraph{Helmholtz}
 \begin{figure}[t]  
 \includegraphics[scale=0.7]{perf-results/helmholtz}
 \caption{Helmholtz results.}\label{fig:helmholtz}
 \end{figure}
-
-
 The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$, as a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler's optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will comment on this in details in the next section.
 
+\paragraph{Elasticity}
 \begin{figure}[t]  
 \includegraphics[scale=0.7]{perf-results/elasticity}
 \caption{Elasticity results.}\label{fig:elasticity}
 \end{figure}
-
 Figure~\ref{fig:elasticity} illustrates results for the Elasticity problem. This form uses vector-valued spaces for the basis functions, so here transformations avoiding computation over zero-valued columns are of key importance. The \texttt{ffc} set of optimizations leads to notable improvements over the original code at $q=1$. The use of inderection arrays allows to phisically eliminate zero-valued columns at code generation time; as a consequence, different tabulated basis functions are merged into a single array. Therefore, despite the execution being purely scalar because of indirection arrays, the reduction in arithmetic intensity and register pressure imply improvement in performance. Nevertheless, \texttt{auto} remains in general the best choice, with gains over \texttt{ffc} that are wider as $p$ and $nf$ increase. 
 
 For $q \geq 2$, in \texttt{ffc} the lack of SIMD vectorization counterbalances the decrease in the number of floating point operations, leading to speed ups over the original code that only occasionally exceeds 1$\times$. On the other hand, the successful application of the zero-avoidance optimization while preserving code specialization plays a key role for \texttt{auto}, resulting in much higher performance code especially at $q=2$ and $q=3$. 
 
 It is worth noting that speed ups of \texttt{auto} over \texttt{fix} decrease at $q=4$, particularly for low values of $p$. As we will discuss in Section~\ref{sec:auto-analysis}, this is because at $q=4$ the vector-register tiling transformation (in combination with loop unroll-and-jam) leads to the highest performance. In principle, vector-register tiling can be used in combination to the zero-avoidance technique; however, due to mere technical limitations, this is currently not supported in COFFEE. Once solved, we expect much higher speed ups in the $q=4$ regime as well.
 
+% TODO: mention aggressive expression rewriting somewhere
 
+\paragraph{Poisson}
 \begin{figure}[t]  
 \includegraphics[scale=0.7]{perf-results/poisson}
 \caption{Poisson results.}\label{fig:poisson}
 \end{figure}
 
-In Figure~\ref{fig:poisson}, ...
+In Figure~\ref{fig:poisson} we report speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the original code for the Poisson form. We note that, as a general trend, \texttt{ffc} exhibits drops in performance as $nf$ increases, notably when $nf=3$, for any values of $q$ and $p$. This is a consequence of the inherent complexity of the generated code. The way \texttt{ffc} performs loop-invariant code motion leads to the pre-computation of integration-dependent terms at the level of the integration loop, which are characterized by higher arithmetic intensity and redundant computation as $nf$ increases. Moreover, the absence of vectorization is another limiting factor.
 
+The \texttt{auto} variant generally shows the best performance. Significant improvements over \texttt{fix} are also achieved, notably as $q$, $p$ and $nf$ increase. As clarified in the next section, this is always due to a more aggressive expression rewriting in combination with the technique to avoid computation over the zero-valued columns induced by vector-valued function spaces.
+
+
+\paragraph{Hyperelasticity}
 \begin{figure}[t]  
 \includegraphics[scale=0.7]{perf-results/hyperelasticity}
 \caption{Hyperelasticity results.}\label{fig:hyperelasticity}
 \end{figure}
 
-In Figure~\ref{fig:hyperelasticity}, ...
+Speed ups for the hyperelasticity form are shown in Figure~\ref{fig:hyperelasticity}. Experiments for $nf \geq 3$ could not be executed because of FEniCS-Form-Compiler's technical limitations. 
+
+For \texttt{auto}, massive speed ups for $q \geq 2$ must mainly be ascribed to aggressive and successful expression writing. Hyperelasticity problems are really compute-intensive, with thousands of operations being performed, so reductions in redundant and useless computation are crucial. Complex forms like hyperelasticity would benefit from further ``specialized'' optimizations: for example, it is a known technical limitation of COFFEE that, in some circumstances, less temporaries could (should) be generated and that hoisted code could (should) be suitably distributed over different loops to minimize register pressure (e.g. COFFEE could carefully apply loop fission for obtaining significantly better register usage). We expect to obtain considerably faster code once such optimizations will be incorporated. 
+
+In the regime $q \geq 2$ and $nf=1$, peformance improvements are less pronounced moving from $p=1$ to $p=2$, although still significant; in particular, we notice a drop at $p=2$, followed by a raise up to $p=4$. It is worth observing that this effect is common to all set of optimizations. The hypothesis is that this is due to the way coefficient functions are evaluated at quadrature points (identical in all configurations), which cannot be easily vectorized unless a change in storage layout and loops order is implemented in the code (abstract syntax tree) generator on top of COFFEE. 
 
 
 \subsection{Details on the Autotuning Process}
 \label{sec:auto-analysis}
 
-% selected variants
+% selected variants (tables)
 % cost of autotuner
 % cached autotuning
+% show the difference of ``aggressive'' vs ``base'' expression rewriting
 
 \section{Conclusions}
 \label{sec:conclusions}
