@@ -547,12 +547,12 @@ Table~\ref{table:autotuner-output} shows the number a given transformation has b
 \cline{1-10}
 problem & \specialcell{number of\\variants} & \specialcell{rewrite\\strategy} & \specialcell{zero-valued columns\\avoidance} & \specialcell{precompute\\integration terms} & \specialcell{padding\\data alignment} & split & \specialcell{vector-register\\tiling} & unroll & BLAS \\
 \cline{1-10}
-\texttt{helmholtz} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
-\texttt{mass} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
-\texttt{elasticity} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
-\texttt{poisson} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
-\texttt{mixed poisson} & 40 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
-\texttt{hyperelasticity} & 32 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{helmholtz} & 64 & aggressive & 0 & 0 & all & 8 & 17 & 15 & 0 \\
+\texttt{mass} & 64 & base & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{elasticity} & 64 & aggressive & 39 & 0 & all & 0 & 11 & 0 & 2 \\
+\texttt{poisson} & 64 & aggressive & 50 & 0 & all & X & X & 1 & 0 \\
+\texttt{mixed poisson} & X & base & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{hyperelasticity} & 32 & aggressive & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
 \cline{1-10}
 \end{tabulary}
 }
