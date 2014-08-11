@@ -1,55 +1,60 @@
-This is BibTeX, Version 0.99c (TeX Live 2009/Debian)
+This is BibTeX, Version 0.99d (TeX Live 2012)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: assembly.aux
 The style file: ACM-Reference-Format-Journals.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
+Warning--I didn't find a database entry for "Code-location"
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Warning--require articleno with numpages field in Bana
 Warning--require articleno with numpages field in Kirby-FEM-opt
-Warning--require articleno with numpages field in SLP
+Warning--require articleno with numpages field in Klockner
 Warning--empty address in Fenics
 Warning--no journal in Luporini
 Warning--no number and no volume in Luporini
 Warning--page numbers missing in both pages and numpages fields in Luporini
 Warning--page numbers missing in both pages and numpages fields in Francis
 Warning--require articleno with numpages field in nek5000
-You've used 10 entries,
+You've used 11 entries,
             5290 wiz_defined-function locations,
-            1308 strings with 16746 characters,
-and the built_in function-call counts, 10205 in all, are:
-= -- 1213
-> -- 553
+            1327 strings with 17059 characters,
+and the built_in function-call counts, 11644 in all, are:
+= -- 1505
+> -- 608
 < -- 3
-+ -- 176
-- -- 196
-* -- 785
-:= -- 1246
-add.period$ -- 51
-call.type$ -- 10
-change.case$ -- 79
-chr.to.int$ -- 10
-cite$ -- 18
-duplicate$ -- 756
-empty$ -- 545
-format.name$ -- 232
-if$ -- 2326
++ -- 192
+- -- 208
+* -- 893
+:= -- 1367
+add.period$ -- 56
+call.type$ -- 11
+change.case$ -- 88
+chr.to.int$ -- 11
+cite$ -- 20
+duplicate$ -- 836
+empty$ -- 604
+format.name$ -- 248
+if$ -- 2737
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 34
-newline$ -- 132
-num.names$ -- 80
-pop$ -- 269
+missing$ -- 37
+newline$ -- 144
+num.names$ -- 88
+pop$ -- 277
 preamble$ -- 1
-purify$ -- 129
+purify$ -- 143
 quote$ -- 0
-skip$ -- 206
+skip$ -- 237
 stack$ -- 0
-substring$ -- 651
-swap$ -- 59
+substring$ -- 773
+swap$ -- 76
 text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 134
-warning$ -- 8
-while$ -- 69
+type$ -- 148
+warning$ -- 9
+while$ -- 72
 width$ -- 0
-write$ -- 230
-(There were 8 warnings)
+write$ -- 248
+(There were 10 warnings)

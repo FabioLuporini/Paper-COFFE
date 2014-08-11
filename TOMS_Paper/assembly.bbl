@@ -32,6 +32,19 @@
 \ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
 \ifx \showURL      \undefined \def \showURL       #1{#1}          \fi
 
+\bibitem[\protect\citeauthoryear{Bana, Plaszewski, and Maciol}{Bana
+  et~al\mbox{.}}{2014}]%
+        {Bana}
+{Krzysztof Bana}, {Przemyslaw Plaszewski}, {and} {Pawel Maciol}. 2014.
+\newblock \showarticletitle{Numerical Integration on GPUs for Higher Order
+  Finite Elements}.
+\newblock {\em Comput. Math. Appl.\/} {67}, 6 (April 2014), 1319--1344.
+\newblock
+\showISSN{0898-1221}
+\showDOI{%
+\url{http://dx.doi.org/10.1016/j.camwa.2014.01.021}}
+
+
 \bibitem[\protect\citeauthoryear{{Firedrake contributors}}{{Firedrake
   contributors}}{2014}]%
         {firedrake-code}
@@ -55,6 +68,19 @@
 \url{http://dx.doi.org/10.1137/040607824}}
 
 
+\bibitem[\protect\citeauthoryear{Kl\"{o}ckner, Warburton, Bridge, and
+  Hesthaven}{Kl\"{o}ckner et~al\mbox{.}}{2009}]%
+        {Klockner}
+{A. Kl\"{o}ckner}, {T. Warburton}, {J. Bridge}, {and} {J.~S. Hesthaven}. 2009.
+\newblock \showarticletitle{Nodal Discontinuous Galerkin Methods on Graphics
+  Processors}.
+\newblock {\em J. Comput. Phys.\/} {228}, 21 (Nov. 2009), 7863--7882.
+\newblock
+\showISSN{0021-9991}
+\showDOI{%
+\url{http://dx.doi.org/10.1016/j.jcp.2009.06.041}}
+
+
 \bibitem[\protect\citeauthoryear{Knepley and Terrel}{Knepley and
   Terrel}{2013}]%
         {petsc-integration-gpu}
@@ -66,20 +92,6 @@
 \showISSN{0098-3500}
 \showDOI{%
 \url{http://dx.doi.org/10.1145/2427023.2427027}}
-
-
-\bibitem[\protect\citeauthoryear{Larsen and Amarasinghe}{Larsen and
-  Amarasinghe}{2000}]%
-        {SLP}
-{Samuel Larsen} {and} {Saman Amarasinghe}. 2000.
-\newblock \showarticletitle{Exploiting Superword Level Parallelism with
-  Multimedia Instruction Sets}. In {\em Proceedings of the ACM SIGPLAN 2000
-  Conference on Programming Language Design and Implementation} {\em (PLDI
-  '00)}. ACM, New York, NY, USA, 145--156.
-\newblock
-\showISBNx{1-58113-199-2}
-\showDOI{%
-\url{http://dx.doi.org/10.1145/349299.349320}}
 
 
 \bibitem[\protect\citeauthoryear{Logg, Mardal, Wells, et~al\mbox{.}}{Logg
