@@ -18,6 +18,9 @@
 \usepackage{subfigure}
 \usepackage{setspace}
 \usepackage{tabulary}
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
 \usepackage{lineno}
 \usepackage{xfrac}
 
@@ -251,7 +254,7 @@ In Figure~\ref{fig:coffee-outline}, we show where these transformations are logi
 \label{sec:expr-rewriting}
 As summarized in~\ref{sec:summary-opts}, loop-invariant code motion is the key to reduce the computational intensity of an assembly expression. The Expression Rewriter (henceforth ER) that we have designed and implemented in COFFEE enhances this technique by making two steps forward, which allow more redundant computation to be avoided. 
 
-Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many possibilities of rewriting an expression, and the search space can quickly become too big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewriting-rules}, we formalize the set of rewrite rules that COFFEE follows to transform an expression. 
+Firstly, exploiting arithmetic operations properties like associativity, distributivity, and commutativity, it manipulates the original expression to expose more opportunities to the code hoister. There are many possibilities of rewriting an expression, and the search space can quickly become too big. Therefore, one problem we solve is finding a sufficiently simple yet systematic way of maximizing the amount of loop-invariant operations in an expression. In Section~\ref{sec:rewrite-rules}, we formalize the set of rewrite rules that COFFEE follows to transform an expression. 
 
 Secondly, the ER re-structures the loop nest so as to eliminate arithmetic operations over array columns that are statically known to be zero-valued. Zero columns in tabulated basis functions appear, for example, when taking derivatives on a reference element or when using mixed elements. A code transformation eliminating floating point operations on zeros was presented in~\cite{quadrature1}; however, the issue with it is that by using indirection arrays in the generated code, it breaks many of the optimizations that can be applied at the Code Specializer level, including SIMD vectorization. In Section~\ref{sec:zeros}, we show a novel approach to avoiding computation on zeros based on symbolic execution.
 
@@ -268,7 +271,7 @@ Secondly, the ER re-structures the loop nest so as to eliminate arithmetic opera
 %
 
 \subsection{Objectives of the Expression Rewriter}
-\label{sec:rewriting-rules}
+\label{sec:expr-rewriter-obj}
 
 \begin{figure}[t]
 \tiny
@@ -390,6 +393,7 @@ We achieve our goal by symbolic execution. The Expression Rewriter expects some 
 Code specialization provides a range of code transformations tailored to optimizing for instruction-level parallelism and register locality. As summarized in Section~\ref{sec:summary-opts} and described in~\cite{Luporini}, padding and data alignment, expression splitting, and outer-product vectorization, which is a domain-aware implementation of vector-register tiling, are examples of optimizations that the Code Specializer is capable of applying. In this paper, we enrich this set of transformations as explained in the following sections.
 
 \subsection{Padding and Data Alignment Revisited}
+\label{sec:padding}
 Padding and data alignment as described in~\cite{Luporini} must be refined for the case in which computation over zero-valued columns is avoided. We recall effective SIMD vectorization can be achieved only if the innermost loop size is a multiple of the vector register length. In the case of an AVX instruction set, for example, we want the size of innermost loops to be multiples of 4 (vector registers can fit up to four double-precision floats). Moreover, efficient loads and stores can be issued only if all of the involved arrays' base addresses are multiple of the vector register length. 
 
 Consider again the code in Figure~\ref{fig:withzeros-skipped-code}. The arrays in the loop nest $[j1,k1]$ can be padded and the right bound of loop \texttt{k1} can be safely increased to 8: eventually, values computed in the region $M[0:3][6:8]$ will be discarded. Then, by explicitly aligning arrays and using suitable pragmas (e.g. \texttt{$\#$pragma simd} for the Intel compiler), effective SIMD auto-vectorization can be obtained. 
@@ -401,7 +405,7 @@ Note that in some cases it is not even safe to increase loop bounds, since extra
 \subsection{Exposing Linear Alegbra Operations}
 In~\cite{Luporini}, we introduced the idea of transforming the element matrix evaluation into a sequence of calls to highly-optimized dense matrix-matrix multiply routines (henceforth DGEMM), for instance MKL or ATLAS BLAS. We compared COFFEE's optimizations with hand-written MKL-based kernels, showing how the small sizes of the involved arrays impair DGEMM routines, which are usually tuned for large arrays. The study was conducted only in the case of a specific Helmholtz problem. There are scenarios, however, in which tabulated basis functions sizes grow up to a point for which turning to BLAS may actually lead to better performance. For example, this can happen when relatively-high polynomial orders are used or if coefficients are present in the form, since they are both responsible for the size of tabulated basis functions. To explore these scenarios, we have developed an algorithm that reduces any assembly expression evaluation to a sequence of DGEMM calls. 
 
-Here, we informally provide the main steps of the algorithm. By fully applying the rewrite rules in Figure~\ref{fig:rewrite-rules}, an assembly expression is reduced to a summation, over each quadrature point, of outer products along the test and trial functions. Each outer product is then isolated, i.e. the assembly expression is split into chunks, each chunk representing an outer product over test and trial functions. Statements in the bodies of the surrounding loops (e.g. coefficients evaluation at a quadrature point, temporaries introduced by expression rewriting) are vector-expanded and hoisted completely outside of the loop nest, similarly to what we have described in Section~\ref{sec:rewriting-rules}. This renders perfect the loop nest; that is, there is no intervening code among the various loops. The element matrix evaluation has now become a sequence of dense matrix-matrix multiplies (transposition aside)
+Here, we informally provide the main steps of the algorithm. By fully applying the rewrite rules in Figure~\ref{fig:rewrite-rules}, an assembly expression is reduced to a summation, over each quadrature point, of outer products along the test and trial functions. Each outer product is then isolated, i.e. the assembly expression is split into chunks, each chunk representing an outer product over test and trial functions. Statements in the bodies of the surrounding loops (e.g. coefficients evaluation at a quadrature point, temporaries introduced by expression rewriting) are vector-expanded and hoisted completely outside of the loop nest, similarly to what we have described in Section~\ref{sec:expr-rewriter-obj}. This renders perfect the loop nest; that is, there is no intervening code among the various loops. The element matrix evaluation has now become a sequence of dense matrix-matrix multiplies (transposition aside)
 \begin{equation*}
 A_{jk} = \sum_{i} x_{0_{ij}} \cdot y_{0_{ik}} + \sum_{i} x_{1_{ij}} \cdot y_{1_{ik}} + ...
 \end{equation*}
@@ -449,10 +453,11 @@ We analyze the run-time performance of four fundamental real problems, which com
 We evaluate the \textit{speed ups} achieved by three sets of optimizations over the original code; that is, the code generated by the FEniCS Form Compiler when no optimizations are applied. In particular, we analyze the impact of the FEniCS Form Compiler's built-in optimizations (henceforth \texttt{ffc}), the impact of COFFEE's transformations as presented in~\cite{Luporini} (referred to as \texttt{fix}, in the following), and the effect of Expression Rewriting and Code Specialization as described in this work (henceforth \texttt{auto}, to denote the use of autotuning as described in Section~\ref{sec:autotune}). The \texttt{auto} values do not include the autotuner cost, which is commented aside in Section~\ref{sec:auto-analysis}. 
 
 %This way, we also highlight the advances achieved over our previous work. 
+%...TODO...: dire che i tempi sono la media di 3 runs
 
 The values that we report include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh has been made small enough to fit the L3 cache, so as to minimize the noise due to any operations that are not part of the element matrix evaluation itself. It has been discussed in many places already (e.g.~\cite{quadrature1}) that as the complexity of a form increseas, the cost of local assembly becomes dominant. All codes were executed in the context of the Firedrake framework.
 
-We do not compare to the FEniCS Form Compiler's tensor contraction mode~\cite{Kirby-FEM-opt} because of three reasons: first, in~\cite{quadrature1} it has been demonstrated the superiority of quadrature as the complexity of a form increases, so it would be superflous to repeat the same analysis. Second, our aim is to show the effect of low-level optimizations on the code, especially SIMD vectorization, which is not feasible in tensor mode. Third, tensor mode code generation fails due to hardware limitations in many of the test cases that we show below.
+We do not compare to the FEniCS Form Compiler's tensor contraction mode~\cite{Kirby-FEM-opt} because of three reasons: first, in~\cite{quadrature1} it has been demonstrated the superiority of quadrature as the complexity of a form increases, so it would be superfluous to repeat the same analysis. Second, our aim is to show the effect of low-level optimizations on the code, especially SIMD vectorization, which is not feasible in tensor mode. Third, tensor mode code generation fails due to hardware limitations in many of the test cases that we show below.
 
 We vary several aspects of each form, which follows the approach and the notation of~\cite{quadrature1} and~\cite{Francis}
 \begin{itemize}
@@ -472,6 +477,7 @@ A plot reports speed-ups over non-optimized FEniCS-Form-Compiler-generated code.
 
 
 \subsection{Performance of Forms}
+\label{sec:perf-results-forms}
 The four chosen forms allow us to perform an in-depth evaluation of different classes of optimizations for local assembly. We limit ourselves to analyzing the cost of computing element matrices, although all of the techniques presented in this paper are immediately extendible to the evaluation of local vectors. As anticipated, in the following we comment speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the non-optimized, FEniCS-Form-Compiler-generated code. 
 
 We first comment on results of general applicability. We note there is a trend of COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
@@ -523,9 +529,41 @@ In the regime $q \geq 2$ and $nf=1$, peformance improvements are less pronounced
 \subsection{Details on the Autotuning Process}
 \label{sec:auto-analysis}
 
+We first comment on the overhead of the autotuning process. In the context of Firedrake, the framework in which COFFEE is integrated, the autotuner is executed at run-time, once the local assembly kernels are provided by the FEniCS Form Compiler. Autotuning, therefore, introduces an overhead in the application execution time. For a given problem instance, such overhead originates from four sources: 1) creation of the various code variants; 2) generation of a C file containing such variants (as simple function calls, plus the ``main'' function that invokes the variants, in sequence); 3) compilation of the autotuning file; 4) execution. Of these four points, we note that: the cost of 4) is relatively small, because each variant's execution time is bound by an empirically-found value (e.g. some milliseconds). The cost of all four points is constrained by our heuristics to prune the search space, as described in Section~\ref{sec:autotune}. Moreover, for a given form and a given discretization, the autotuner needs to be executed only once, since its output is saved and reused for later assemblies. This implies that if the assembly occurs in a time stepping loop, or the same form is executed on a different mesh, or known quantities of the input problem are changed, then the assembly cost is rapidly amortized. Premised that, the most important thing remains that when working with real unstructured meshes - which are likely to be composed of millions of elements, leading to long-lasting assembly phases - the autotuner overhead practically becomes completely negligible. In our experience, and in particular in the four examined problems, the autotuning process lasted less than a minute in the majority of cases. Most often, it took less than thirty seconds. Rarely it needed more than a minute, specifically in the case of hyperelasticity; however, despite the inherent complexity of this form, we measured a peak of only 4 minutes for the extreme case $[q=4, p=4, nf=1]$, while 1.30 minutes were needed in the case $[q=1, p=1, nf=1]$. This analysis certifies that the autotuner overhead is definitely sustainable in real-world applications.
+
+In this paper and in~\cite{Luporini}, we have repeatedly claimed that different forms (and different discretizations) require distinct sets of transformations to reach close-to-peak performance. To demonstrate this, we now report details about the output of the autotuning process. We show that for the four examined forms - more specifically, for the 224 problem instances $[form, q, p, nf]$ illustrated in the previous figures - a plethora of optimization strategies have been selected by the autotuner. We also complement and strengthen our claim by showing the autotuner's output for two additional forms whose performance results, for brevity, were not shown in Section~\ref{sec:perf-results-forms}: a Mass and a Mixed Poisson problems. 
+
+Table~\ref{table:autotuner-output} shows the number a given transformation has been selected by the autotuner. To not hinder readability, the output has been grouped by form, rather than showing the selected optimization strategy for each $[form, q, p, nf]$. Values in the \texttt{rewrite strategy} column can either be \texttt{base} or \texttt{aggressive}, as explained in Section~\ref{sec:autotune}: in the former case, only generalized loop-invariant code motion in applied; in the latter case, the rewrite rules are recursively applied as extensive as possible. If the value of the column is \texttt{aggressive} (\texttt{base}) it means that in the majority of cases the \texttt{aggressive} (\texttt{base}) strategy prevailed on the \texttt{base} (\texttt{aggressive}) one. Precomputation of integration-dependent terms was explained in Section~\ref{sec:expr-rewriter-obj}. The \texttt{split} column refers to the expression splitting transformation (~\cite{Luporini}, and summary in Section~\ref{sec:summary-opts}). The \texttt{unroll} column indicates the application of explicit unrolling. Other columns are of obvious meaning. Values in the various columns illustrate the number of problem instances out of the total (column \texttt{mumber of variants}) in which an optimization was activated. Obviously, more transformations are typically used in combination in a same problem. 
+
+%In the table, we implicitly assume that padding and data alignment (Section~\ref{sec:padding}), as well as precomputation of integration-dependent terms (Section~\ref{sec:expr-rewriter-obj}) have always been applied.
+
+
+
+\newcommand{\autotuneroutput}{
+\tiny
+\begin{tabulary}{1.0\textwidth}{c|c|ccc|ccccc}
+\cline{3-10}
+\multicolumn{2}{c}{} & \multicolumn{3}{c|}{\texttt{expression rewriting}} & \multicolumn{5}{c}{\texttt{code specialization}} \\
+\cline{1-10}
+problem & \specialcell{number of\\variants} & \specialcell{rewrite\\strategy} & \specialcell{zero-valued columns\\avoidance} & \specialcell{precompute\\integration terms} & \specialcell{padding\\data alignment} & split & \specialcell{vector-register\\tiling} & unroll & BLAS \\
+\cline{1-10}
+\texttt{helmholtz} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{mass} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{elasticity} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{poisson} & 48 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{mixed poisson} & 40 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\texttt{hyperelasticity} & 32 & 1 & 2 & 3 & 1 & 2 & 3 & 4 & 5 \\
+\cline{1-10}
+\end{tabulary}
+}
+
+\begin{table*}[t]
+\tbl{Autotuner output.}{ \scriptsize \autotuneroutput }
+\label{table:autotuner-output}
+\end{table*}
+
+ 
 % selected variants (tables)
-% cost of autotuner
-% cached autotuning
 % show the difference of ``aggressive'' vs ``base'' expression rewriting
 
 \section{Conclusions}
