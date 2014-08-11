@@ -8,6 +8,7 @@ Database file #1: biblio.bib
 Warning--I didn't find a database entry for "Code-location"
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--require articleno with numpages field in Bana
+Warning--require articleno with numpages field in PLUTO
 Warning--require articleno with numpages field in Kirby-FEM-opt
 Warning--require articleno with numpages field in Klockner
 Warning--empty address in Fenics
@@ -16,45 +17,45 @@ Warning--no number and no volume in Luporini
 Warning--page numbers missing in both pages and numpages fields in Luporini
 Warning--page numbers missing in both pages and numpages fields in Francis
 Warning--require articleno with numpages field in nek5000
-You've used 11 entries,
+You've used 12 entries,
             5290 wiz_defined-function locations,
-            1327 strings with 17059 characters,
-and the built_in function-call counts, 11644 in all, are:
-= -- 1505
-> -- 608
+            1338 strings with 17408 characters,
+and the built_in function-call counts, 12802 in all, are:
+= -- 1628
+> -- 660
 < -- 3
-+ -- 192
-- -- 208
-* -- 893
-:= -- 1367
-add.period$ -- 56
-call.type$ -- 11
-change.case$ -- 88
-chr.to.int$ -- 11
-cite$ -- 20
-duplicate$ -- 836
-empty$ -- 604
-format.name$ -- 248
-if$ -- 2737
++ -- 210
+- -- 224
+* -- 978
+:= -- 1498
+add.period$ -- 61
+call.type$ -- 12
+change.case$ -- 96
+chr.to.int$ -- 12
+cite$ -- 22
+duplicate$ -- 940
+empty$ -- 675
+format.name$ -- 268
+if$ -- 3002
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 37
-newline$ -- 144
-num.names$ -- 88
-pop$ -- 277
+missing$ -- 42
+newline$ -- 154
+num.names$ -- 96
+pop$ -- 314
 preamble$ -- 1
-purify$ -- 143
+purify$ -- 156
 quote$ -- 0
-skip$ -- 237
+skip$ -- 265
 stack$ -- 0
-substring$ -- 773
-swap$ -- 76
+substring$ -- 873
+swap$ -- 87
 text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 148
-warning$ -- 9
-while$ -- 72
+type$ -- 162
+warning$ -- 10
+while$ -- 79
 width$ -- 0
-write$ -- 248
-(There were 10 warnings)
+write$ -- 270
+(There were 11 warnings)

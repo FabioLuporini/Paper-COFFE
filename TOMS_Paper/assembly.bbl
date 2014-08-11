@@ -45,6 +45,21 @@
 \url{http://dx.doi.org/10.1016/j.camwa.2014.01.021}}
 
 
+\bibitem[\protect\citeauthoryear{Bondhugula, Hartono, Ramanujam, and
+  Sadayappan}{Bondhugula et~al\mbox{.}}{2008}]%
+        {PLUTO}
+{Uday Bondhugula}, {Albert Hartono}, {J. Ramanujam}, {and} {P. Sadayappan}.
+  2008.
+\newblock \showarticletitle{A Practical Automatic Polyhedral Parallelizer and
+  Locality Optimizer}. In {\em Proceedings of the 2008 ACM SIGPLAN Conference
+  on Programming Language Design and Implementation} {\em (PLDI '08)}. ACM, New
+  York, NY, USA, 101--113.
+\newblock
+\showISBNx{978-1-59593-860-2}
+\showDOI{%
+\url{http://dx.doi.org/10.1145/1375581.1375595}}
+
+
 \bibitem[\protect\citeauthoryear{{Firedrake contributors}}{{Firedrake
   contributors}}{2014}]%
         {firedrake-code}
