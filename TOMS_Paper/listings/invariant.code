@@ -12,7 +12,7 @@ for (int i=0; i<I; ++i) {
   }
   for (int j=0; j<T; ++j)
     for (int k=0; k<T; ++k)
-      M[j][k] += ((T1[j]*A[i][k]*g)+
-                  ((A[i][k]/c)*A[i][j])+
+      M[j][k] += (((A[i][k]/c)*A[i][j])+
+                  (T1[j]*A[i][k]*g)+
 		  (T2[k]*A[i][j]*f))*det*W[i];
 }
