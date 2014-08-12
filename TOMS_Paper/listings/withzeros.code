@@ -1,6 +1,3 @@
-
-
-
 void burgers(double M[6][6], 
              double **coordinates,
              double **coeff0) {
