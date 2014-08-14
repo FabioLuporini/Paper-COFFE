@@ -66,15 +66,7 @@ Paul H.J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-Abstract goes here
-%
-%The code is generated from a high level language for PDEs. An
-%invocation of the kernel typically does tensor-like calculators over
-%relatively small matrices; e.g., triply nested loops operating on
-%about a dozen iterations. Because of the DSL context, COFFEE has a lot
-%of flexibility on how it organizes/orders the calculations to tailor
-%execution to a target architecture.
-%
+The need for rapidly implementing high performance and portable finite element methods has led to approaches based on automated code generation, in which local assembly operations are derived from the mathematical specification of a weak variational form. Local assembly code must be efficient, since the computational cost can dramatically increase with the complexity of the input form, covering a significant fraction of the overall computation run-time. Achieving high performance, however, is non-trivial, due to the complexity of mathematical expressions involved in the numerical integration and the small size of the loop nests, which prevent many standard compiler optimizations. We present an optimization strategy centred on expression rewriting, to minimize the executed floating point operations, and code specialization, to fully exploit the capability of the underlying platform, e.g. SIMD vectorization. By also relying on model-driven, dynamic autotuning, we report notable performance improvements over state-of-the-art optimization systems for local assembly operations.
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
