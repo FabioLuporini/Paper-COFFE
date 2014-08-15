@@ -562,10 +562,9 @@ problem & \specialcell{number of\\variants} & \specialcell{rewrite\\strategy} & 
 \section{Conclusions}
 \label{sec:conclusions}
 
-We have presented ...
-...TODO...: straightforward extendibility to right-hand side assembly
-% Mass DGEMM utile explicit method etc
+We started discussing how complex is the problem of optimizing local assembly operations in the context of automated code generation, in which an infinite range of possibly extremely complicated variational forms need to be supported. Available compilers and third-party libraries cannot exploit the structure inherent assembly expressions, and most of the time fail at producing efficient code. We have demonstrated that when optimizing local assembly kernels three points must be addressed: minimization of floating point operations, instruction-level parallelism (especially SIMD vectorization) and data (register) locality. Our approach is based on a two-stage optimization procedure: expression rewriting and code specialization. The first stage produces code that suits optimizations in the second stage. Our motivation for this structured strategy was that we felt state-of-the-art optimization systems were not adequate enough for moderately and remarkably complex variational forms. 
 
+We have implemented the Expression Rewriter and the Code Specializer in COFFEE, a platform-independent optimizing compiler tailored to local assembly operations, integrated with the popular Firedrake framework. This, along with the extensive and successful performance evaluation provided, prove the maturity of our work. 
 
 
 % Bibliography
