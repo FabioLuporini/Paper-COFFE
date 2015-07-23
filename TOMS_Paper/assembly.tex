@@ -54,10 +54,10 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization}
+\markboth{F. Luporini et al.}{Optimal Finite Element Integration}
 
 % Title portion
-\title{Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization}
+\title{Optimal Finite Element Integration}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -66,22 +66,19 @@ Paul H.J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-The need for rapidly implementing high performance and portable finite element methods has led to approaches based on automated code generation, in which local assembly operations are derived from the mathematical specification of a weak variational form. Local assembly code must be efficient, since the computational cost can dramatically increase with the complexity of the input form, covering a significant fraction of the overall computation run-time. Achieving high performance, however, is non-trivial, due to the complexity of mathematical expressions involved in the numerical integration and the small size of the loop nests, which prevent many standard compiler optimizations. We present an optimization strategy centred on expression rewriting, to minimize the executed floating point operations, and code specialization, to fully exploit the capability of the underlying platform, e.g. SIMD vectorization. By also relying on model-driven, dynamic autotuning, we report notable performance improvements over state-of-the-art optimization systems for local assembly operations.
+...
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
   Finite element methods}
 
-\category{G.4}{Mathematical Software}{Parallel and vector
-  implementations}
+\category{G.4}{Mathematical Software}{Parallel and vector implementations}
 
 \terms{Design, Performance}
 
-\keywords{Finite element integration, local assembly, compilers,
-  optimizations, SIMD vectorization}
+\keywords{Finite element integration, local assembly, compilers, optimizations, SIMD vectorization}
 
-\acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2014. 
-  Optimizing Automated Finite Element Integration through Expression Rewriting and Code Specialization.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2015. Optimal Finite Element Integration.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -114,47 +111,27 @@ Department of Mathematics, Imperial College London;
 
 \maketitle
 
-%Computational cost is a critical limitation in scientific computing,
-%especially for finite element simulations. To provide one particular
-%example we are particularly concerned about, it has been well
-%established that mesh resolution Consequently, our aggressive
-%optimization of local assembly, which may even take up to 60% of the
-%overall FEM's execution time, directly impacts the performance of
-%large-scale scientific simulations running on supercomputers.
 
-\section{Introduction}
+\section{Introduction and Motivations}
 
-The need for rapidly implementing high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proved successful in the context of the FEniCS~\cite{Fenics} and Firedrake~\cite{firedrake-code} projects, which have become incredibly popular over the last years. In these frameworks, the weak variational form of a given problem is expressed at high-level by means of a domain-specific language. Such a mathematical specification is suitably manipulated and then passed as input to a form compiler, whose goal is to generate a representation of local assembly operations. These operations numerically evaluate problem-specific integrals in order to compute so called local matrices and vectors, which represent the contributions from each element in the discretized domain to the equation solution. Local assembly code must be high performance: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen function spaces, the resulting assembly kernels become more and more computationally expensive, covering a significant fraction of the overall computation run-time. 
+The need for rapidly implementing high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proved successful in the context of the FEniCS~\cite{Fenics} and Firedrake~\cite{firedrake-code} projects, which have become increasingly popular over the last years. In these frameworks, the weak variational form of a problem is expressed at high-level by means of a domain-specific language. The mathematical specification is manipulated and then passed to a form compiler, which generates a representation of local assembly operations. These operations numerically evaluate problem-specific integrals in order to compute so called local matrices and vectors, which represent the contributions from each element in the discretized domain to the equation solution. Local assembly code must be high performance: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen function spaces, the resulting assembly kernels become more and more computationally expensive, covering a significant fraction of the overall computation run-time. 
 
 Producing high performance implementations is, however, non-trivial. The complexity of mathematical expressions involved in the numerical integration, which varies from problem to problem, and the small size of the loop nest in which such integral is computed obstruct the optimization process. Traditional vendor compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent assembly expressions. Polyhedral-model-based source-to-source compilers, for instance~\cite{PLUTO}, mainly apply aggressive loop optimizations, such as tiling, but these are not particularly helpful in our context. This lack of suitable optimizing tools has led to the development of a number of higher-level approaches to maximize the performance of local assembly kernels.  In~\cite{quadrature1}, it is shown how automated code generation can be leveraged to introduce domain-specific optimizations, which a user cannot be expected to write ``by hand''. \cite{Kirby-FEM-opt} and~\cite{Francis} have studied, instead, different optimization techniques based on a mathematical reformulation of finite element integration. In~\cite{Luporini}, we have made one step forward by showing that different forms, on different platforms, require distinct sets of transformations if close-to-peak performance must be reached, and that low-level, domain-aware code transformations are essential to maximize instruction-level parallelism and register locality. The problem of optimizing local assembly routines has been tackled recently also for GPU architectures, for instance in~\cite{petsc-integration-gpu},~\cite{Klockner}, and~\cite{Bana}.
 
-Our research has resulted in the development of a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Finit Element local assEmbly.}, fully integrated with the Firedrake framework~\cite{Luporini}. Besides separating the mathematical domain, captured by the form compiler at an higher level of abstraction, from the optimization process, COFFEE also aims to be platform-agnostic. The code transformations occur on an intermediate representation of the assembly operation, which is ultimately translated into platform-specific code. Domain knowledge is exploited in two ways: for simplifying the implementation of code transformations and to make them extremely effective. Domain knowledge is conveyed to COFFEE from the higher level (the form compiler in the case of Firedrake, although any user-provided code would be acceptable) through suitable annotations attached to the input. For example, when the input is in the form of an abstract syntax tree produced by the form compiler, specific nodes are decorated so as to drive the optimization process. Although COFFEE has been thought of as a multi-platform optimizing compiler, our performance evaluation so far has been restricted to standard CPU platforms only. We emphasize once more, however, that the transformations applicable by both the Expression Rewriter (Section~\ref{sec:expr-rewriting}) and the Code Specializer (Section~\ref{sec:code-spec}) would work on generic accelerators as well.
-
-In this paper, we build on our previous work~\cite{Luporini} and present a novel structured approach to the optimization of automatically-generated finite element integration routines based on quadrature representation. We argue that for complex, realistic forms, peak performance can be achieved only by passing through a two-step optimization procedure: 1) expression rewriting, to minimize floating point operations, 2) and code specialization, to ensure effective register utilization and SIMD vectorization. The code transformations introduced in~\cite{Luporini} are reused: as explained in Section~\ref{sec:summary-opts}, padding and data alignment, expression splitting, and vector-register tiling become steps of code specialization, whereas generalized loop-invariant code motion is performed during the expression rewriting stage. We complement and generalize our previous work with the following contributions.
-
-Expression rewriting aims at reducing the computational intensity of local assembly kernels by rescheduling arithmetic operations based on a set of rewrite rules. Our first contribution consists of a framework that aggressively exploits associativity, distributivity, and commutativity of operators to expose ``hidden'' loop-invariant sub-expressions and SIMD vectorization opportunities to the code specialization stage. While rewriting an assembly expression, domain knowledge is used in several ways, for example to avoid redundant computation. Secondly, we propose an algorithm that, relying on symbolic execution, restructures the code so as to skip useless iterations over zero-valued entries in vector-valued basis functions arrays, while preserving code vectorizability. These transformations will allow outperforming the results obtained in~\cite{Luporini} as well as those achievable using the FEniCS' built-in optimization system, presented in~\cite{quadrature1}. 
-
-At code specialization time, transformations are applied to maximize the exploitation of the underlying platform's resources, e.g. SIMD lanes. On top of the work in~\cite{Luporini}, we provide a number of contributions. Firstly, we revisit the padding and data alignment transformation to account for the new code structures produced by expression rewriting. This is of fundamental importance to achieve effective SIMD vectorization. Secondly, we address an open problem in~\cite{Luporini} by providing an algorithm that automatically transforms an element matrix evaluation into a sequence of calls to BLAS' dense matrix-matrix multiply routines. BLAS routines are known to perform far from peak performance when the involved arrays are small, which is almost always the case of low-order finite element methods. However, we will show that in corner, yet meaningful cases, especially in forms characterized by the presence of pre-multiplying functions and relatively high-order function spaces, a BLAS-based implementation can be successful. Finally, we introduce a model-driven, dynamic autotuner that transparently evaluates multiple sets of code transformations to determine the best optimization strategy for a given problem. The main challenge here is to build, for a generic form, a reasonably small search space that comprises most of the effective code variants.
-
-Expression rewriting and code specialization have been implemented in COFFEE, which in turn is integrated with the Firedrake framework. Therefore, to testify the goodness of our approach, we provide an extensive and unprecedented performance evaluation across a number of forms of increasing complexity, including some based on complex hyperelasticity models. We characterize our problems by varying polynomial order of the employed function spaces and number of pre-multiplying functions. To clearly distinguish the improvement achieved by this work, we will compare, for each test case, four sets of code variants: 1) unoptimized code, i.e. a local assembly routine as returned from the form compiler; 2) code optimized by FEniCS, i.e. the work in~\cite{quadrature1}; 3) code optimized as described in~\cite{Luporini}; code optimized by expression rewriting and code specialization as described in this paper. Notable performance improvements of 4) over 1), 2) and 3) are reported and discussed.
+Our research has resulted in ....
+... we build on our previous work~\cite{Luporini} ... and present a ... We argue that for complex, realistic forms, peak performance can be achieved only by  ... 
+... also low-level optimisation ...
 
 
-%The contributions of this paper can be summarized as follows:
-%\begin{enumerate}
-%\item 
-%\item extensive and unprecedented performance evaluation in a wide range of forms of increasing complexity
-%\end{enumerate}
+This is all implemented in COFFEE, which in turn is integrated with the Firedrake framework. We provide an extensive and unprecedented performance evaluation across a number of forms of increasing complexity, including some based on complex (hyperelasticity) models. We characterize our problems by varying polynomial order of the employed function spaces and number of pre-multiplying functions. To clearly distinguish the improvement achieved by this work, we will compare, for each test case, X sets of code variants: 1) unoptimized code, i.e. a local assembly routine as returned from the form compiler; 2) code optimized by FEniCS, i.e. the work in~\cite{quadrature1}; 3) code optimized as described in~\cite{Luporini}; ....
 
-%Extensive performance evaluation...
 
-%This paper can be thought of as a continuation of the work presented in~\cite{Luporini}: in particular, we answer the remaining open questions, generalize and formalize an approach to minimize redundant computation using a similar philosophy, we show ~\cite{quadrature1}. 
 
 \section{Preliminaries}
 \label{sec:background}
 
 %is the computation of contributions of a specific cell in the discretized domain to the linear system which yields the PDE solution. The process consists of numerically evaluating problem-specific integrals to produce a matrix and a vector [Olgaard and Wells 2010; AMCG 2010], whose sizes depend on the order of the method. This operation is applied to all cells in the discretized domain. In this work we focus on local matrices, or “element matrices”, which are more costly to compute than element vectors.
 
-\subsection{Quadrature for Finite Element Local Assembly}
 We summarize the basic concepts sustaining the finite element method following the notation adopted in~\cite{quadrature1} and~\cite{Francis}. We consider the weak formulation of a linear variational problem
 \begin{equation}
 \begin{split}
@@ -194,6 +171,7 @@ A_{ij}^K = \int_K w \nabla \phi_i^K \cdot \nabla \phi_j^K\ \mathrm{d}x
 The local element vector $L$ can be determined in an analogous way. 
 %From the computational perspective, its evaluation is however less expensive than that of $A$.
 
+\subsection{Quadrature Mode}
 Quadrature schemes are conveniently used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies a change of variables from reference coordinates $X_0$ to real coordinates $x = F_K (X_0)$ is necessary any time a new element is evaluated. The numerical integration routine based on quadrature representation over an element $K$ can be expressed as follows
 \begin{equation}
 \label{quadrature}
@@ -202,162 +180,44 @@ A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \su
 \end{equation}
 where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
 
-In the next sections, we will often refer to the local element matrix evaluation, such as Equation~\ref{quadrature} for the weighted Lapalce operator, as the \textit{assembly expression} deriving from the weak variational problem.
+\subsection{Tensor Mode}
+...
 
 
-\subsection{COFFEE: a Compiler for Optimizing Quadrature-based Finite Element Integration}
-\label{sec:summary-opts}
-If high performance code needs to be generated, assembly expressions must be optimized with regards to three interrelated aspects: 1) arithmetic intensity, 2) instruction-level parallelism, and 3) data locality. In this paper, we tackle these three points building on our previous work (\cite{Luporini}), in which we presented COFFEE, a mature, platform-independent compiler capable of optimizing local assembly code.
 
-\begin{figure}
-\begin{center}
-\includegraphics[scale=0.6]{pictures/coffee-scheme}
-\caption{Outline of COFFEE. The input is either a string of C code or an abstract syntax tree representation. The optimization process goes through two main steps: \textit{expression rewriting} and \textit{code specialization}. The autotuner, incorporated with the Code Specializer, use heuristics to select the set of code variants that, for a given variational form, are likely to reach high performance.}\label{fig:coffee-outline}
-\end{center}
-\end{figure}
+\section{Optimality of Multilinear Loop Nests}
+\label{sec:optimal-impl}
 
-The high-level structure of COFFEE is outlined in Figure~\ref{fig:coffee-outline}. The input is either C code, explicitly provided by the user as a string, or an abstract syntax tree (henceforth AST) representation automatically generated at the higher level of abstraction. We have integrated COFFEE with the Firedrake framework; here, the input is originated by the FEniCS Form Compiler~\cite{FFC-Compiler} in the form of an AST. Decoration of special AST nodes, or equivalently annotation of C code, is extensively used to convey domain knowledge to COFFEE. This is used to introduce more effective, specialized optimizations, as well as to simplify the implementation.
-
-Two conceptually distinct software modules can be individuated: the Expression Rewriter and the Code Specializer. The former targets arithmetic intensity. Its role is to transform the assembly expression and, therefore, the enclosing loop nest, so as to minimize the number of floating point operations that are performed to evaluate the element matrix (or vector). The latter is tailored to optimizing for instruction-level parallelism, particularly SIMD vectorization, and data (register) locality. As shown in the Figure, the Expression Rewriter manipulates and transforms the original AST, which is then provided to the Code Specializer. As described later, we have invested some effort to ensure that the code transformations applied at expression rewriting time would not break any code specialization opportunity. This, for example, would not be the case if the Expression Rewriter coincided with the FEniCS Form Compiler's built-in optimization system; we will clarify this aspect in Section~\ref{sec:zeros}.
-
-To neatly distinguish the contributions of this paper from those in~\cite{Luporini}, in this section we summarize the results of our previous work. Moreover, in Section~\ref{sec:perf-results}, we will explicitly compare the performance achieved with the transformations presented in this paper to both~\cite{Luporini} and~\cite{quadrature1}.
-
-In our previous work, we have demonstrated the effectiveness of a set of optimizations for finite element quadrature-based integration routines originated through automated code generation. We have also shown how different subsets of optimizations are needed to achieve close-to-peak performance in different variational forms. In particular, we can summarize our study as follows
-
+We need to define: 
 \begin{itemize}
-\item \emph{Generalized Loop-invariant Code Motion}. Compiler's loop-invariant code motion algorithms may not be general enough to optimize assembly expressions, in which different sub-expressions are invariant with respect to more than one loop in the enclosing nest. As reiterated in Section~\ref{sec:expr-rewriting}, we work around this limitation by performing source-level code motion, while also achieving vectorization of invariant code.
-\item \emph{Padding and data alignment}. The small size of the loop nest (integration, test, and trial functions loops) require all of the involved arrays to be padded to a multiple of the vector register length so as to maximize the effectiveness of SIMD code. Data alignment can be enforced as a consequence of padding. 
-\item \emph{Vector-register Tiling}. Blocking at the level of vector registers, which we perform exploiting the specific memory access pattern of the assembly expressions (i.e. a domain-aware transformation), improves data locality beyond traditional unroll-and-jam optimizations. This is especially true for relatively high polynomial order (i.e. greater than 2) or when pre-multiplying functions are present.
-\item \emph{Expression Splitting}. In certain assembly expressions the register pressure is significantly high: when the number of basis functions arrays (or, equivalently, temporaries introduced by loop-invariant code motion) and constants is large, spilling to L1 cache is a consequence for architectures with a relatively low number of logical registers (e.g. 16/32). We exploit sum's associativity to ``split'' the assembly expression into multiple sub-expressions, which are computed individually.
+\item multilinear loop nests, static loop nests; (note: the loop over the elements could also be considered static, if mesh didn't move...)
+\item concept of reuse in a loop;
+\item prove that reuse can always be eliminated from the innermost loop of multilinear loop nests. 
+\item definition of optimality
+\item insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
 \end{itemize}
 
-In Figure~\ref{fig:coffee-outline}, we show where these transformations are applied in the COFFEE pipeline; also, the novel contributions of this work are highlighted in red. In the next two sections, we describe the new functionalities of Expression Rewriter and Code Specializer, respectively.
+Need to show examples.
 
-%Temporary arrays can be placed at the right depth in the sorrounding loop nest to store values of sub-expressions that are invariant to one or more loops. 
+\section{Automated Code Generation of Optimal Multilinear Loop Nests}
 
-% Far notare che low-level si, ma sono guidate da high-level knowledge! Questo in risposta alla domanda: ma allora perche' non sfruttare la domain knowledge che hai, che senso ha separare...
+\begin{itemize}
+\item Deficiencies of previous approaches
+\item  Building block operations in coffee: 1) eliminating reuse, 2)  insights on the various tree algorithms employed
+\item cost model for deciding what to do
+\item constrained increase in the working set size
+\item heuristic optimisation of constant and quadrature dependent expressions
+\end{itemize}
 
-% Vantaggio di automatizzare rispetto che scrivere a mano
-% which would be practically unfeasible to achieve by hand-written code
-
-
-
-\section{Expression Rewriting}
-\label{sec:expr-rewriting}
-Loop-invariant code motion is the key to reduce the computational intensity of an assembly expression. The Expression Rewriter still relies on this technique, although it makes several steps forward. 
-
-Firstly, exploiting operators properties like associativity, distributivity, and commutativity, it manipulates assembly expressions to expose more code hoisting and SIMD vectorization opportunities, as well as to balance the register pressure in the various levels of the loop nest. There are many possibilities of rewriting an expression, so the search space can be quite large. We address this problem by defining a simple yet systematic way of rewriting an expression based on a set of formal rewrite rules, which are meticulously applied by COFFEE. 
-
-Secondly, the Expression Rewriter re-structures iteration spaces so as to avoid arithmetic operations over tabulated basis functions columns that are statically known to be zero-valued. Zero-valued columns in tabulated basis functions appear, for example, when taking derivatives on a reference element or when using mixed elements. A code transformation eliminating floating point operations on zeros was presented in~\cite{quadrature1}; however, the issue with that is the use of indirection arrays in the generated code, which break many of the optimizations applicable at code specialization time, including SIMD vectorization. In Section~\ref{sec:zeros}, we present a novel approach based on symbolic execution.
-
-%In COFFEE, the application of the re-writing rules preceds the elimination of operations on zeros. 
-
-%It is worth noting how writing these transformations ``by hand'' would be practically unfeasible, especially when the expressions are particularly complex.
-%
-%
-%In this section, we describe our efforts in producing a more effective tool capable of explore how to leverage automated code generation to expose more opportunities to the code hoister. 
-%
-%Automated code generation, however, Mathematical expressions can be transformed to decrease the number of arithmetic operations required to evaluate the element tensor. A first 
-%
-%Minimizing the number of floating point operations for evaluating the element tensor of a generic form
-%
-
-\subsection{Motivations and Objectives}
-\label{sec:expr-rewriter-obj}
-
-\begin{figure}[t]
-\tiny
-\centering     
-\subfigure[Original (simplified) code]{\label{fig:original-code}\lstinputlisting{listings/simple.code}}
-~~~~~~~~~~~~~~~~
-\subfigure[The code after that generalized loop-invariant code motion has been applied]{\label{fig:invariant-code}\lstinputlisting{listings/invariant.code}}
-~\\
-~\\
-\subfigure[Once terms are factorized, further code hoisting opportunities arise. Here, \texttt{T3} stores the precomputation of an invariant sub-expression exposed by factorization]{\label{fig:factorized-code}\lstinputlisting{listings/factorized.code}}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-\subfigure[Hoisting and scalar-expansion of integration-dependent terms allow to achieve full SIMD vectorization of the assembly code]{\label{fig:scalarexp-code}\lstinputlisting{listings/vectexpanded.code}}
-\caption{Applying a sequence of transformations to an excerpt from a Burgers' local assembly kernel, suitably simplified to improve readability.}
-\end{figure}
-
-Consider the local element matrix computation in Figure~\ref{fig:original-code}, which is an excerpt from a Burgers problem. The assembly expression, produced by the FEniCS Form Compiler, has been deliberately simplified, and code details have been omitted for brevity and readability. In practice, assembly expressions can be much more complex, for example depending on the differential operators employed in the variational form; however, this example is representative enough for highlighting patterns that are common in a large class of problems. 
-
-A first glimpse of the code suggests that the sub-expression \texttt{a*f0*A[i][j]+b*f1*B[i][j]} is invariant with respect to the innermost (trial functions) loop \texttt{k}, so it can be hoisted at the level of the outer loop \texttt{j} to avoid redundant computation. This is indeed a standard compiler transformation, supported by any available compilers, so, in principle, there should be no need to transform the source code explicitly. With a closer look we notice that the sub-expression \texttt{d*D[i][k]+e*E[i][k]} is also invariant, although, this time, with respect to the outer (test functions) loop \texttt{j}. In~\cite{Luporini}, we have showed that available compilers limit the search for code motion opportunities to the innermost loop of a given loop nest. Moreover, the lack of cost models to ascertain both the optimal place where to hoist an expression and whether or not vectorizing it at the price of extra temporary memory is a fundamental limiting factor. The \textit{generalized loop-invariant code motion} technique that we implemented in COFFEE, leading to the code in Figure~\ref{fig:invariant-code}, addressed these limitations, which are critical in the case of non-trivial assembly expressions, resulting in run-time improvements up to 3$\times$.
-
-In this paper, we target particularly complex variational forms for which a more aggressive transformation is required. We generalize the problem of finding and hoisting invariant sub-expressions by formulating the following critical question: \textit{how an assembly expression should be rewritten so as to minimize both floating point operations and data movement}? To minimize floating point operations, in terms of instructions executed, it is important to reduce the absolute number of arithmetic operations to evaluate the element matrix as well as to achieve full vectorization of the assembly loop nest.
- 
-We start considering the case of assembly expressions that, after generalized loop-invariant code motion has been applied, still  ``hide'' opportunities for code hoisting. By examining again the code in Figure~\ref{fig:invariant-code}, we notice that the basis function array \texttt{A} iterating along the \texttt{[i,j]} loops appears twice in the expression. By expanding the products in which \texttt{A} is accessed and by applying sum commutativity, terms can be factorized. This has two effects: firstly, it reduces the number of arithmetic operations performed; secondly, and most importantly, it exposes a new sub-expression \texttt{A[i][k]/c+T2[k]*f} invariant with respect to loop \texttt{j}. Consequently, hoisting can be performed, resulting in the code in Figure~\ref{fig:factorized-code}. In general, exposing factorization opportunities requires traversing the whole expression tree, and then expanding and moving terms. It also needs heuristics to select a factorization strategy: there may be different opportunities of reorganizing sub-expressions, and, in our case, the best is the one that maximizes the invariant code eventually disclosed. We will discuss this aspect formally in Section~\ref{fig:rewrite-rules}.
-
-As a second observation, we note that integration-dependent expressions are inherently executed as scalar code. For example, the \texttt{f0*a} and \texttt{f1*b} products in Figure~\ref{fig:factorized-code} depend on the loop along quadrature points; these operations are performed in a non-vectorized way at every \texttt{i} iteration. This is not a big issue in our running example, in which the scalar computation represents a small fraction of the total, but it becomes a concrete problem in complicated forms, like those at the heart of hyperelasticity (which we evaluate in Section~\ref{sec:perf-results}). In such forms, the amount of computation independent of both test and trial functions loops is so large that it has a significant impact on the run-time, despite being executed only $O(I)$ times (with $I$ number of quadrature points). We have therefore implemented an algorithm to move and scalar-expand integration-dependent expressions, which leads to codes as in Figure~\ref{fig:scalarexp-code}.
-
-The third motivation for expression rewriting concerns the register pressure in the innermost loop. Once the code has been optimized for arithmetic intensity, it is important to think about how the transformations impacted register allocation. Assume the local assembly kernel is executed on a state-of-the-art CPU architecture having 16 logical registers, e.g. an Intel Haswell. Each value appearing in the expression is loaded and kept in a register as long as possible. In Figure~\ref{fig:scalarexp-code}, for instance, the scalar value \texttt{g} is loaded once, whereas the term \texttt{det*W[i]} is precomputed and loaded in a register at every \texttt{i} iteration. This implies that at every iteration of the \texttt{[j,k]} loop nest, 12$\%$ of the available registers are spent just to store values independent of test and trial functions loops. In more complicated expressions, the percentage of registers destined to store such constant terms can be even higher. Registers are, however, a precious resource, especially when evaluating compute-intensive expressions. The smaller is the number of available free registers, the worse is the instruction-level parallelism achieved: for example, a shortage of registers can increase the pressure on the L1 cache (i.e. it can worsen data locality), or it may prevent the effective application of standard transformations, e.g. loop unrolling. We aim at relieving this problem by suitably expanding terms and introducing, where necessary, additional temporary values. We illustrate this in the following example.
-
-%An analogous analysis applies to processors with larger numbers of registers, since using loop unroll or loop unroll-and-jam to expose more instruction-level parallelism would increase the requirements on registers.
-
-\begin{figure}[t]
-\tiny
-\centering
-\subfigure[Original (simplified) code]{\label{fig:toexpand-code}\lstinputlisting{listings/toexpand.code}}
-~\\
-\subfigure[The code after expansion of \texttt{det*W[i]}]{\label{fig:expanded-1-code}\lstinputlisting{listings/expanded-1.code}}
-~~
-\subfigure[The code after expansion of \texttt{g}. Note the need to introduce a new temporary array]{\label{fig:expanded-2-code}\lstinputlisting{listings/expanded-2.code}}
-\caption{Expansion of terms to improve register pressure in a local assembly kernel}\label{fig:expanded-code}
-\end{figure}
-
-Consider a variant of the Burgers local assembly kernel, shown in Figure~\ref{fig:toexpand-code}. This is again a representative, simplified example. We can easily distribute \texttt{det*W[i]} over the three operands on the left-hand side of the multiplication, and then absorb it in the pre-computation of the invariant sub-expression stored in \texttt{T1}, resulting in code as in Figure~\ref{fig:expanded-1-code}. Freeing the register destined to the constant \texttt{g} is less straightforward: we cannot absorb it in \texttt{T1} as we did with \texttt{det*W[i]} since \texttt{T1} is also accessed in the \texttt{T1[j]*A[i][k]} sub-expression. The solution is to add another temporary as in Figure~\ref{fig:expanded-2-code}. Generalizing, this is a problem of data dependencies: to solve it, we use a dependency graph in which we add a direct edge from identifier \texttt{A} to identifier \texttt{B} to denote that the evaluation of \texttt{B} depends on \texttt{A}. The dependency graph is initially empty, and is updated every time a new temporary is created by either loop-invariant code motion or expansion of terms. The dependency graph is then queried to understand when expansion can be performed without resorting to new temporary values. This aspect is formalized in the next section.
-
-
-\subsection{Rewrite Rules}
-\label{sec:rewrite-rules}
-In general, assembly expressions produced by automated code generation can be much more complex than those we have used as examples, with dozens of terms involved (basis function arrays, derivatives, coefficients, ...) and hundreds of (nested) arithmetic operations. Our goal is to establish a portable, unified, platform-independent, and systematic way of reducing the computational strength of an expression exploiting the intuitions described in the previous section. This \textit{expression rewriting} should be simple; definitely, it must be robust to be integrated in an optimizing domain-specific compiler capable of supporting real problems, such as COFFEE. In other words, we look for an algorithm capable of transforming a plain assembly expression by applying 1) generalized loop-invariant code motion, 2) non-trivial factorization and re-association of sub-expressions, and 3) expansion of terms; after that, it should perform 4) scalar-expansion of integration-dependent terms to achieve full vectorization of the assembly code. 
-
-We centre such an algorithm around a set of rewrite rules. These rules drive the transformation of an expression, prescribe where invariant sub-expressions will be moved (i.e. at what level in the loop nest), and track the propagation of data dependencies. When applying a rule, the state of the loop nest must be updated to reflect, for example, the use of a new temporary and new data dependencies. We define the state of a loop nest as $L = (\sigma, G)$, where $G = (V, E)$ represents the dependency graph, while $\sigma : Inv \rightarrow S$ maps invariant sub-expressions to identifiers of temporary arrays. The notation $\sigma_i$ refers to invariants hoisted at the level of loop $i$. We also introduce the \textit{conditional hoister} operator $[]$ on $\sigma$ such that
-\begin{gather*}
-\sigma[\sfrac{v}{x}] = 
-\begin{cases}
-\sigma(x) \text{~~~~~~~~if $x \in Inv$; $v$ is ignored}\\
-v \text{~~~~~~~~~~~~~if $x$ $\notin$ $Inv$; $\sigma$(x) = v}\\
-\end{cases}
-\end{gather*}
-That is, if the invariant expression \texttt{x} has already been hoisted, $[]$ returns the temporary identifier hosting its value; otherwise, \texttt{x} is hoisted and a new temporary $v$ is created. There is a special case when $v = \perp$, used for \textit{conditional deletion} of entries in $\sigma$. Specifically
-\begin{gather*}
-\sigma[\sfrac{\perp}{x}] = 
-\begin{cases}
-\sigma(x) \text{~~~~~~~~if $x \in Inv$; $\sigma = \sigma \setminus (x, \sigma(x))$}\\
-v \text{~~~~~~~~~~~~~~if $x$ $\notin$ $Inv$; $v \notin S$}\\
-\end{cases}
-\end{gather*}
-In other words, the invariant sub-expression \texttt{x} is removed and the temporary identifier that was hosting its value is returned if \texttt{x} had been previously hoisted; otherwise, a fresh identifier $v$ is returned. This is useful to express updates of hoisted invariant sub-expressions when expanding terms.
-
-In the following, a generic (sub-)expression is represented with Roman letters \texttt{a, b, ...}; constant terms are considered a special case, so Greek letters \texttt{$\alpha$, $\beta$, ...} are used instead. The iteration vector $i = [i_0, i_1, ...]$ is the ordered sequence of the indices of the loops enclosing an (sub-)expression. We will refer to $i_0$ as the outermost enclosing loop. The notation $a_i$, therefore, indicates that the expression $a$ assumes distinct values while iterating along the loops in $i$; its outermost loop is silently assumed to be $i_0$. 
-
-\begin{figure}[t]
-\small
-\centering
-\begin{spacing}{1.35}
-\begin{align*}
-~~~~~~&Rule &~~&~~~~~~~~~~~~~~~~~~~~~~~~Precondition \\
-[a_i \cdot b_j]_{(\sigma, G)} &\rightarrow [a_i \cdot b_j]_{(\sigma, G)} ~~&~~&\\
-[(a_i + b_j)\cdot \alpha]_{(\sigma, G)} &\rightarrow [(a_i \cdot \alpha + b_j \cdot \alpha)]_{(\sigma, G)} ~~&~~ &\\
-[a_i \cdot b_j + a_i \cdot c_j]_{(\sigma, G)} &\rightarrow [(a_i \cdot (b_j + c_j)]_{(\sigma, G)} ~~&~~ &\\
-[a_i + b_i]_{(\sigma, G)} &\rightarrow [t_i]_{(\sigma', G')} ~~&~~ &t_i = \sigma_{i_0}[\sfrac{t_i'}{a_i + b_i}], G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, b_i)\rbrace)\\
-[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma_{i_0}[\sfrac{\sigma[\sfrac{\perp}{a_i}]}{a_i \cdot \alpha}], a_i \notin in(G), \\
-~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
-[(a_i \cdot b_j) \cdot \alpha]_{(\sigma, G)} &\rightarrow [t_i \cdot b_j]_{(\sigma', G')} ~~&~~ &\sharp(b_j) > \sharp(a_i), t_i = \sigma_{i_0}[\sfrac{t_i'}{a_i \cdot \alpha}], a_i \in in(G), \\
-~&~~&~~&G' = (V \cup {t_i}, E \cup \lbrace(t_i, a_i), (t_i, \alpha)\rbrace)\\
-\end{align*}
-\end{spacing}
-\caption{Rewrite rules driving the rewriting process of an assembly expression.}\label{fig:rewrite-rules}
-\end{figure}
-
-Rewrite rules for expression rewriting are provided in Figure~\ref{fig:rewrite-rules}; obvious rules are omitted for brevity. The Expression Rewriter applies the rules while performing a depth-first traversal of the assembly expression tree. Given an arithmetic operation between two sub-expressions (i.e. a node in the expression tree), we first need to find an applicable rule. There cannot be ambiguities: only one rule can be matched. If the preconditions of the rule are satisfied, the corresponding transformation is performed; otherwise, no rewriting is performed, and the traversal proceeds. As examples, it is possible to instantiate the rules in the codes shown in Figures~\ref{fig:original-code} and~\ref{fig:toexpand-code}; eventually, the optimized codes in Figures~\ref{fig:factorized-code} and~\ref{fig:expanded-2-code} are obtained, respectively. 
-
-To what extent should rewrite rules be applied is a question that cannot be answered in general. In some problems, a full rewrite of the expression may be the best option; in other cases, on the other hand, an aggressive expansion of terms, for example, may lead to high register pressure in the loops computing invariant terms, worsening the performance. In Section~\ref{sec:autotune} we explain how to leverage the Code Specializer to select a suitable rewriting strategy for the problem at hand.
-
+\section{Low-level Optimization}
+\label{sec:code-spec}
+...
 
 \subsection{Avoiding Iteration on Zero-valued Blocks by Symbolic Execution}
 \label{sec:zeros}
-We aim at skipping arithmetic operations over blocks of zero-valued entries in basis functions (and their derivatives) arrays. Zero-valued columns arise, for example, when taking derivatives on a reference element and when employing mixed elements. In~\cite{quadrature1}, a technique to avoid operations on zero-valued columns based on the use of indirection arrays was described (e.g. \texttt{A[B[i]]}, where \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in \texttt{A}) and implemented in the context of FEniCS. We will evaluate our approach and compare it to this pioneering work in Section~\ref{sec:perf-results}. Essentially, our strategy avoids indirection arrays in the generated code, which otherwise would break the optimizations applicable at the Code Specializer level, including SIMD vectorization. 
+%TODO : say that the reasons to have zeros is to keep the design of the form compiler simple, which just "puts zeros" and "outline the assembly expression".
+
+Operations over blocks of zero-valued entries in tabulated (derivatives of) basis functions can be skipped. Zero-valued columns arise, for example, when taking derivatives on a reference element, or when employing vector function spaces. In~\cite{quadrature1}, a technique to avoid iteration over zero-valued columns, based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, where \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in \texttt{A}), was described and tested in \texttt{FFC}. We will evaluate our approach and compare it to this pioneering work in Section~\ref{sec:perf-results}. Our strategy differs by avoiding indirection arrays in the generated code. 
 
 \begin{figure}[t]
 \tiny
@@ -368,7 +228,7 @@ We aim at skipping arithmetic operations over blocks of zero-valued entries in b
 \caption{Simplified excerpt of local assembly code from a Burgers form using vector-valued basis functions, before and after symbolic execution is performed to rewrite the iteration space}\label{fig:skip-code}
 \end{figure}
 
-Consider Figure~\ref{fig:withzeros-code}, an enriched version of the Burgers excerpt in Figure~\ref{fig:invariant-code}. The code is instantiated for the specific case of polynomial order 1, Lagrange elements on a 2D mesh. The array \texttt{D} represents a tabulated derivative of a basis function at the various quadrature points. There are four zero-valued columns. Any multiplications or additions along these columns could (should) be skipped to avoid irrelevant floating point operations. The solution adopted in~\cite{quadrature1} is not to generate the zero-valued columns (i.e. to generate a dense 6$\times$2 array), to reduce the size of the iteration space over test and trial functions (from 6 to 2), and to use an indirection array (e.g. $ind = \lbrace 3, 5\rbrace$) to update the right entries in the element tensor $A$. This prevents, among the various optimizations, effective SIMD vectorization, because memory loads and store would eventually reference non-contiguous locations. 
+Consider Figure~\ref{fig:withzeros-code}, an enriched version of the Burgers excerpt in Figure~\ref{fig:invariant-code}. The array \texttt{D} represents a tabulated derivative of a basis function at the various quadrature points. There are four zero-valued columns. Any multiplications or additions along these columns could (should) be skipped to avoid irrelevant floating point operations. The solution adopted in~\cite{quadrature1} is not to generate the zero-valued columns (i.e. to generate a dense 6$\times$2 array), to reduce the size of the iteration space over test and trial functions (from 6 to 2) and to use an indirection array (e.g. $ind = \lbrace 3, 5\rbrace$) to update the right entries in the element tensor $A$. 
 %on the other hand, reshrinki tutto su un array solo...
 
 Our approach is based on using domain knowledge and symbolic execution. We discern the origin of zero-valued columns: for example, those due to taking derivatives on the reference element from those inherent to using mixed (vector) elements. In the running Burgers example, the use of vector function spaces require the generation of a zero-block (columns 0, 1, 2 in the array \texttt{D}) to correctly evaluate the local element matrix while iterating along the space of test and trial functions. The two key observations are that 1) the number of zero-valued columns caused by using vector function spaces is, often, much larger then that due to derivatives, and 2) such columns are contiguous in memory. Based on this observation, we aim at avoiding iteration only along the block of zero-valued columns induced by mixed (vector) elements. 
@@ -377,13 +237,9 @@ Our approach is based on using domain knowledge and symbolic execution. We disce
 
 We achieve our goal by means of symbolic execution. The Expression Rewriter expects some indication about the location of the zero-valued columns induced by mixed (vector) function spaces, for each tabulated basis function. This indication comes either in the form of code annotation, if the input to COFFEE were provided as pure C (as shown in Figure~\ref{fig:withzeros-code}), or by suitably decorating basis functions nodes, if the input were an abstract syntax tree. Then, the rewrite rules are applied and each statement is executed symbolically. For example, consider the assignment \texttt{T2[r] = d*D[i][k]+e*E[i][k]} in Figure~\ref{fig:withzeros-code}. Array \texttt{D} has non-zero-valued columns in the range $NZ_D=[3,5]$; we also assume array \texttt{E} has non-zero-valued columns in the range $NZ_E=[0,2]$. Multiplications by scalar values do not affect the propagation of non-zero-valued columns. On the other hand, when symbolically executing the sum of the two operands \texttt{d*D[i][k]} and \texttt{e*E[i][k]}, we track that the target identifier \texttt{T2} will have non-zero-valued columns in the range $NZ_E \| NZ_D=[0,5]$. Eventually, exploiting the $NZ$ information computed and associated with each identifier, we split the original assembly expression into multiple sets of sub-expressions, each set characterized by the same range of non-zero-valued columns. In our example, assuming that $NZ_{T1}=[3,5]$ and $NZ_A=[3,5]$, there are two of such sets, which leads to the generation of two distinct iteration spaces (one for each set), as in Figure~\ref{fig:withzeros-skipped-code}.
 
+%TODO : rephrase: " This prevents, among the various optimizations, effective SIMD vectorization, because memory loads and store would eventually reference non-contiguous locations. "
 
-
-\section{Code Specialization}
-\label{sec:code-spec}
-Code specialization provides a range of code transformations tailored to optimizing for instruction-level parallelism and register locality. As summarized in Section~\ref{sec:summary-opts} and described in~\cite{Luporini}, padding and data alignment, expression splitting, and outer-product vectorization, which is a domain-aware implementation of vector-register tiling, are examples of optimizations that the Code Specializer is capable of applying. In this paper, we revisit and enrich this set of transformations as explained in the following sections.
-
-\subsection{Padding and Data Alignment Revisited}
+\subsection{Padding and Data Alignment}
 \label{sec:padding}
 Padding and data alignment as described in~\cite{Luporini} must be refined for the case in which computation over zero-valued columns is avoided. We recall effective SIMD (auto-)vectorization can be achieved only if the innermost loop size is a multiple of the vector register length, in which case the compiler needs not to introduce a remainder scalar loop. In the case of an AVX instruction set, for example, we want to round the size of the innermost loops to the closest multiple of 4 (AVX registers can fit up to four double-precision floats). This can be done provided that arrays are padded, if necessary. Moreover, loads and stores instructions are efficient only if their addresses are suitably aligned to cache boundaries; this is obtainable by enforcing the base address of each padded array to be a multiple of the vector length.
 
@@ -393,44 +249,8 @@ There are some complications in the case of loops \texttt{[j0,k0]}. Here, increa
 
 Note that in some circumstances the previous solution cannot be applied, since extra iterations might end up accessing non-zero entries in the local element matrix \texttt{M}. In such a situation, there is no possibility of recovering data alignment.
 
-\subsection{Exposing Linear Alegbra Operations}
-In~\cite{Luporini}, we introduced the idea of transforming the element matrix evaluation into a sequence of calls to highly-optimized dense matrix-matrix multiply routines (henceforth DGEMM), for instance MKL or ATLAS BLAS. We compared COFFEE's optimizations with hand-written MKL-based kernels, showing how the small sizes of the involved arrays impair DGEMM routines, which are usually tuned for large arrays. The study was conducted only in the case of a specific Helmholtz form. There are scenarios, however, in which tabulated basis functions sizes grow up to a point for which turning to BLAS may actually lead to better performance. For example, this can happen when relatively-high polynomial orders are used or if coefficients are present in the form, since they are both responsible for the size of basis functions tabulated at quadrature points. To explore these scenarios, we have developed an algorithm that reduces any assembly expression evaluation to a sequence of DGEMM calls. 
-
-We informally provide the main steps of the algorithm. By fully applying the rewrite rules in Figure~\ref{fig:rewrite-rules}, an assembly expression is reduced to a summation, over each quadrature point, of outer products along the test and trial functions. Each outer product is then isolated, i.e. the assembly expression is split into chunks, each chunk representing an outer product over test and trial functions. Statements in the bodies of the surrounding loops (e.g. coefficients evaluation at a quadrature point, temporaries introduced by expression rewriting) are vector-expanded and hoisted completely outside of the loop nest, similarly to what we have described in Section~\ref{sec:expr-rewriter-obj}. This renders the loop nest perfect; that is, there is no intervening code among the various loops. The element matrix evaluation has now become a sequence of dense matrix-matrix multiplies (transposition aside)
-\begin{equation*}
-A_{jk} = \sum_{i} x_{0_{ij}} \cdot y_{0_{ik}} + \sum_{i} x_{1_{ij}} \cdot y_{1_{ik}} + ...
-\end{equation*}
-where $x0, x1, y0, y1, ...$ are tabulated basis functions or vector-expanded temporaries introduced at expression rewriting time. Eventually, the storage layout of the involved operands is changed so as to be conforming to the BLAS interface (e.g. two dimensional arrays are flatten as one dimensional arrays). The translation into a sequence of DGEMM calls is the last, straightforward step. 
-
-% 
-\subsection{Model-driven Dynamic Autotuning}
-\label{sec:autotune}
-We have demonstrated in~\cite{Luporini} that determining the sequence of transformations that  maximizes the performance of a problem requires investigating a broad range of factors, including mathematical structure of the input form, polynomial order of employed function spaces, presence of pre-multiplying functions, and, of course, the characteristics of the underlying architecture. 
-
-In~\cite{Luporini}, we proposed a simple cost model to drive the optimization process. In this paper, we have added a significant number of options to the set of possible optimizations, so the selection problem is now far more challenging. The sole Expression Rewriter, for instance, can generate a wide variety of implementations by just applying rewrite rules to different extents. We found difficult extending the cost model to effectively cover such a large search space. 
-
-We tackle the optimizations selection problem by compiler autotuning. Not only does it allow to determine the best combination of transformations, also it enables exploring parametric low-level optimizations, such as loop unroll, unroll-and-jam, and interchange, by trying different unroll factors and loop permutations. By leveraging the cost model defined in our previous study, domain knowledge, and a set of heuristics, we manage to keep the autotuner overhead at a minimum, whilst achieving significant speed ups over the purely cost-model-based implementations in all of the forms we have evaluated. In particular, our autotuner usually requires order of seconds to determine the fastest kernel implementation, a negligible overhead when it comes to iterate over real-life unstructured meshes, which can contain up to trillions of elements (e.g. ~\cite{Rossinelli2013}).
-
-COFFEE analyzes the input problem and decides what variants it is worth testing through autotuning, as described later. Each variant is obtained by requesting specific transformations to the Expression Rewriter and the Code Specializer. The possible variants are then provided to the autotuner, in the form of abstract syntax trees. The autotuner is a template-based code generator. By inspecting an abstract syntax tree, it determines how to generate ``wrapping'' code that 1) initializes kernel's input variables with fictitious values and 2) calls the kernel. These two points are executed repeatedly in a \emph{while} loop for a pre-established amount of time (order of milliseconds). At the exit of the \emph{while} loop, the times the kernel was invoked is recorded. Eventually, the variant executed the largest number of iterations is designated as the fastest implementation. Suitable compiler directives are used to prevent inlining of all function calls: this avoids the situation in which some variants are inlined and some are not, which would fake the autotuner's output. 
-
-The autotuning process is dynamic: depending on the complexity of the input problem, more or less variants are tried. General heuristics, which can be considered a revisited version of those presented in~\cite{nek5000}, are applied
-\begin{itemize}
-\item Loop permutations that are likely to worsen the performance are excluded from the search space. According to the cost model, and for the same reasons explained in~\cite{Luporini}, we enable only variants in which the loop over quadrature points is either the outermost or the innermost. This is due to the fact that versions of the code in which such loop lies between the test and trial functions loops are typically lower performing.
-\item The unroll factors must divide the loop bounds evenly to avoid the introduction of reminder (scalar) loops.
-\item The innermost loop is never explicitly unrolled. This is because we expect auto-vectorization along this loop, so memory accesses should be kept unit-stride. 
-\end{itemize}
-The autotuner is also domain-aware: the following heuristics, which capture properties of the computational domain, are exploited
-\begin{itemize}
-\item The lengths of test and trial functions loops are identical in some cases, for example when they originate from the same function space. In such cases, since for the employed storage layout the memory access pattern is symmetrical along these two loops, we prune their interchange from the search space. 
-\item The larger is the polynomial order of the method, the larger is the assembly loop nest. In these cases, we impose a bound on the loop nest's overall unroll factor (which we found empirically) to avoid uselessly testing too many unroll factors. 
-\item On the other hand, if the polynomial order is low, i.e. when the loop nest is small, we prune variants that we know will be low-performing, e.g. those resorting to BLAS.
-\item We specifically select two levels of expression rewriting. In the ``base'' level, only generalized loop-invariant code motion, as described in~\cite{Luporini}, is applied. This means that only a subset of the rewrite rules exposed in~\ref{fig:rewrite-rules} will be considered. In the ``aggressive'' level, all of the rewrite rules are applied. Many other trade-offs, which we do not explore, would be feasibile, however. 
-\item For the expression splitting optimization described in~\cite{Luporini} and summarized in Section~\ref{sec:summary-opts}, we test only three split factors, namely 1, 2, 4. Also, if the input problem uses mixed function spaces, the iteration space is already split at expression rewriting time to avoid computation over zero-valued columns; in these cases, we do not further apply expression splitting.
-\item Based on the cost model, the padding and data alignment optimization is always applied. 
-\end{itemize}
-
-All of the previous points contribute to minimize the overhead of the autotuning process. We will discuss the actual cost of autotuning in Section~\ref{sec:auto-analysis}.
-%COFFEE allows the user to abstract from finding the optimal optimization strategy for a given problem by resorting to its model-driven, dynamic autotuner.
+\subsection{Vector-promotion of Integration Quantities}
+....
 
 
 \section{Performance Evaluation}
@@ -448,8 +268,6 @@ We evaluate the \textit{speed ups} achieved by three sets of optimizations over 
 %...TODO...: dire che i tempi sono la media di 3 runs
 
 The values that we report include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh has been made small enough to fit the L3 cache, so as to minimize the ``noise'' due to any operations that are not part of the element matrix evaluation itself. However, it has been reiterated over and over (e.g.~\cite{quadrature1}) that as the complexity of a form increseas, the cost of local assembly becomes dominant. All codes were executed in the context of the Firedrake framework.
-
-We do not compare to the FEniCS Form Compiler's tensor contraction mode~\cite{Kirby-FEM-opt} because of three reasons: first, in~\cite{quadrature1} it has been demonstrated the superiority of quadrature as the complexity of a form increases, so it would be superfluous to repeat the same analysis. Second, our aim is to show the effect of low-level optimizations on the code, especially SIMD vectorization, which is not feasible in tensor mode due to the inherent structure of the code. Third, tensor mode code generation fails due to hardware limitations in many of the test cases that we show below.
 
 We vary several aspects of each form, which follows the approach and the notation of~\cite{quadrature1} and~\cite{Francis}
 \begin{itemize}
@@ -476,15 +294,17 @@ We first comment on results of general applicability. By looking at the various 
 
 \paragraph{Helmholtz}
 \begin{figure}[t]  
-\includegraphics[scale=0.7]{perf-results/helmholtz}
-\caption{Helmholtz results.}\label{fig:helmholtz}
+...
+%\includegraphics[scale=0.7]{perf-results/helmholtz}
+%\caption{Helmholtz results.}\label{fig:helmholtz}
 \end{figure}
-The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler's optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
+The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
 
 \paragraph{Elasticity}
 \begin{figure}[t]  
-\includegraphics[scale=0.7]{perf-results/elasticity}
-\caption{Elasticity results.}\label{fig:elasticity}
+...
+%\includegraphics[scale=0.7]{perf-results/elasticity}
+%\caption{Elasticity results.}\label{fig:elasticity}
 \end{figure}
 Figure~\ref{fig:elasticity} illustrates results for the Elasticity problem. This form uses a vector-valued space for the basis functions, so here transformations avoiding computation over zero-valued columns are of key importance. The \texttt{ffc} set of optimizations leads to notable improvements over the original code at $q=1$. The use of inderection arrays allows to phisically eliminate zero-valued columns at code generation time; as a consequence, different tabulated basis functions are merged into a single array. Therefore, despite the execution being purely scalar because of indirection arrays, the reduction in arithmetic intensity and register pressure imply improvement in performance. Nevertheless, \texttt{auto} remains in general the best choice, with gains over \texttt{ffc} that are wider as $p$ and $nf$ increase. 
 
@@ -492,12 +312,12 @@ For $q \geq 2$, in \texttt{ffc} the lack of SIMD vectorization counterbalances t
 
 It is worth noting that speed ups of \texttt{auto} over \texttt{fix} decrease at $q=4$, particularly for low values of $p$. As we will discuss in Section~\ref{sec:auto-analysis}, this is because at $q=4$ the vector-register tiling transformation (in combination with loop unroll-and-jam) leads to the highest performance. In principle, vector-register tiling can be used in combination to the zero-avoidance technique; however, due to mere technical limitations, this is currently not supported in COFFEE. Once solved, we expect much higher speed ups in the $q=4$ regime as well.
 
-% TODO: mention aggressive expression rewriting somewhere
 
 \paragraph{Poisson}
 \begin{figure}[t]  
-\includegraphics[scale=0.7]{perf-results/poisson}
-\caption{Poisson results.}\label{fig:poisson}
+...
+%\includegraphics[scale=0.7]{perf-results/poisson}
+%\caption{Poisson results.}\label{fig:poisson}
 \end{figure}
 
 In Figure~\ref{fig:poisson} we report speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the original code for the Poisson form. We note that, as a general trend, \texttt{ffc} exhibits drops in performance as $nf$ increases, notably when $nf=3$, for any values of $q$ and $p$. This is a consequence of the inherent complexity of the generated code. The way \texttt{ffc} performs loop-invariant code motion leads to the pre-computation of integration-dependent terms at the level of the integration loop, which are characterized by higher arithmetic intensity and redundant computation as $nf$ increases. Moreover, the absence of vectorization is another limiting factor.
@@ -507,8 +327,9 @@ The \texttt{auto} variant generally shows the best performance. Significant impr
 
 \paragraph{Hyperelasticity}
 \begin{figure}[t]  
-\includegraphics[scale=0.7]{perf-results/hyperelasticity}
-\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
+...
+%\includegraphics[scale=0.7]{perf-results/hyperelasticity}
+%\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
 \end{figure}
 
 Speed ups for the hyperelasticity form are shown in Figure~\ref{fig:hyperelasticity}. Experiments for $nf \geq 2$ could not be executed because of FEniCS-Form-Compiler's technical limitations. 
@@ -518,53 +339,10 @@ For \texttt{auto}, massive speed ups for $q \geq 2$ are to be ascribed to aggres
 In the regime $q \geq 2$ and $nf=1$, peformance improvements are less pronounced moving from $p=1$ to $p=2$, although still significant; in particular, we notice a drop at $p=2$, followed by a raise up to $p=4$. It is worth observing that this effect is common to all sets of optimizations. The hypothesis is that this is due to the way coefficient functions are evaluated at quadrature points (identical in all configurations), which cannot be easily vectorized unless a change in storage layout and loops order is implemented in the code (abstract syntax tree) generator on top of COFFEE. 
 
 
-\subsection{Details on the Autotuning Process}
-\label{sec:auto-analysis}
-
-\paragraph{Autotuning Overhead}
-We first comment on the overhead of the autotuning process. In the context of Firedrake, the framework in which COFFEE is integrated, the autotuner is executed at run-time, once the local assembly kernels are provided by the FEniCS Form Compiler. Autotuning, therefore, introduces an overhead in the application execution time. Such overhead originates from four operations: 1) creation of the various code variants; 2) generation of a C file containing such variants (as simple function calls, plus the ``main'' function that invokes the variants, in sequence); 3) compilation of the autotuning file; 4) execution. Of these four points, we note that: the cost of 4) is relatively small, because each variant's execution time is bound by an empirically-found value (e.g. some milliseconds). The cost of all four points is constrained by our heuristics to prune the search space, as described in Section~\ref{sec:autotune}. Moreover, for a given form and a given discretization, the autotuner needs to be executed only once, since its output is saved and reused for later assemblies. This implies that if the assembly occurs in a time stepping loop, or the same form is executed on a different mesh, or known quantities of the input problem are changed, then the assembly cost is rapidly amortized. Premised that, the most important thing remains that when working with real unstructured meshes - which are likely to be composed of millions of elements, leading to long-lasting assembly phases - the autotuner overhead practically becomes completely negligible. In our experience, and in particular in the four examined problems, the autotuning process lasted less than a minute in the majority of cases. Most often, it took less than thirty seconds. Rarely it needed more than a minute, as for instance in the case of hyperelasticity; however, despite the inherent complexity of this form, we measured a peak of only 4 minutes for the extreme case $[q=4, p=4, nf=1]$, while 1.30 minutes were needed in the case $[q=1, p=1, nf=1]$. This analysis certifies that the autotuner overhead is definitely sustainable in real-world applications.
-
-\paragraph{Selected Optimizations}
-In this paper and in~\cite{Luporini}, we have repeatedly claimed that different forms (and different discretizations) require distinct sets of transformations to reach close-to-peak performance. To demonstrate this, we now report details about the output of the autotuning process. We show that for the four examined forms - more specifically, for the 224 problem instances $[form, q, p, nf]$ illustrated in the previous figures - a plethora of optimization strategies have been selected by the autotuner. We also complement and strengthen our claim by showing the autotuner's output for two additional forms whose performance results, for brevity, were not shown in Section~\ref{sec:perf-results-forms}: a Mass and a Mixed Poisson problems. 
-
-Table~\ref{table:autotuner-output} shows the number a given transformation has been selected by the autotuner. To not hinder readability, the output has been grouped by form, rather than showing the selected optimization strategy for each $[form, q, p, nf]$. Values in the \texttt{rewrite strategy} column can either be \texttt{base} or \texttt{aggressive}, as explained in Section~\ref{sec:autotune}: in the former case, only generalized loop-invariant code motion in applied; in the latter case, the rewrite rules are recursively applied as extensive as possible. If the value is \texttt{aggressive} (\texttt{base}) it means that in the majority of cases the \texttt{aggressive} (\texttt{base}) strategy prevailed on the \texttt{base} (\texttt{aggressive}) one. Precomputation of integration-dependent terms was explained in Section~\ref{sec:expr-rewriter-obj}. The \texttt{split} column refers to the expression splitting transformation (\cite{Luporini}, and summary in Section~\ref{sec:summary-opts}). The \texttt{unroll} column indicates the application of explicit unrolling. Other columns are of obvious meaning. Values in the various cells illustrate the number of problem instances (out of the total reported in column \texttt{number of variants}) in which an optimization was activated. Obviously, more transformations are typically used in combination in a same problem. 
-
-
-
-
-\newcommand{\autotuneroutput}{
-\tiny
-\begin{tabulary}{1.0\textwidth}{c|c|ccc|ccccc}
-\cline{3-10}
-\multicolumn{2}{c}{} & \multicolumn{3}{c|}{\texttt{expression rewriting}} & \multicolumn{5}{c}{\texttt{code specialization}} \\
-\cline{1-10}
-problem & \specialcell{number of\\variants} & \specialcell{rewrite\\strategy} & \specialcell{zero-valued columns\\avoidance} & \specialcell{precompute\\integration terms} & \specialcell{padding\\data alignment} & split & \specialcell{vector-register\\tiling} & unroll & M \\
-\cline{1-10}
-\texttt{helmholtz} & 64 & aggressive & 0 & 0 & all & 12 & 26 & 20 & 0 \\
-\texttt{mass} & 64 & base & 0 & 0 & all & 0 & 0 & 31 & 2 \\
-\texttt{elasticity} & 64 & aggressive & 39 & 0 & all & 0 & 11 & 0 & 2 \\
-\texttt{poisson} & 64 & aggressive & 52 & 0 & all & all & 0 & 0 & 0 \\
-\texttt{mixed poisson} & 192 & base & 0 & 0 & all & 32 & 68 & 36 & 0 \\
-\texttt{hyperelasticity} & 32 & aggressive & all & all & all & 2 & 0 & 0 & 0 \\
-\cline{1-10}
-\end{tabulary}
-}
-
-\begin{table*}[t]
-\tbl{Summary of the optimizations selected by the autotuner in a number of forms}{ \scriptsize \autotuneroutput }
-\label{table:autotuner-output}
-\end{table*}
-
- 
-% selected variants (tables)
-% show the difference of ``aggressive'' vs ``base'' expression rewriting
 
 \section{Conclusions}
 \label{sec:conclusions}
-
-We started discussing how complex is the problem of optimizing local assembly operations in the context of automated code generation, in which an infinite range of possibly extremely complicated variational forms need to be supported. Available compilers and third-party libraries cannot exploit the structure inherent assembly expressions, and most of the time fail at producing efficient code. We have demonstrated that when optimizing local assembly kernels three points must be addressed: minimization of floating point operations, instruction-level parallelism (especially SIMD vectorization) and data (register) locality. Our approach is based on a two-stage optimization procedure: expression rewriting and code specialization. The first stage produces code that suits optimizations in the second stage. Our motivation for this structured strategy was that we felt state-of-the-art optimization systems were not adequate enough for moderately and remarkably complex variational forms. 
-
-We have implemented the Expression Rewriter and the Code Specializer in COFFEE, a platform-independent optimizing compiler tailored to local assembly operations, integrated with the popular Firedrake framework. This, along with the extensive and successful performance evaluation provided, prove the maturity of our work. 
+...
 
 
 % Bibliography

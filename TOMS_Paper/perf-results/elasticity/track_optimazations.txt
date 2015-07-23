@@ -1,5 +1,0 @@
-(3, False, (None, None), True, None, False, None, False): 39
-(2, False, (4, 1), True, None, False, None, False): 3
-(2, False, (4, 3), True, None, False, None, False): 1
-(4, 0, (None, None), True, (1, 0), 'mkl', None, False): 2
-(2, False, (4, 2), True, None, False, None, False): 7
