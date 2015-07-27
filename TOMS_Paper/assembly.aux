@@ -21,46 +21,39 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Quadrature Mode}{3}}
 \newlabel{quadrature}{{7}{3}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Tensor Mode}{3}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Optimality of Multilinear Loop Nests}{3}}
-\newlabel{sec:optimal-impl}{{3}{3}}
-\citation{quadrature1}
-\citation{quadrature1}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Automated Code Generation of Optimal Multilinear Loop Nests}{4}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Low-level Optimization}{4}}
-\newlabel{sec:code-spec}{{5}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Avoiding Iteration on Zero-valued Blocks by Symbolic Execution}{4}}
-\newlabel{sec:zeros}{{5.1}{4}}
-\citation{Luporini}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Optimality of Loop Nests}{4}}
+\newlabel{sec:optimal-impl}{{3}{4}}
+\newlabel{prop:share-removal}{{1}{4}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest.code}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Loop nest example\relax }}{5}}
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:withzeros-code}{{1(a)}{5}}
-\newlabel{sub@fig:withzeros-code}{{(a)}{5}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/withzeros.code}{5}}
-\newlabel{fig:withzeros-skipped-code}{{1(b)}{5}}
-\newlabel{sub@fig:withzeros-skipped-code}{{(b)}{5}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/skipzeros.code}{5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Simplified excerpt of local assembly code from a Burgers form using vector-valued basis functions, before and after symbolic execution is performed to rewrite the iteration space\relax }}{5}}
-\newlabel{fig:skip-code}{{1}{5}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Original (simplified) code. Note the annotation over the definition of the tabulated basis function \texttt {D}, which is used to identify the presence of zero-valued columns}}}{5}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {The code after symbolic execution took place}}}{5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Padding and Data Alignment}{5}}
-\newlabel{sec:padding}{{5.2}{5}}
+\newlabel{code:loopnest}{{1}{5}}
+\citation{Luporini}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Synthesis of Optimal Loop Nests in Finite Element Integration}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Automated Code Generation}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Low-level Optimization}{6}}
+\newlabel{sec:code-spec}{{6}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}{6}}
+\newlabel{sec:zeros}{{6.1}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Padding and Data Alignment}{6}}
+\newlabel{sec:padding}{{6.2}{6}}
 \citation{UFL}
 \citation{ufl-code}
 \citation{Luporini}
 \citation{quadrature1}
 \citation{quadrature1}
 \citation{Francis}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Vector-promotion of Integration Quantities}{6}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{6}}
-\newlabel{sec:perf-results}{{6}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Vector-promotion of Integration Quantities}{7}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Performance Evaluation}{7}}
+\newlabel{sec:perf-results}{{7}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Experimental Setup}{7}}
 \citation{Luporini}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance of Forms}{7}}
-\newlabel{sec:perf-results-forms}{{6.2}{7}}
-\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{7}}
-\@writefile{toc}{\contentsline {paragraph}{Elasticity}{8}}
-\@writefile{toc}{\contentsline {paragraph}{Poisson}{8}}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Performance of Forms}{8}}
+\newlabel{sec:perf-results-forms}{{7.2}{8}}
+\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{8}}
+\@writefile{toc}{\contentsline {paragraph}{Elasticity}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Poisson}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{9}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{ufl-code}{\citeauthoryear {??}{ufl}{2014}}
@@ -78,6 +71,6 @@
 \bibcite{Rossinelli2013}{\citeauthoryear {Rossinelli, Hejazialhosseini, Hadjidoukas, Bekas, Curioni, Bertsch, Futral, Schmidt, Adams, and Koumoutsakos}{Rossinelli et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2013}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
 \bibcite{nek5000}{\citeauthoryear {Shin, Hall, Chame, Chen, Fischer, and Hovland}{Shin et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2010}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{9}}
-\newlabel{sec:conclusions}{{7}{9}}
-\lastpage{10}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusions}{10}}
+\newlabel{sec:conclusions}{{8}{10}}
+\lastpage{11}

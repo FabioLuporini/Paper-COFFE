@@ -18,12 +18,26 @@
 \usepackage{subfigure}
 \usepackage{setspace}
 \usepackage{tabulary}
+\usepackage{fancybox}
+
+\makeatletter
+\newenvironment{CenteredBox}{% 
+\begin{Sbox}}{% Save the content in a box
+\end{Sbox}\centerline{\parbox{\wd\@Sbox}{\TheSbox}}}% And output it centered
+\makeatother
+
+\let\proof\relax
+\let\endproof\relax
+\usepackage{amsthm}
 \newcommand{\specialcell}[2][c]{%
   \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
 
 \usepackage{lineno}
 \usepackage{xfrac}
 
+% Theorems, definitions, lemmas, etc
+\newtheorem{Def}{Definition}
+\newtheorem{Prop}{Proposition}
 
 \usepackage{alltt}
 \renewcommand{\ttdefault}{txtt}
@@ -34,14 +48,7 @@
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
 
-% Package to generate and customize Algorithm as per ACM style
-\usepackage[ruled]{algorithm2e}
-\renewcommand{\algorithmcfname}{ALGORITHM}
-\SetAlFnt{\small}
-\SetAlCapFnt{\small}
-\SetAlCapNameFnt{\small}
-\SetAlCapHSkip{0pt}
-\IncMargin{-\parindent}
+
 
 % Metadata Information
 %\acmVolume{9}
@@ -121,7 +128,7 @@ Producing high performance implementations is, however, non-trivial. The complex
 Our research has resulted in ....
 ... we build on our previous work~\cite{Luporini} ... and present a ... We argue that for complex, realistic forms, peak performance can be achieved only by  ... 
 ... also low-level optimisation ...
-
+...also for the first time we provide a formal explanation of the math in terms of compiler theory
 
 This is all implemented in COFFEE, which in turn is integrated with the Firedrake framework. We provide an extensive and unprecedented performance evaluation across a number of forms of increasing complexity, including some based on complex (hyperelasticity) models. We characterize our problems by varying polynomial order of the employed function spaces and number of pre-multiplying functions. To clearly distinguish the improvement achieved by this work, we will compare, for each test case, X sets of code variants: 1) unoptimized code, i.e. a local assembly routine as returned from the form compiler; 2) code optimized by FEniCS, i.e. the work in~\cite{quadrature1}; 3) code optimized as described in~\cite{Luporini}; ....
 
@@ -180,64 +187,128 @@ A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \su
 \end{equation}
 where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
 
+% Magari la summation sui coefficients la sputo dentro? che dici?
+
 \subsection{Tensor Mode}
 ...
 
 
 
-\section{Optimality of Multilinear Loop Nests}
+\section{Optimality of Loop Nests}
 \label{sec:optimal-impl}
 
-We need to define: 
+In this section, we characterize our definition of optimality and we describe the assumptions under which it holds. 
+
+In order to make the document self-contained, we start by reviewing basic compiler terminology.
+
+\begin{Def}[Perfect and imperfect loop nests]
+A loop nest is said to be \textit{perfect} when code appears only in the body of the innermost loop. Conversely, the presence of code between any pair of loops in a nest renders the loop nest \textit{imperfect}. 
+\end{Def}
+
+A straightforward property of perfect nests is that hoisting of invariant expressions from the innermost loop to the preheader (i.e., the block that precedes the entry point of the nest) is always safe. We will later make extensive use of this property.
+
+% In the following, we should represent loops by their iteration variable.
+
+\begin{Def}[Linear loop]
+A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if all expressions appearing in the body of $L$ that use $i$ to access some memory locations are linear in $I$.
+\end{Def}
+
+In this work, we are particularly interested in the following class since it naturally arises from the math described in~\ref{sec:background}.
+
+\begin{Def}[Perfect multilinear loop nest]
+A \textit{perfect multilinear} loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $l \in [0, n-1]$.
+\end{Def}
+
+Note that nothing prevents a perfect multilinear loop nest to be enclosed by an outer, possibly imperfect, nest. Indeed, this is the loop structure that will be at the centre of our study. We will later elaborate on this. First, we need to formulate a definition of optimality for perfect multilinear loop nests. To this purpose, it is convenient to introduce the notion of sharing.
+
+\begin{Def}[Sharing]
+A loop $L_i$ presents \textit{sharing} if it contains at least two expressions depending on $i$ that are symbolically identical. 
+\end{Def}
+
+At this point, we can present a simple yet fundamental result.
+
+\begin{Prop}
+\label{prop:share-removal}
+Sharing in a perfect multilinear loop nest $N = L_{i_{0}, i_{1}, ..., i_{n-1}}$ can always be eliminated.
+\end{Prop}
+\begin{proof}
+The demonstration is by construction and exploits linearity. We want to transform $N$ into $N'$ such that sharing is absent at all levels of $N'$. Starting from the innermost loop $n-1$, the expressions are ''flattened'' by expanding all products involving any of the terms depending on $i_{n-1}$. Subsequently, such terms can be factorized. Due to linearity, in each factored product there is only one term depending on $i_{n-1}$. The factors that do not depend on $i_{n-1}$ are, by definition, loop-invariant, and as such can be hoisted at the level of $i_{n-2}$. This procedure can be applied recursively up to $L_{i_{0}}$: multilinearity allows factorization at each level; perfectness ensures hoisting is always safe.
+\end{proof}
+
+Based on this proposition, we define optimality as follows.
+
+\begin{Def}[Optimality of a multilinear loop nest]
+The synthesis of a multilinear loop nest is \textit{optimal} if the amount of operations performed in the innermost loop is minimal.
+\end{Def}
+
+In other words, this implies there is no other nest syntheses that could decrease the number of operations in the body of the innermost loop any further. Note that this definition of optimality does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of ''optimality'' clearly makes no sense. In the following, we assume to operate in a CPU-bound regime, in which the body of loop nests are characterized by arithmetic-intensive expressions. This suits the context of finite element integration.
+
+A second result follows.
+\begin{Prop}
+An optimal synthesis for a perfect multilinear loop nest $N$ can be found in ....
+\end{Prop}
+\begin{proof}
+By construction. We consider the body of the innermost loop $L_{i_{n-1}}$. Constant expressions can be hoisted outside of $N$ and be replaced with suitable temporaries. Loop-dependent terms are grouped into $n$ disjoint sets $S_i$, each $S_i$ containing all terms depending on loop $i$. These sets are sorted in descending order based on their cardinality. By establishing a one-to-one mapping between set indices and loop indices, we produce a new loop permutation. The loop permutation is semantically correct because of perfectness. In this new order, loops are placed such that as going down the nest, $L_i$ is characterized by less unique terms than $L_{i-1}$. At this point, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ no further improvable in the number of operations executed. In particular, the number of operations is equal to $\sharp S_i + (\sharp S_i - 1)$, in which the second term represents the cost of the summation.
+\end{proof}
+
+In practice, this result is too weak if we consider generic loop nests in which multilinearity applies to a subset of loops only and reductions are present. Consider the example in Figure~\ref{code:loopnest}. 
+
+\begin{figure}[h]\begin{CenteredBox}
+\lstinputlisting[basicstyle=\small]{listings/loopnest.code}
+\end{CenteredBox}\caption{Loop nest example}\label{code:loopnest}\end{figure}
+
+The imperfect nest \texttt{N}=\texttt{eijk} comprises a reduction loop \texttt{i} and a perfect doubly nested loop \texttt{jk}, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
 \begin{itemize}
-\item multilinear loop nests, static loop nests; (note: the loop over the elements could also be considered static, if mesh didn't move...)
-\item concept of reuse in a loop;
-\item prove that reuse can always be eliminated from the innermost loop of multilinear loop nests. 
-\item definition of optimality
-\item insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
+\item contrary to what happens with hoisting in perfect multilinear loop nests, in this case the size of the temporaries would be proportional to the number of non-reduction loops (in the example, \texttt{N$\cdot$O} for \texttt{ijk} sub-expressions, \texttt{L$\cdot$N$\cdot$O} for \texttt{eijk} ones). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime;
+\item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of \texttt{k} (for example, consider how expansion tends to increase operations).
 \end{itemize}
 
-Need to show examples.
+We then review our definition of optimality for generic loop nests as follows
 
-\section{Automated Code Generation of Optimal Multilinear Loop Nests}
+\begin{Def}[Optimality of a loop nest]
+The synthesis of a loop nest is \textit{optimal} if, under a set of memory constraints \texttt{C}, the amount of operations performed in the innermost loop is minimal.
+\end{Def}
+
+Clearly, this definition remains vague until instantiated in a certain model. Once the model is fixed, we can argue about the meaning of \texttt{C} and try to produce an algorithm to reach optimality. This is tackled in the next section.
+
+\section{Synthesis of Optimal Loop Nests in Finite Element Integration}
+The model, or loop nest structure, we are interested in arises in the domain of finite element integration. As explained in Section~\ref{sec:background}, integration occurs locally at the element level. In a weak variational formulation of a problem, a bilinear and a liner forms need be evaluated, typically using a quadrature scheme. The loop nest in Figure~\ref{code:loopnest} is a simplified view of a typical bilinear form implementation. The \texttt{e} loop represents iteration over the elements of a mesh; the \texttt{i} loop derives from using numerical quadrature; the perfect loop nest \texttt{jk} implements the computation over the test and trial functions' degrees of freedom. 
+
+Domain knowledge tells us that in our model, for real-world scenarios, the following holds: 1) $L >>> M, N, O$; that is, even with high order basis functions, the number of elements is typically order of magnitude larger than both the number of quadrature points and degrees of freedom; 2) the loop nest enclosed by the integration loop is always perfect and multilinear (descends from the straightforward implementation of Equation~\ref{quadrature} into a loop nest). Based upon these observations, we now discuss optimality.
+
+\subsection{Operation-minimal synthesis}
+
+\subsection{Memory constraints}
+
+%\item cost model for deciding what to do
+%\item constrained increase in the working set size
+%\item heuristic optimisation of constant and quadrature dependent expressions
+
+%insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
+
+%Need to show examples.
+
+\section{Automated Code Generation}
 
 \begin{itemize}
 \item Deficiencies of previous approaches
 \item  Building block operations in coffee: 1) eliminating reuse, 2)  insights on the various tree algorithms employed
-\item cost model for deciding what to do
-\item constrained increase in the working set size
-\item heuristic optimisation of constant and quadrature dependent expressions
 \end{itemize}
 
 \section{Low-level Optimization}
 \label{sec:code-spec}
 ...
 
-\subsection{Avoiding Iteration on Zero-valued Blocks by Symbolic Execution}
+\subsection{Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}
 \label{sec:zeros}
 %TODO : say that the reasons to have zeros is to keep the design of the form compiler simple, which just "puts zeros" and "outline the assembly expression".
 
-Operations over blocks of zero-valued entries in tabulated (derivatives of) basis functions can be skipped. Zero-valued columns arise, for example, when taking derivatives on a reference element, or when employing vector function spaces. In~\cite{quadrature1}, a technique to avoid iteration over zero-valued columns, based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, where \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in \texttt{A}), was described and tested in \texttt{FFC}. We will evaluate our approach and compare it to this pioneering work in Section~\ref{sec:perf-results}. Our strategy differs by avoiding indirection arrays in the generated code. 
+% say that we just don't kill al zero-columns and use indirections to not break vectorisation
 
-\begin{figure}[t]
-\tiny
-\centering     
-\subfigure[Original (simplified) code. Note the annotation over the definition of the tabulated basis function \texttt{D}, which is used to identify the presence of zero-valued columns]{\label{fig:withzeros-code}\lstinputlisting{listings/withzeros.code}}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-\subfigure[The code after symbolic execution took place]{\label{fig:withzeros-skipped-code}\lstinputlisting{listings/skipzeros.code}}
-\caption{Simplified excerpt of local assembly code from a Burgers form using vector-valued basis functions, before and after symbolic execution is performed to rewrite the iteration space}\label{fig:skip-code}
-\end{figure}
+% generic engine to remove zeros. Can be rows (RT elements), columns (derivatives, vector elements), blocks (vector elements, "TC mode"). Based on symbolic execution.
+% rationale: contiguous in the innermost dimension are aggregated. contiguous in all other dimensions are not, unless complete overlap.
+% tables shrunk and merged
 
-Consider Figure~\ref{fig:withzeros-code}, an enriched version of the Burgers excerpt in Figure~\ref{fig:invariant-code}. The array \texttt{D} represents a tabulated derivative of a basis function at the various quadrature points. There are four zero-valued columns. Any multiplications or additions along these columns could (should) be skipped to avoid irrelevant floating point operations. The solution adopted in~\cite{quadrature1} is not to generate the zero-valued columns (i.e. to generate a dense 6$\times$2 array), to reduce the size of the iteration space over test and trial functions (from 6 to 2) and to use an indirection array (e.g. $ind = \lbrace 3, 5\rbrace$) to update the right entries in the element tensor $A$. 
-%on the other hand, reshrinki tutto su un array solo...
-
-Our approach is based on using domain knowledge and symbolic execution. We discern the origin of zero-valued columns: for example, those due to taking derivatives on the reference element from those inherent to using mixed (vector) elements. In the running Burgers example, the use of vector function spaces require the generation of a zero-block (columns 0, 1, 2 in the array \texttt{D}) to correctly evaluate the local element matrix while iterating along the space of test and trial functions. The two key observations are that 1) the number of zero-valued columns caused by using vector function spaces is, often, much larger then that due to derivatives, and 2) such columns are contiguous in memory. Based on this observation, we aim at avoiding iteration only along the block of zero-valued columns induced by mixed (vector) elements. 
-
-%Our example is then transformed as in Figure~\ref{fig:withzeros-skipped-code}: loop bounds are adjusted and suitable offsets are introduce to access the element matrix and basis function arrays. In general, the element matrix evaluation may also have to be split over multiple iteration spaces (test and trial functions loops), each iteration space characterized by its own loop bounds; this has the side effect of both increasing loop overhead and decreasing data locality.
-
-We achieve our goal by means of symbolic execution. The Expression Rewriter expects some indication about the location of the zero-valued columns induced by mixed (vector) function spaces, for each tabulated basis function. This indication comes either in the form of code annotation, if the input to COFFEE were provided as pure C (as shown in Figure~\ref{fig:withzeros-code}), or by suitably decorating basis functions nodes, if the input were an abstract syntax tree. Then, the rewrite rules are applied and each statement is executed symbolically. For example, consider the assignment \texttt{T2[r] = d*D[i][k]+e*E[i][k]} in Figure~\ref{fig:withzeros-code}. Array \texttt{D} has non-zero-valued columns in the range $NZ_D=[3,5]$; we also assume array \texttt{E} has non-zero-valued columns in the range $NZ_E=[0,2]$. Multiplications by scalar values do not affect the propagation of non-zero-valued columns. On the other hand, when symbolically executing the sum of the two operands \texttt{d*D[i][k]} and \texttt{e*E[i][k]}, we track that the target identifier \texttt{T2} will have non-zero-valued columns in the range $NZ_E \| NZ_D=[0,5]$. Eventually, exploiting the $NZ$ information computed and associated with each identifier, we split the original assembly expression into multiple sets of sub-expressions, each set characterized by the same range of non-zero-valued columns. In our example, assuming that $NZ_{T1}=[3,5]$ and $NZ_A=[3,5]$, there are two of such sets, which leads to the generation of two distinct iteration spaces (one for each set), as in Figure~\ref{fig:withzeros-skipped-code}.
-
-%TODO : rephrase: " This prevents, among the various optimizations, effective SIMD vectorization, because memory loads and store would eventually reference non-contiguous locations. "
 
 \subsection{Padding and Data Alignment}
 \label{sec:padding}
