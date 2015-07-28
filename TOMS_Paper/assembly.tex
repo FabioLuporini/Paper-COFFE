@@ -301,7 +301,7 @@ Before expanding on optimality, we make a few observations about properties of o
 % say somewhere that N and O are the number of dofs for test and trial functions
 
 \subsection{Memory constraints}
-The fact that the iteration space of $L_e$ is so larger than that of other loops suggests that we should be cautious when hoisting outside of the loop nest $N$. Imagine an additional loop $L_t$, the time stepping loop, wraps $N$. Theoretically, one could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and hoist them out of $L_e$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion, therefore, that the decrease in the number of operations would be completely overwhelmed by the bigger memory pressure.
+The fact that the iteration space of $L_e$ is so larger than that of other loops suggests that we should be cautious when hoisting outside of the loop nest $N$. Imagine a time stepping loop $L_t$ wraps $N$. Theoretically, one could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and hoist them out of $L_e$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion, therefore, that the decrease in the number of operations would be completely overwhelmed by the bigger memory pressure.
 
 A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as one of many possible examples, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporaries of size equal to $N\cdot O$; depending on $N$, $O$ and the cardinality of such set (or, equivalently, "the rank and size of the geometry tensor"), it is not so unlikely to eventually break the local memory threshold.  
 
@@ -314,9 +314,22 @@ Based upon these considerations, we impose two memory constraints
 \subsection{Operation-minimum synthesis}
 Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in the innermost loop is minimum. We now discuss how we can systematically achieve this.
 
-Eliminating sharing from the multilinear loop nest does not suffice to reach nest optimality. This is because we are considering the whole nest, so the presence of the integration loop $L_i$ makes us wonder whether the reduction it imposes can be pre-evaluated outside of $L_e$, as already suggested in~\ref{def:optimality}, thus reducing the operation count.
+Eliminating sharing from the multilinear loops does not suffice to reach nest optimality. In fact, we wonder whether the reduction imposed by $L_i$ could be pre-evaluated outside of $N$, as already suggested in~\ref{def:optimality}, thus potentially reducing the operation count.
 
-To answer this question, we make use of a result in~\cite{Kirby:TC}, the foundation of tensor contraction mode. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the domain of product (of derivatives) of functions from discrete spaces; such monomials can always be reduced to the product of two tensor, a reference tensor and a geometry tensor. An interpretation of this result at the level of loop nest is that if our input is, conceptually, as in Figure~\ref{code:loopnest}, then we can always dissect \texttt{F} into distinct sub-expressions (one per monomial), refactorize each sub-expression to split constant from $[L_i, L_j, L_k]$-dependent terms, hoist the latter one outside of $L_e$, pre-evaluate the reduction.
+To answer this question, we make use of a result -- the foundation of tensor contraction mode -- in~\cite{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to the product of two tensor, a reference tensor and a geometry tensor. This result can be interpreted at the loop nest level: if our input is, conceptually, as in Figure~\ref{code:loopnest}, then we can always dissect \texttt{F} into distinct sub-expressions (the monomials), factorize each sub-expression to split constant from $[L_i, L_j, L_k]$-dependent terms, hoist the latter ones outside of $N$, pre-evaluate the reduction. 
+
+The intuition of the algorithm to synthesize an optimal loop nest is shown in Figure~\ref{code:intuition}.
+
+\begin{figure}[h]
+\begin{lstlisting}[basicstyle=\small, frame=single]
+M = dissect the input expression into monomials
+for each monomial in M:
+    predict the cost of 
+    calculate the cost of reduction pre-evaluation 
+\end{lstlisting}
+\caption{Intuition of the main algorithm}
+\label{code:intuition}
+\end{figure}
 
 %\item cost model for deciding what to do
 %\item heuristic optimisation of constant and quadrature dependent expressions
