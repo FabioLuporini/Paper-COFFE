@@ -107,15 +107,16 @@
 \url{http://dx.doi.org/10.1137/040607824}}
 
 
-\bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2006}]%
-        {FFC-Compiler}
-{Robert~C. Kirby} {and} {Anders Logg}. 2006.
-\newblock \showarticletitle{A Compiler for Variational Forms}.
-\newblock {\em ACM Trans. Math. Softw.\/} {32}, 3 (Sept. 2006), 417--444.
+\bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2007}]%
+        {Kirby:TC}
+{Robert~C. Kirby} {and} {Anders Logg}. 2007.
+\newblock \showarticletitle{Efficient Compilation of a Class of Variational
+  Forms}.
+\newblock {\em ACM Trans. Math. Softw.\/} {33}, 3, Article 17 (Aug. 2007).
 \newblock
 \showISSN{0098-3500}
 \showDOI{%
-\url{http://dx.doi.org/10.1145/1163641.1163644}}
+\url{http://dx.doi.org/10.1145/1268769.1268771}}
 
 
 \bibitem[\protect\citeauthoryear{Kl\"{o}ckner, Warburton, Bridge, and
@@ -181,23 +182,6 @@
 \url{http://dx.doi.org/10.1145/1644001.1644009}}
 
 
-\bibitem[\protect\citeauthoryear{Rossinelli, Hejazialhosseini, Hadjidoukas,
-  Bekas, Curioni, Bertsch, Futral, Schmidt, Adams, and Koumoutsakos}{Rossinelli
-  et~al\mbox{.}}{2013}]%
-        {Rossinelli2013}
-{Diego Rossinelli}, {Babak Hejazialhosseini}, {Panagiotis Hadjidoukas}, {Costas
-  Bekas}, {Alessandro Curioni}, {Adam Bertsch}, {Scott Futral}, {Steffen~J.
-  Schmidt}, {Nikolaus~A. Adams}, {and} {Petros Koumoutsakos}. 2013.
-\newblock \showarticletitle{11 PFLOP/s Simulations of Cloud Cavitation
-  Collapse}. In {\em Proceedings of the International Conference on High
-  Performance Computing, Networking, Storage and Analysis} {\em (SC '13)}. ACM,
-  New York, NY, USA, Article 3, 13 pages.
-\newblock
-\showISBNx{978-1-4503-2378-9}
-\showDOI{%
-\url{http://dx.doi.org/10.1145/2503210.2504565}}
-
-
 \bibitem[\protect\citeauthoryear{Russell and Kelly}{Russell and Kelly}{2013}]%
         {Francis}
 {Francis~P. Russell} {and} {Paul H.~J. Kelly}. 2013.
@@ -205,20 +189,6 @@
   Assembly Using Symbolic Manipulation}.
 \newblock {\it {ACM} Trans. Math. Software} {39}, 4 (2013).
 \newblock
-
-
-\bibitem[\protect\citeauthoryear{Shin, Hall, Chame, Chen, Fischer, and
-  Hovland}{Shin et~al\mbox{.}}{2010}]%
-        {nek5000}
-{Jaewook Shin}, {Mary~W. Hall}, {Jacqueline Chame}, {Chun Chen}, {Paul~F.
-  Fischer}, {and} {Paul~D. Hovland}. 2010.
-\newblock \showarticletitle{Speeding Up Nek5000 with Autotuning and
-  Specialization}. In {\em Proceedings of the 24th ACM International Conference
-  on Supercomputing} {\em (ICS '10)}. ACM, New York, NY, USA, 253--262.
-\newblock
-\showISBNx{978-1-4503-0018-6}
-\showDOI{%
-\url{http://dx.doi.org/10.1145/1810085.1810120}}
 
 
 \end{thebibliography}

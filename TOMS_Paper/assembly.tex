@@ -139,14 +139,16 @@ This is all implemented in COFFEE, which in turn is integrated with the Firedrak
 
 %is the computation of contributions of a specific cell in the discretized domain to the linear system which yields the PDE solution. The process consists of numerically evaluating problem-specific integrals to produce a matrix and a vector [Olgaard and Wells 2010; AMCG 2010], whose sizes depend on the order of the method. This operation is applied to all cells in the discretized domain. In this work we focus on local matrices, or “element matrices”, which are more costly to compute than element vectors.
 
-We summarize the basic concepts sustaining the finite element method following the notation adopted in~\cite{quadrature1} and~\cite{Francis}. We consider the weak formulation of a linear variational problem
+We review finite element integration and possible implementations using notation and examples adopted in~\cite{quadrature1} and~\cite{Francis}. 
+
+We consider the weak formulation of a linear variational problem
 \begin{equation}
 \begin{split}
 Find\ u\ \in U\ such\ that \\
 a(u, v) = L(v), \forall v \in V
 \end{split}
 \end{equation}
-where $a$ and $L$ are called bilinear and linear form, respectively. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are discrete function spaces. For simplicity, we assume $U = V$ and $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$
+where $a$ and $L$ are, respectively, a bilinear and a linear form. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are discrete function spaces. For simplicity, we assume $U = V$ and $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$
 \begin{equation}
 A\textbf{u} = b
 \end{equation}
@@ -181,7 +183,7 @@ The local element vector $L$ can be determined in an analogous way.
 \subsection{Quadrature Mode}
 Quadrature schemes are conveniently used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies a change of variables from reference coordinates $X_0$ to real coordinates $x = F_K (X_0)$ is necessary any time a new element is evaluated. The numerical integration routine based on quadrature representation over an element $K$ can be expressed as follows
 \begin{equation}
-\label{quadrature}
+\label{eq:quadrature}
 \scriptsize
 A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\beta=1}^d \frac{\partial X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial \phi_i^K(X^q)}{\partial X_{\alpha_1}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \frac{\partial \phi_j^K(X^q)}{\partial X_{\alpha_2}} det F_K' W^q
 \end{equation}
@@ -189,10 +191,23 @@ where $N$ is the number of integration points, $W^q$ the quadrature weight at th
 
 % Magari la summation sui coefficients la sputo dentro? che dici?
 
-\subsection{Tensor Mode}
-...
+\subsection{Tensor Contraction Mode}
+Starting from Equation~\ref{eq:quadrature}, exploiting basic mathematical properties we can rewrite the expression as
+\begin{equation}
+\label{eq:tensor}
+\scriptsize
+A_{ij}^K = \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\alpha_3=1}^n det F_K' w_{\alpha_3} \sum_{\beta=1}^d \frac{X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \int_{K_0} \phi_{\alpha_3} \frac{\partial \phi_{i_1}}{\partial X_{\alpha_1}} \frac{\partial \phi_{i_2}}{\partial X_{\alpha_2}} dX.
+\end{equation}
+A generalization of this transformation has been proposed in~\cite{Kirby:TC}. By only involving reference element terms, the integral in the equation can be pre-evaluated and stored in a temporary. The evaluation of the local tensor can then be abstracted as
+\begin{equation}
+A_{ij}^K = \sum_{\alpha} A_{i_1 i_2 \alpha}^0 G_{K}^\alpha
+\end{equation}
+in which the pre-evaluated "reference tensor" $A_{i_1 i_2 \alpha}$ and the cell-dependent "geometry tensor" $G_{K}^\alpha$ are exposed. 
 
+\subsection{Qualitative Comparison}
+Depending on the form being considered, the relative performance of the two modes, in terms of number of operations executed, can vary even quite dramatically. The presence of derivatives or coefficient functions in the input form tends to increase the size of the geometry tensor, making the traditional quadrature mode increasingly more indicate for "complex" forms. On the other hand, speed ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains "sufficiently small". 
 
+These two modes have been implemented in the Fenics Form Compiler. In this compiler, a simple heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically~\cite{Fenics}. We will later comment on the efficacy of this approach (Section~\ref{sec:optimal-syntesis}. For the moment, we just recall that one of the goals of this research is to produce an intelligent system that is capable of selecting the optimal mode at the monomials level -- no heuristics, no "global" choice of the mode for all monomials in the form -- without affecting the cost of code generation.
 
 \section{Optimality of Loop Nests}
 \label{sec:optimal-impl}
@@ -210,7 +225,7 @@ A straightforward property of perfect nests is that hoisting of invariant expres
 % In the following, we should represent loops by their iteration variable.
 
 \begin{Def}[Linear loop]
-A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if all expressions appearing in the body of $L$ that use $i$ to access some memory locations are linear in $I$.
+A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if all expressions appearing in the body of $L$ that use $i$ to access some memory locations are linear over $I$.
 \end{Def}
 
 In this work, we are particularly interested in the following class since it naturally arises from the math described in~\ref{sec:background}.
@@ -229,7 +244,7 @@ At this point, we can present a simple yet fundamental result.
 
 \begin{Prop}
 \label{prop:share-removal}
-Sharing in a perfect multilinear loop nest $N = L_{i_{0}, i_{1}, ..., i_{n-1}}$ can always be eliminated.
+Sharing in a perfect multilinear loop nest $N = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ can always be eliminated.
 \end{Prop}
 \begin{proof}
 The demonstration is by construction and exploits linearity. We want to transform $N$ into $N'$ such that sharing is absent at all levels of $N'$. Starting from the innermost loop $n-1$, the expressions are ''flattened'' by expanding all products involving any of the terms depending on $i_{n-1}$. Subsequently, such terms can be factorized. Due to linearity, in each factored product there is only one term depending on $i_{n-1}$. The factors that do not depend on $i_{n-1}$ are, by definition, loop-invariant, and as such can be hoisted at the level of $i_{n-2}$. This procedure can be applied recursively up to $L_{i_{0}}$: multilinearity allows factorization at each level; perfectness ensures hoisting is always safe.
@@ -238,7 +253,7 @@ The demonstration is by construction and exploits linearity. We want to transfor
 Based on this proposition, we define optimality as follows.
 
 \begin{Def}[Optimality of a multilinear loop nest]
-The synthesis of a multilinear loop nest is \textit{optimal} if the amount of operations performed in the innermost loop is minimal.
+The synthesis of a multilinear loop nest is \textit{optimal} if the amount of operations performed in the innermost loop is minimum.
 \end{Def}
 
 In other words, this implies there is no other nest syntheses that could decrease the number of operations in the body of the innermost loop any further. Note that this definition of optimality does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of ''optimality'' clearly makes no sense. In the following, we assume to operate in a CPU-bound regime, in which the body of loop nests are characterized by arithmetic-intensive expressions. This suits the context of finite element integration.
@@ -257,31 +272,53 @@ In practice, this result is too weak if we consider generic loop nests in which 
 \lstinputlisting[basicstyle=\small]{listings/loopnest.code}
 \end{CenteredBox}\caption{Loop nest example}\label{code:loopnest}\end{figure}
 
-The imperfect nest \texttt{N}=\texttt{eijk} comprises a reduction loop \texttt{i} and a perfect doubly nested loop \texttt{jk}, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
+The imperfect nest $N=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
 \begin{itemize}
 \item contrary to what happens with hoisting in perfect multilinear loop nests, in this case the size of the temporaries would be proportional to the number of non-reduction loops (in the example, \texttt{N$\cdot$O} for \texttt{ijk} sub-expressions, \texttt{L$\cdot$N$\cdot$O} for \texttt{eijk} ones). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime;
-\item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of \texttt{k} (for example, consider how expansion tends to increase operations).
+\item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of $L_k$ (for example, consider how expansion tends to increase operations).
 \end{itemize}
 
 We then review our definition of optimality for generic loop nests as follows
 
 \begin{Def}[Optimality of a loop nest]
-The synthesis of a loop nest is \textit{optimal} if, under a set of memory constraints \texttt{C}, the amount of operations performed in the innermost loop is minimal.
+\label{def:optimality}
+The synthesis of a loop nest is \textit{optimal} if, under a set of memory constraints \texttt{C}, the amount of operations performed in the innermost loop is minimum.
 \end{Def}
 
 Clearly, this definition remains vague until instantiated in a certain model. Once the model is fixed, we can argue about the meaning of \texttt{C} and try to produce an algorithm to reach optimality. This is tackled in the next section.
 
 \section{Synthesis of Optimal Loop Nests in Finite Element Integration}
-The model, or loop nest structure, we are interested in arises in the domain of finite element integration. As explained in Section~\ref{sec:background}, integration occurs locally at the element level. In a weak variational formulation of a problem, a bilinear and a liner forms need be evaluated, typically using a quadrature scheme. The loop nest in Figure~\ref{code:loopnest} is a simplified view of a typical bilinear form implementation. The \texttt{e} loop represents iteration over the elements of a mesh; the \texttt{i} loop derives from using numerical quadrature; the perfect loop nest \texttt{jk} implements the computation over the test and trial functions' degrees of freedom. 
+\label{sec:optimal-syntesis}
 
-Domain knowledge tells us that in our model, for real-world scenarios, the following holds: 1) $L >>> M, N, O$; that is, even with high order basis functions, the number of elements is typically order of magnitude larger than both the number of quadrature points and degrees of freedom; 2) the loop nest enclosed by the integration loop is always perfect and multilinear (descends from the straightforward implementation of Equation~\ref{quadrature} into a loop nest). Based upon these observations, we now discuss optimality.
+In this section, we instantiate our definition of loop optimality in the domain of finite element integration. This requires elaborating on the junction between two different levels of abstraction: the math, in terms of the multilinear forms arising from the weak variational formulation of a problem, which we reviewed in Section~\ref{sec:background}; and the (partly multilinear) loop nests implementing such forms.
 
-\subsection{Operation-minimal synthesis}
+Our point of departure is the example loop nest in Figure~\ref{code:loopnest}. This loop nest is a simplified view of a typical bilinear form implementation. The $L_e$ loop represents iteration over the elements of a mesh; the $L_i$ loop derives from using numerical quadrature; the perfect loop nest $[L_j, L_k]$ implements the computation over the test and trial functions' degrees of freedom. We deliberately omitted useless portions of code to not hinder readability (e.g. matrix insertion) and to avoid tying our discussing to a specific form (e.g. \texttt{F} is unspecified).
+
+Before expanding on optimality, we make a few observations about properties of our domain. 1) We know that $L >>> M, N, O$; that is, even with high order basis functions, the number of elements is typically order of magnitude larger than both the number of quadrature points and degrees of freedom. 2) The loop nest enclosed by the integration loop is always perfect and multilinear; this naturally descends from the translation of Equation~\ref{eq:quadrature} into a loop nest. 
+
+% maybe say somewhere the order of the loop nest eijk is just the most natural --- the other present worse data locality for example
+% change L into some other letters
+% say somewhere that N and O are the number of dofs for test and trial functions
 
 \subsection{Memory constraints}
+The fact that the iteration space of $L_e$ is so larger than that of other loops suggests that we should be cautious when hoisting outside of the loop nest $N$. Imagine an additional loop $L_t$, the time stepping loop, wraps $N$. Theoretically, one could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and hoist them out of $L_e$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion, therefore, that the decrease in the number of operations would be completely overwhelmed by the bigger memory pressure.
+
+A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as one of many possible examples, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporaries of size equal to $N\cdot O$; depending on $N$, $O$ and the cardinality of such set (or, equivalently, "the rank and size of the geometry tensor"), it is not so unlikely to eventually break the local memory threshold.  
+
+Based upon these considerations, we impose two memory constraints
+\begin{itemize}
+\item The size of a temporary due to code motion cannot be bigger than the size of the multilinear loop nest iteration space ($N\cdot O$ for the bilinear form in the example). A corollary is that hoisting of expressions involving geometry terms outside of $L_e$ is forbidden.
+\item The total size of the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
+\end{itemize}
+
+\subsection{Operation-minimum synthesis}
+Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in the innermost loop is minimum. We now discuss how we can systematically achieve this.
+
+Eliminating sharing from the multilinear loop nest does not suffice to reach nest optimality. This is because we are considering the whole nest, so the presence of the integration loop $L_i$ makes us wonder whether the reduction it imposes can be pre-evaluated outside of $L_e$, as already suggested in~\ref{def:optimality}, thus reducing the operation count.
+
+To answer this question, we make use of a result in~\cite{Kirby:TC}, the foundation of tensor contraction mode. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the domain of product (of derivatives) of functions from discrete spaces; such monomials can always be reduced to the product of two tensor, a reference tensor and a geometry tensor. An interpretation of this result at the level of loop nest is that if our input is, conceptually, as in Figure~\ref{code:loopnest}, then we can always dissect \texttt{F} into distinct sub-expressions (one per monomial), refactorize each sub-expression to split constant from $[L_i, L_j, L_k]$-dependent terms, hoist the latter one outside of $L_e$, pre-evaluate the reduction.
 
 %\item cost model for deciding what to do
-%\item constrained increase in the working set size
 %\item heuristic optimisation of constant and quadrature dependent expressions
 
 %insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
