@@ -315,12 +315,12 @@ Based upon these considerations, we impose two memory constraints
 \item The total size of the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
 \end{itemize}
 
-\subsection{Operation-minimum synthesis}
-Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in the innermost loop is minimum. We now discuss how we can systematically achieve this.
+\subsection{Operation Minimization under Memory Constraints}
+Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in all innermost loops is minimum. We now discuss how we can systematically achieve this.
 
-Eliminating sharing from the multilinear loops does not suffice to reach nest optimality. In fact, we wonder whether the reduction imposed by $L_i$ could be pre-evaluated outside of $N$, as already suggested in~\ref{def:optimality}, thus potentially reducing the operation count.
+Eliminating sharing from the multilinear loops does not suffice for nest optimality. In fact, we wonder whether the reduction imposed by $L_i$ could be pre-evaluated outside of $N$, as already suggested in~\ref{def:optimality}, thus potentially reducing the operation count.
 
-To answer this question, we make use of a result -- the foundation of tensor contraction mode -- in~\cite{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $N$ and finally pre-evaluated. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
+To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $N$, and finally pre-evaluated. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
 
 The intuition of the algorithm to synthesize an optimal loop nest is shown in Figure~\ref{code:intuition}. 
 
@@ -350,7 +350,7 @@ The point of departure consists of understanding the impact, as number of operat
 %now show that local reasoning is optimal in our context, while we postpone the discussion about the variation in \texttt{ops}. 
 %For the moment, just note that if we exclude pathological cases in which different monomials reduce to multiple identical tables, local reasoning satisfies our needs. 
 
-If we estimate that, for a given monomial, pre-evaluation will decrease the workload, then the corresponding sub-expression is extracted, a sequence of transformation steps -- involving expansion, factorization, code motion -- takes place (details in Section~\ref{sec:codegen}, and the evaluation eventually performed. The result is a set of $n$-dimensional tables (these can be seen as "slices" of the reference tensor at the math level), $n$ being the arity of the multilinear form. Identical tables are mapped to the same temporary. Eventually, sharing is removed in all resulting expressions by applying a procedure as described in Proposition~\ref{prop:optimal-mln}. 
+If we estimate that, for a given monomial, pre-evaluation will decrease the workload, then the corresponding sub-expression is extracted, a sequence of transformation steps -- involving expansion, factorization, code motion -- takes place (details in Section~\ref{sec:codegen}, and the evaluation eventually performed. The result is a set of $n$-dimensional tables (these can be seen as "slices" of the reference tensor at the math level), $n$ being the arity of the multilinear form. Identical tables are mapped to the same temporary. Eventually, sharing is removed from all resulting expressions by applying a procedure as described in Proposition~\ref{prop:optimal-mln}. 
 
 The transformed, operation-minimum loop nest is as in Figure~\ref{code:loopnest-opt}. 
 
