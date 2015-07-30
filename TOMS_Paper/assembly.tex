@@ -122,7 +122,7 @@ Department of Mathematics, Imperial College London;
 \maketitle
 
 
-\section{Introduction and Motivations}
+\section{Introduction, Motivations, Related Work}
 
 The need for rapidly implementing high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proved successful in the context of the FEniCS~\cite{Fenics} and Firedrake~\cite{firedrake-code} projects, which have become increasingly popular over the last years. In these frameworks, the weak variational form of a problem is expressed at high-level by means of a domain-specific language. The mathematical specification is manipulated and then passed to a form compiler, which generates a representation of local assembly operations. These operations numerically evaluate problem-specific integrals in order to compute so called local matrices and vectors, which represent the contributions from each element in the discretized domain to the equation solution. Local assembly code must be high performance: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, and polynomial order of the chosen function spaces, the resulting assembly kernels become more and more computationally expensive, covering a significant fraction of the overall computation run-time. 
 
@@ -231,13 +231,13 @@ A straightforward property of perfect nests is that hoisting of invariant expres
 A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if all expressions appearing in the body of $L$ that use $i$ to access some memory locations are linear over $I$.
 \end{Def}
 
-In this work, we are particularly interested in the following class since it naturally arises from the math described in~\ref{sec:background}.
+In this work, we are particularly interested in the following class since it naturally arises from the math described in Section~\ref{sec:background}.
 
 \begin{Def}[Perfect multilinear loop nest]
-A \textit{perfect multilinear} loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $l \in [0, n-1]$.
+A \textit{perfect multilinear} loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
-Note that nothing prevents a perfect multilinear loop nest to be enclosed by an outer, possibly imperfect, nest. Indeed, this is the loop structure that will be at the centre of our study. We will later elaborate on this. First, we need to formulate a definition of optimality for perfect multilinear loop nests. To this purpose, it is convenient to introduce the notion of sharing.
+Note that nothing prevents a perfect multilinear loop nest from being enclosed by an outer, possibly imperfect, nest. Indeed, this loop structure will be at the centre of our study. We will later elaborate on this. First, we need to define optimality for perfect multilinear loop nests. To this purpose, it is convenient to introduce the notion of sharing.
 
 \begin{Def}[Sharing]
 A loop $L_i$ presents \textit{sharing} if it contains at least two expressions depending on $i$ that are symbolically identical. 
@@ -247,10 +247,10 @@ At this point, we can present a simple yet fundamental result.
 
 \begin{Prop}
 \label{prop:share-removal}
-Sharing in a perfect multilinear loop nest $N = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ can always be eliminated.
+Sharing in a perfect multilinear loop nest $LN = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ can always be eliminated.
 \end{Prop}
 \begin{proof}
-The demonstration is by construction and exploits linearity. We want to transform $N$ into $N'$ such that sharing is absent at all levels of $N'$. Starting from the innermost loop $n-1$, the expressions are ''flattened'' by expanding all products involving any of the terms depending on $i_{n-1}$. Subsequently, such terms can be factorized. Due to linearity, in each factored product there is only one term depending on $i_{n-1}$. The factors that do not depend on $i_{n-1}$ are, by definition, loop-invariant, and as such can be hoisted at the level of $i_{n-2}$. This procedure can be applied recursively up to $L_{i_{0}}$: multilinearity allows factorization at each level; perfectness ensures hoisting is always safe.
+The demonstration is by construction and exploits linearity. We want to transform $LN$ into $LN'$ such that there is no sharing is any $L_i \in LN'$. Starting from the innermost loop $L_{i_{n-1}}$, the expressions are ''flattened'' by expanding all products involving terms depending on $L{i_{n-1}}$. Being on the same level of the expression tree, such terms can then be factorized. Due to linearity, each factored product only has one term depending on $L_{i_{n-1}}$. The other terms, independent of $L_{i_{n-1}}$, are, by definition, loop-invariant, and as such can be hoisted at the level of $L_{i_{n-2}}$. This procedure can be applied recursively up to $L_{i_{0}}$: multilinearity allows factorization at each level; perfectness ensures hoisting is always safe.
 \end{proof}
 
 Based on this proposition, we define optimality as follows.
@@ -259,30 +259,30 @@ Based on this proposition, we define optimality as follows.
 The synthesis of a multilinear loop nest is \textit{optimal} if the amount of operations performed in the innermost loop is minimum.
 \end{Def}
 
-In other words, this implies there is no other nest syntheses that could decrease the number of operations in the body of the innermost loop any further. Note that this definition of optimality does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of ''optimality'' clearly makes no sense. In the following, we assume to operate in a CPU-bound regime, in which the body of loop nests are characterized by arithmetic-intensive expressions. This suits the context of finite element integration.
+In other words, this means there is no other nest synthesis able to decrease the number of operations in the innermost loop any further. Note that this definition of optimality does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of ''optimality'' would clearly make no sense. In the following, we assume to operate in a CPU-bound regime, in which the body of loop nests are characterized by arithmetic-intensive expressions. This suits the context of finite element integration.
 
 A second result follows.
 \begin{Prop}
 \label{prop:optimal-mln}
-An optimal synthesis for a perfect multilinear loop nest $N$ can be found in ....
+An optimal synthesis for a perfect multilinear loop nest $LN$ can be found in ....
 \end{Prop}
 \begin{proof}
-By construction. We consider the body of the innermost loop $L_{i_{n-1}}$. Constant expressions can be hoisted outside of $N$ and be replaced with suitable temporaries. Loop-dependent terms are grouped into $n$ disjoint sets $S_i$, each $S_i$ containing all terms depending on loop $i$. These sets are sorted in descending order based on their cardinality. By establishing a one-to-one mapping between set indices and loop indices, we produce a new loop permutation. The loop permutation is semantically correct because of perfectness. In this new order, loops are placed such that as going down the nest, $L_i$ is characterized by less unique terms than $L_{i-1}$. At this point, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ no further improvable in the number of operations executed. In particular, the number of operations is equal to $\sharp S_{i_{n-1}} + (\sharp S_{i_{n-1}} - 1)$, in which the second term represents the cost of the summation.
+By construction. We start from the innermost loop $L_{i_{n-1}}$. Loop-dependent terms are logically grouped into $n$ disjoint sets $S_i$, each $S_i$ containing all terms depending on $L_i$. These sets are sorted in descending order based on their cardinality. By establishing a one-to-one mapping between set indices and loop indices, we produce a new loop permutation. The loop permutation is semantically correct because of perfectness. In this new order, loops are placed such that as going down the nest, $L_i$ is characterized by less unique terms than $L_{i-1}$. At this point, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ no further improvable in the number of operations executed. In particular, the number of operations is equal to $\sharp S_{i_{n-1}} + (\sharp S_{i_{n-1}} - 1)$, in which the second term represents the cost of the summation.
 \end{proof}
 
-In practice, this result is too weak if we consider generic loop nests in which multilinearity applies to a subset of loops only and reductions are present. Consider the example in Figure~\ref{code:loopnest}. 
+We now consider generic loop nests in which multilinearity applies to a subset of loops only. Consider the example in Figure~\ref{code:loopnest}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{Loop nest example}\label{code:loopnest}\end{figure}
 
-The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
+The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of $LN$ as long as data dependencies are preserved (note that $LN$ is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to $M$ in the number of operations executed. However, finding or exposing reducible sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
 \begin{itemize}
-\item as opposed to what happens with hoisting in perfect multilinear loop nests, in this case the size of the temporaries would be proportional to the number of non-reduction loops (in the example, \texttt{N$\cdot$O} for \texttt{ijk} sub-expressions, \texttt{L$\cdot$N$\cdot$O} for \texttt{eijk} ones). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime;
-\item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of $L_k$ (for example, consider how expansion tends to increase operations).
+\item as opposed to what happens with hoisting in perfect multilinear loop nests, in this case the size of the temporaries would be proportional to the number of non-reduction loops crossed (in the example, \texttt{N$\cdot$O} for \texttt{ijk} sub-expressions, \texttt{L$\cdot$N$\cdot$O} for \texttt{eijk} ones). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime;
+\item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of $L_k$ (expansion could increase the number of operations, e.g. $A(B+C) = AB + AC$).
 \end{itemize}
 
-We then review our definition of optimality for generic loop nests as follows
+We then refine our definition of optimality for generic loop nests as follows
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:optimality}
@@ -312,11 +312,11 @@ A second, more general observation is that, for certain forms and discretization
 
 Based upon these considerations, we impose two memory constraints
 \begin{itemize}
-\item The size of a temporary due to code motion cannot be bigger than the size of the multilinear loop nest iteration space ($N\cdot O$ for the bilinear form in the example). A corollary is that hoisting of expressions involving geometry terms outside of $L_e$ is forbidden.
+\item The size of a temporary due to code motion cannot be bigger than the size of the multilinear loop nest iteration space ($N\cdot O$ for the bilinear form in the example). A corollary is that hoisting expressions involving geometry terms outside of $L_e$ is forbidden.
 \item The total size of the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
 \end{itemize}
 
-\subsection{Operation Minimization under Memory Constraints}
+\subsection{Minimizing the Operation Cost}
 Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in all innermost loops is minimum. We now discuss how we can systematically achieve this.
 
 Eliminating sharing from the multilinear loops does not suffice for nest optimality. In fact, we wonder whether the reduction imposed by $L_i$ could be pre-evaluated outside of $N$, as already suggested in~\ref{def:optimality}, thus potentially reducing the operation count.
@@ -332,13 +332,16 @@ The intuition of the main algorithm for optimal loop nest synthesis is shown in 
 
 \begin{figure}[h]
 \begin{lstlisting}[basicstyle=\small\ttfamily, frame=single]
-M = dissect the input expression into monomials
-for each monomial in M:
+dissect the input expression into monomials
+for each monomial M:
   C = estimate $\mbox{\texttt{ops}}$ after pre-evaluation
   NC = estimate $\mbox{\texttt{ops}}$ without pre-evaluation
   if C < NC and memory constraints satisfied:
-    extract the monomial into a separate loop nest
-    apply pre-evaluation
+    mark M as candidate for pre-evaluation
+for each monomial M:
+  if M does not share terms with M$'$, an unmarked monomial:
+    extract M into a separate loop nest
+    apply pre-evaluation to M
 for each expression:
   remove sharing    
 \end{lstlisting}
@@ -346,47 +349,50 @@ for each expression:
 \label{code:intuition}
 \end{figure}
 
-The point of departure consists of understanding the impact, as number of operations saved or introduced, of pre-evaluation. This is studied "locally"; that is, for each monomial, in isolation. We will later discuss the optimality of this approach and how we can precisely quantify such impact exploiting simple mathematical properties. 
+The point of departure consists of understanding the impact, as number of operations saved or introduced, of pre-evaluation. This is studied "locally"; that is, for each monomial, in isolation. If we estimate that, for a given monomial, pre-evaluation will decrease the operation count, then the corresponding sub-expression is extracted, a sequence of transformation steps -- involving expansion, factorization, code motion -- takes place (details in Section~\ref{sec:codegen}, and the evaluation eventually performed. The result is a set of $n$-dimensional tables (these can be seen as "slices" of the reference tensor at the math level), $n$ being the arity of the multilinear form. Identical tables are mapped to the same temporary. Eventually, sharing is removed from the resulting expressions by applying a procedure as described in Proposition~\ref{prop:optimal-mln}. 
 
-%now show that local reasoning is optimal in our context, while we postpone the discussion about the variation in \texttt{ops}. 
-%For the moment, just note that if we exclude pathological cases in which different monomials reduce to multiple identical tables, local reasoning satisfies our needs. 
-
-If we estimate that, for a given monomial, pre-evaluation will decrease the workload, then the corresponding sub-expression is extracted, a sequence of transformation steps -- involving expansion, factorization, code motion -- takes place (details in Section~\ref{sec:codegen}, and the evaluation eventually performed. The result is a set of $n$-dimensional tables (these can be seen as "slices" of the reference tensor at the math level), $n$ being the arity of the multilinear form. Identical tables are mapped to the same temporary. Eventually, sharing is removed from all resulting expressions by applying a procedure as described in Proposition~\ref{prop:optimal-mln}. 
-
-The transformed, optimal loop nest is as in Figure~\ref{code:loopnest-opt}. 
+The transformed loop nest is as in Figure~\ref{code:loopnest-opt}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
 \end{CenteredBox}\caption{Optimized Loop nest example}\label{code:loopnest-opt}\end{figure}
 
-Before elaborating on how we determine the pre-evaluation gain (or loss), we demonstrate the optimality of the approach.
+Before elaborating on the profitability of pre-evaluation, we need to discuss under which conditions this approach, based on a "local analysis" of monomials, is optimal. 
 
 \begin{Prop}
-Consider an expression comprising a set of monomials $M$. Let $P$ be the set of all monomials for which it has been estimated that pre-evaluation decreases their operation count. Then, if pre-evaluation is applied to all of the monomials in $P$, the resulting loop nest $LN$, enclosing an expression which is the sum of all monomials in $Z = M \setminus P$, is optimal under memory constraints $C$ once sharing is removed.
+\label{prop:optimal-approach}
+Consider an expression comprising a set of monomials $M$. Let $P$ be the set of pre-evaluated monomials, determined as described in Figure~\ref{code:intuition}, and let $Z$ be such that $Z = M \setminus P$. Assume that:
+\begin{enumerate}
+\item the cost function employed is optimal; that is, it predicts correctly the profitability of pre-evaluation
+\item pre-evaluating distinct monomials does not produce identical tables
+\item monomials in $P$ do not share terms
+\end{enumerate} 
+Then, the loop nest $LN$ is optimal under memory constraints $C$, once sharing is removed.
 \end{Prop}
 \begin{proof}
-We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$ for the pre-evaluated expressions in $P$, and $[L_e, L_i, L_j, L_k]$ enclosing the remaining monomials in $Z$. Since they only differer for the presence of $L_i$, we relieve the notation by omitting all shared loops when discussing operation counts. In particular, we use $I$ to refer to the iteration space size of $L_i$. The operation count of what we are proving to be the optimal $LN$ synthesis is, therefore, $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation cost of monomials in $P$ and $Z$.
+We first comment on the assumptions. 1) How to create an optimal cost function is discussed in Section~\ref{sec:op_count}. 2) A pathological case due to symmetries in basis functions, which in practice rarely happens. 3) This could occur in complex forms with several monomials; for simplicity, we ignore this situation (otherwise, a "global" analysis of the monomials would be required).
 
-We start noting that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This allows us to search the optimum in the syntheses space by only 1) selecting candidates for pre-evaluation and 2) dealing with sharing. We need to prove that reasoning about the operation count on a monomial basis, rather than globally, suffices to reach our definition of optimality. We reduce this problem to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$. That is, we show there is no better way of constructing $P$ and $Z$ other than local reasoning.
+We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$, for the pre-evaluated monomials in $P$, and $[L_e, L_i, L_j, L_k]$, enclosing the remaining monomials in $Z$. Since they only differ for the presence of $L_i$, we relieve notation by omitting all shared loops when discussing operation counts. In particular, we use $I$ to refer to the iteration space size of $L_i$. The operation count of what we are proving to be the optimal $LN$ synthesis is, therefore, $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation cost of monomials in $P$ and $Z$, respectively.
 
-A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if all symbols in $Z_P$ are also shared in $\overline{Z} = Z \setminus Z_P$,  then we have $LN_{ops_2}' = LN_{ops_2}$, so out statement is true. If, on the other hand, at least one symbol is not shared, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluated terms, $LN_{ops_1}' \geq LN_{ops_1} +  I \cdot\delta$ holds. This is the case if and only if pre-evaluated terms are not identical to others in $P$, which would otherwise expose sharing. However, if we exclude the pathological cases in which different sub-expressions reduce to the same values (due to symmetries in basis functions, for example), this must be true, otherwise the assumption about the optimality of the cost prediction would be contradicted.
+We start noting that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This narrows the proof to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$.
 
-B) In the absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$ and we are starting from the assumption that pre-evaluation is optimal for the monomials considered. As opposed to this extreme case, there could be some degree of sharing between monomials in $P_Z$ an $\overline{P}$. However, as clarified in the next section, this situation is not possible: the cost function "sees sharing" and it would prevent pre-evaluation by counting on sharing-removal for optimality. Finally, partial sharing. Note that by not pre-evaluating $P_Z$, the following: $LN_{ops_1} - LN_{ops_1}' < LN_{ops_2}' - LN_{ops_2}$ trivially holds (i.e., the loss in operation count is larger than the gain). At best, once sharing is remove, 
+A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if monomials in $Z_P$ share symbols with $\overline{Z} = Z \setminus Z_P$, then we have $LN_{ops_2}' = LN_{ops_2}$, so our statement is true. If, on the other hand, at least one monomial does not share any symbols, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluations, $LN_{ops_1}' \geq LN_{ops_1} +  I \cdot\delta$ holds. This is indeed the case since we rely on assumption 2, which ensures the uniqueness of the pre-evaluated tables (i.e., the absence of sharing) and, therefore, the optimality of $LN$. 
+
+B) In absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$, with the cost function being optimal by assumption. Assumption 3 guarantees there can be no sharing within $P_Z$, which avoids subtle cases wherein pre-evaluation would result sub-optimal due to destroying sharing-removal opportunities. The last case we have to consider is when $p \in P_Z$ shares at least one term with $z \in Z$. This situation cannot actually occur by construction: all candidates for pre-evaluation sharing terms with monomials in $Z$ are "declassed" from $P$ to $Z$: the rationale is that we would have to pay anyway the presence of the shared terms in the innermost loop due to $z$, so aggregating $p$ in $Z$ does not increase the operation count. 
 \end{proof}
 
-\subsection{Operation Counting}
-
-We now only need to tie our loose hand...
+\subsection{A-Priori Operation Counting}
+\label{sec:op_count}
+In this section we discuss the optimality of the cost function. 
 
 %\item cost model for deciding what to do
 %\item heuristic optimisation of constant and quadrature dependent expressions
 
 % apply memory constraints: reduction to knapsack problem ... not implemented, we use greedy
 
-\subsection{Heuristic Optimization of Integration-dependent Expressions}
-%insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
 
-\section{Automated Code Generation}
+
+\section{Code Generation}
 \label{sec:codegen}
 
 \begin{itemize}
@@ -394,13 +400,16 @@ We now only need to tie our loose hand...
 \item  Building block operations in coffee: 1) eliminating reuse, 2)  insights on the various tree algorithms employed
 \end{itemize}
 
-\section{Low-level Optimization}
+\subsection{Heuristic Optimization of Integration-dependent Expressions}
+%insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
+
+\subsection{Low-level Optimization}
 \label{sec:code-spec}
 ...
 
 % MAYBE JUST A SUBSECTION, "INSIGHTS OF LOW-LEVEL OPTS ...."
 
-\subsection{Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}
+\subsubsection{Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}
 \label{sec:zeros}
 %TODO : say that the reasons to have zeros is to keep the design of the form compiler simple, which just "puts zeros" and "outline the assembly expression".
 
@@ -411,19 +420,12 @@ We now only need to tie our loose hand...
 % tables shrunk and merged
 
 
-\subsection{Padding and Data Alignment}
+\subsubsection{Padding and Data Alignment}
 \label{sec:padding}
-Padding and data alignment as described in~\cite{Luporini} must be refined for the case in which computation over zero-valued columns is avoided. We recall effective SIMD (auto-)vectorization can be achieved only if the innermost loop size is a multiple of the vector register length, in which case the compiler needs not to introduce a remainder scalar loop. In the case of an AVX instruction set, for example, we want to round the size of the innermost loops to the closest multiple of 4 (AVX registers can fit up to four double-precision floats). This can be done provided that arrays are padded, if necessary. Moreover, loads and stores instructions are efficient only if their addresses are suitably aligned to cache boundaries; this is obtainable by enforcing the base address of each padded array to be a multiple of the vector length.
+...
 
-Consider again the code in Figure~\ref{fig:withzeros-skipped-code}. The arrays in the loop nest \texttt{[j1,k1]} can be padded and the right bound of loop \texttt{k1} can be safely increased to 8: eventually, values computed in the region \texttt{M[0:3][6:8]} will be discarded. Then, by explicitly aligning arrays and using suitable pragmas (e.g. \texttt{$\#$pragma simd} for the Intel compiler), effective SIMD auto-vectorization can be obtained for this loop nest. 
-
-There are some complications in the case of loops \texttt{[j0,k0]}. Here, increasing the loop bound to 4 is still safe, assuming that both \texttt{T1} and \texttt{A} are padded with zero-valued entries, but it has no effect: the starting addresses of the load instructions would be \texttt{T1[3]} and \texttt{A[i][3]}, which are not aligned. One solution is to start iterating from the closest index that would ensure data alignment: in this specific case, $k0=0$. However, this would imply losing (partially in general, totally for this loop nest) the effect of the zero-avoidance transformation. Another possibility is to attain to non-aligned accesses. COFFEE can generate code for both situations, so we leave the autotuner, described in Section~\ref{sec:autotune}, in charge of determining the optimal transformation.
-
-Note that in some circumstances the previous solution cannot be applied, since extra iterations might end up accessing non-zero entries in the local element matrix \texttt{M}. In such a situation, there is no possibility of recovering data alignment.
-
-\subsection{Vector-promotion of Integration Quantities}
-....
-
+\subsubsection{Vector-promotion of Integration Quantities}
+...
 
 \section{Performance Evaluation}
 \label{sec:perf-results}
@@ -460,55 +462,55 @@ A plot reports speed-ups over non-optimized FEniCS-Form-Compiler-generated code.
 
 \subsection{Performance of Forms}
 \label{sec:perf-results-forms}
-The four chosen forms allow us to perform an in-depth evaluation of different classes of optimizations for local assembly. We limit ourselves to analyzing the cost of computing element matrices, although all of the techniques presented in this paper are immediately extendible to the evaluation of local vectors. As anticipated, in the following we comment speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the non-optimized, FEniCS-Form-Compiler-generated code. 
-
-We first comment on results of general applicability. By looking at the various figures, we note there is a trend in COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
+%The four chosen forms allow us to perform an in-depth evaluation of different classes of optimizations for local assembly. We limit ourselves to analyzing the cost of computing element matrices, although all of the techniques presented in this paper are immediately extendible to the evaluation of local vectors. As anticipated, in the following we comment speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the non-optimized, FEniCS-Form-Compiler-generated code. 
+%
+%We first comment on results of general applicability. By looking at the various figures, we note there is a trend in COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
 
 \paragraph{Helmholtz}
-\begin{figure}[t]  
-...
-%\includegraphics[scale=0.7]{perf-results/helmholtz}
-%\caption{Helmholtz results.}\label{fig:helmholtz}
-\end{figure}
-The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
+%\begin{figure}[t]  
+%...
+%%\includegraphics[scale=0.7]{perf-results/helmholtz}
+%%\caption{Helmholtz results.}\label{fig:helmholtz}
+%\end{figure}
+%The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
 
 \paragraph{Elasticity}
-\begin{figure}[t]  
-...
-%\includegraphics[scale=0.7]{perf-results/elasticity}
-%\caption{Elasticity results.}\label{fig:elasticity}
-\end{figure}
-Figure~\ref{fig:elasticity} illustrates results for the Elasticity problem. This form uses a vector-valued space for the basis functions, so here transformations avoiding computation over zero-valued columns are of key importance. The \texttt{ffc} set of optimizations leads to notable improvements over the original code at $q=1$. The use of inderection arrays allows to phisically eliminate zero-valued columns at code generation time; as a consequence, different tabulated basis functions are merged into a single array. Therefore, despite the execution being purely scalar because of indirection arrays, the reduction in arithmetic intensity and register pressure imply improvement in performance. Nevertheless, \texttt{auto} remains in general the best choice, with gains over \texttt{ffc} that are wider as $p$ and $nf$ increase. 
-
-For $q \geq 2$, in \texttt{ffc} the lack of SIMD vectorization counterbalances the decrease in the number of floating point operations, leading to speed ups over the original code that only occasionally exceed 1$\times$. On the other hand, the successful application of the zero-avoidance optimization while preserving code specialization plays a key role for \texttt{auto}, resulting in much higher performance code especially at $q=2$ and $q=3$. 
-
-It is worth noting that speed ups of \texttt{auto} over \texttt{fix} decrease at $q=4$, particularly for low values of $p$. As we will discuss in Section~\ref{sec:auto-analysis}, this is because at $q=4$ the vector-register tiling transformation (in combination with loop unroll-and-jam) leads to the highest performance. In principle, vector-register tiling can be used in combination to the zero-avoidance technique; however, due to mere technical limitations, this is currently not supported in COFFEE. Once solved, we expect much higher speed ups in the $q=4$ regime as well.
+%\begin{figure}[t]  
+%...
+%%\includegraphics[scale=0.7]{perf-results/elasticity}
+%%\caption{Elasticity results.}\label{fig:elasticity}
+%\end{figure}
+%Figure~\ref{fig:elasticity} illustrates results for the Elasticity problem. This form uses a vector-valued space for the basis functions, so here transformations avoiding computation over zero-valued columns are of key importance. The \texttt{ffc} set of optimizations leads to notable improvements over the original code at $q=1$. The use of inderection arrays allows to phisically eliminate zero-valued columns at code generation time; as a consequence, different tabulated basis functions are merged into a single array. Therefore, despite the execution being purely scalar because of indirection arrays, the reduction in arithmetic intensity and register pressure imply improvement in performance. Nevertheless, \texttt{auto} remains in general the best choice, with gains over \texttt{ffc} that are wider as $p$ and $nf$ increase. 
+%
+%For $q \geq 2$, in \texttt{ffc} the lack of SIMD vectorization counterbalances the decrease in the number of floating point operations, leading to speed ups over the original code that only occasionally exceed 1$\times$. On the other hand, the successful application of the zero-avoidance optimization while preserving code specialization plays a key role for \texttt{auto}, resulting in much higher performance code especially at $q=2$ and $q=3$. 
+%
+%It is worth noting that speed ups of \texttt{auto} over \texttt{fix} decrease at $q=4$, particularly for low values of $p$. As we will discuss in Section~\ref{sec:auto-analysis}, this is because at $q=4$ the vector-register tiling transformation (in combination with loop unroll-and-jam) leads to the highest performance. In principle, vector-register tiling can be used in combination to the zero-avoidance technique; however, due to mere technical limitations, this is currently not supported in COFFEE. Once solved, we expect much higher speed ups in the $q=4$ regime as well.
 
 
 \paragraph{Poisson}
-\begin{figure}[t]  
-...
-%\includegraphics[scale=0.7]{perf-results/poisson}
-%\caption{Poisson results.}\label{fig:poisson}
-\end{figure}
-
-In Figure~\ref{fig:poisson} we report speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the original code for the Poisson form. We note that, as a general trend, \texttt{ffc} exhibits drops in performance as $nf$ increases, notably when $nf=3$, for any values of $q$ and $p$. This is a consequence of the inherent complexity of the generated code. The way \texttt{ffc} performs loop-invariant code motion leads to the pre-computation of integration-dependent terms at the level of the integration loop, which are characterized by higher arithmetic intensity and redundant computation as $nf$ increases. Moreover, the absence of vectorization is another limiting factor.
-
-The \texttt{auto} variant generally shows the best performance. Significant improvements over \texttt{fix} are also achieved, notably as $q$, $p$ and $nf$ increase. As clarified in the next section, this is always due to a more aggressive expression rewriting in combination with the zero-avoidance technique.
+%\begin{figure}[t]  
+%...
+%%\includegraphics[scale=0.7]{perf-results/poisson}
+%%\caption{Poisson results.}\label{fig:poisson}
+%\end{figure}
+%
+%In Figure~\ref{fig:poisson} we report speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the original code for the Poisson form. We note that, as a general trend, \texttt{ffc} exhibits drops in performance as $nf$ increases, notably when $nf=3$, for any values of $q$ and $p$. This is a consequence of the inherent complexity of the generated code. The way \texttt{ffc} performs loop-invariant code motion leads to the pre-computation of integration-dependent terms at the level of the integration loop, which are characterized by higher arithmetic intensity and redundant computation as $nf$ increases. Moreover, the absence of vectorization is another limiting factor.
+%
+%The \texttt{auto} variant generally shows the best performance. Significant improvements over \texttt{fix} are also achieved, notably as $q$, $p$ and $nf$ increase. As clarified in the next section, this is always due to a more aggressive expression rewriting in combination with the zero-avoidance technique.
 
 
 \paragraph{Hyperelasticity}
-\begin{figure}[t]  
-...
-%\includegraphics[scale=0.7]{perf-results/hyperelasticity}
-%\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
-\end{figure}
-
-Speed ups for the hyperelasticity form are shown in Figure~\ref{fig:hyperelasticity}. Experiments for $nf \geq 2$ could not be executed because of FEniCS-Form-Compiler's technical limitations. 
-
-For \texttt{auto}, massive speed ups for $q \geq 2$ are to be ascribed to aggressive and successful expression writing. Hyperelasticity problems are really compute-intensive, with thousands of operations being performed, so reductions in redundant and useless computation are crucial. Complex forms like hyperelasticity would benefit from further ``specialized'' optimizations: for example, it is a known technical limitation of COFFEE that, in some circumstances, less temporaries could (should) be generated and that hoisted code could (should) be suitably distributed over different loops to minimize register pressure (e.g. COFFEE could apply loop fission for obtaining significantly better register usage). We expect to obtain considerably faster code once such optimizations will be incorporated. 
-
-In the regime $q \geq 2$ and $nf=1$, peformance improvements are less pronounced moving from $p=1$ to $p=2$, although still significant; in particular, we notice a drop at $p=2$, followed by a raise up to $p=4$. It is worth observing that this effect is common to all sets of optimizations. The hypothesis is that this is due to the way coefficient functions are evaluated at quadrature points (identical in all configurations), which cannot be easily vectorized unless a change in storage layout and loops order is implemented in the code (abstract syntax tree) generator on top of COFFEE. 
+%\begin{figure}[t]  
+%...
+%%\includegraphics[scale=0.7]{perf-results/hyperelasticity}
+%%\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
+%\end{figure}
+%
+%Speed ups for the hyperelasticity form are shown in Figure~\ref{fig:hyperelasticity}. Experiments for $nf \geq 2$ could not be executed because of FEniCS-Form-Compiler's technical limitations. 
+%
+%For \texttt{auto}, massive speed ups for $q \geq 2$ are to be ascribed to aggressive and successful expression writing. Hyperelasticity problems are really compute-intensive, with thousands of operations being performed, so reductions in redundant and useless computation are crucial. Complex forms like hyperelasticity would benefit from further ``specialized'' optimizations: for example, it is a known technical limitation of COFFEE that, in some circumstances, less temporaries could (should) be generated and that hoisted code could (should) be suitably distributed over different loops to minimize register pressure (e.g. COFFEE could apply loop fission for obtaining significantly better register usage). We expect to obtain considerably faster code once such optimizations will be incorporated. 
+%
+%In the regime $q \geq 2$ and $nf=1$, peformance improvements are less pronounced moving from $p=1$ to $p=2$, although still significant; in particular, we notice a drop at $p=2$, followed by a raise up to $p=4$. It is worth observing that this effect is common to all sets of optimizations. The hypothesis is that this is due to the way coefficient functions are evaluated at quadrature points (identical in all configurations), which cannot be easily vectorized unless a change in storage layout and loops order is implemented in the code (abstract syntax tree) generator on top of COFFEE. 
 
 
 

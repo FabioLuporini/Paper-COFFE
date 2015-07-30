@@ -9,7 +9,7 @@
 \citation{petsc-integration-gpu}
 \citation{Klockner}
 \citation{Bana}
-\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction and Motivations}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction, Motivations, Related Work}{1}}
 \citation{Luporini}
 \citation{quadrature1}
 \citation{Luporini}
@@ -39,39 +39,34 @@
 \citation{Kirby:TC}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Memory constraints}{7}}
 \newlabel{sec:mem-const}{{4.1}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Operation Minimization under Memory Constraints}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Minimizing the Operation Cost}{7}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Intuition of the main algorithm\relax }}{8}}
 \newlabel{code:intuition}{{2}{8}}
+\newlabel{prop:optimal-approach}{{3}{8}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore opt.code}{9}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Optimized Loop nest example\relax }}{9}}
 \newlabel{code:loopnest-opt}{{3}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Operation Counting}{9}}
-\citation{Luporini}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}A-Priori Operation Counting}{9}}
+\newlabel{sec:op_count}{{4.3}{9}}
 \citation{UFL}
 \citation{ufl-code}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Heuristic Optimization of Integration-dependent Expressions}{10}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Automated Code Generation}{10}}
-\newlabel{sec:codegen}{{5}{10}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Low-level Optimization}{10}}
-\newlabel{sec:code-spec}{{6}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}{10}}
-\newlabel{sec:zeros}{{6.1}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Padding and Data Alignment}{10}}
-\newlabel{sec:padding}{{6.2}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Vector-promotion of Integration Quantities}{10}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Performance Evaluation}{10}}
-\newlabel{sec:perf-results}{{7}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Experimental Setup}{10}}
 \citation{Luporini}
 \citation{quadrature1}
 \citation{quadrature1}
 \citation{Francis}
-\citation{Luporini}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Performance of Forms}{11}}
-\newlabel{sec:perf-results-forms}{{7.2}{11}}
-\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{12}}
-\@writefile{toc}{\contentsline {paragraph}{Elasticity}{12}}
-\@writefile{toc}{\contentsline {paragraph}{Poisson}{12}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Code Generation}{10}}
+\newlabel{sec:codegen}{{5}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Heuristic Optimization of Integration-dependent Expressions}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Low-level Optimization}{10}}
+\newlabel{sec:code-spec}{{5.2}{10}}
+\newlabel{sec:zeros}{{5.2.1}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}{10}}
+\newlabel{sec:padding}{{5.2.2}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Padding and Data Alignment}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Vector-promotion of Integration Quantities}{10}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{10}}
+\newlabel{sec:perf-results}{{6}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{10}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{ufl-code}{\citeauthoryear {??}{ufl}{2014}}
@@ -82,12 +77,17 @@
 \bibcite{Kirby-FEM-opt}{\citeauthoryear {Kirby, Knepley, Logg, and Scott}{Kirby et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2005}}
 \bibcite{Kirby:TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2007}}
 \bibcite{Klockner}{\citeauthoryear {Kl\"{o}ckner, Warburton, Bridge, and Hesthaven}{Kl\"{o}ckner et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2009}}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{13}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusions}{13}}
-\newlabel{sec:conclusions}{{8}{13}}
 \bibcite{petsc-integration-gpu}{\citeauthoryear {Knepley and Terrel}{Knepley and Terrel}{2013}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2014}}
 \bibcite{quadrature1}{\citeauthoryear {Olgaard and Wells}{Olgaard and Wells}{2010}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\lastpage{14}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance of Forms}{11}}
+\newlabel{sec:perf-results-forms}{{6.2}{11}}
+\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{11}}
+\@writefile{toc}{\contentsline {paragraph}{Elasticity}{11}}
+\@writefile{toc}{\contentsline {paragraph}{Poisson}{11}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{11}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{11}}
+\newlabel{sec:conclusions}{{7}{11}}
+\lastpage{12}
