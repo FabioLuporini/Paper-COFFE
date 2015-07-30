@@ -276,7 +276,7 @@ In practice, this result is too weak if we consider generic loop nests in which 
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{Loop nest example}\label{code:loopnest}\end{figure}
 
-The imperfect nest $N=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
+The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of \texttt{N}, provided that data dependencies are preserved (note that \texttt{N} is imperfect). One could think of pre-evaluating the reduction, thus obtaining a decrease proportional to \texttt{M} in the number of operations executed. However, finding or exposing such sub-expressions is, in general, challenging. Further, even though we assumed we could do so, the following issues should be addressed
 \begin{itemize}
 \item as opposed to what happens with hoisting in perfect multilinear loop nests, in this case the size of the temporaries would be proportional to the number of non-reduction loops (in the example, \texttt{N$\cdot$O} for \texttt{ijk} sub-expressions, \texttt{L$\cdot$N$\cdot$O} for \texttt{eijk} ones). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime;
 \item the process by which multi-invariant sub-expressions are exposed could require transformations like expansion and factorization. Consequently, the save originating from the elimination of the reduction loop could be overwhelmed by a potentially larger increase in the number of operations in the body of $L_k$ (for example, consider how expansion tends to increase operations).
@@ -286,7 +286,7 @@ We then review our definition of optimality for generic loop nests as follows
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:optimality}
-The synthesis of a loop nest is \textit{optimal} if, under a set of memory constraints \texttt{C}, the amount of operations performed in all innermost loops of the nest is minimum.
+The synthesis of a loop nest is \textit{optimal} if, under a set of memory constraints \texttt{C}, the total amount of operations performed in all innermost loops is minimum.
 \end{Def}
 
 Clearly, this definition remains vague until instantiated in a certain model. Once the model is fixed, we can argue about the meaning of \texttt{C} and try to produce an algorithm to reach optimality. This is tackled in the next section.
@@ -305,9 +305,10 @@ Before expanding on optimality, we make a few observations about properties of o
 % say somewhere that N and O are the number of dofs for test and trial functions
 
 \subsection{Memory constraints}
-The fact that the iteration space of $L_e$ is so larger than that of other loops suggests that we should be cautious when hoisting outside of the loop nest $N$. Imagine a time stepping loop $L_t$ wraps $N$. Theoretically, one could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and hoist them out of $L_e$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion, therefore, that the decrease in the number of operations would be completely overwhelmed by the bigger memory pressure.
+\label{sec:mem-const}
+The fact that the iteration space of $L_e$ is so larger than that of other loops suggests that we should be cautious when hoisting outside of $LN$. Imagine a time stepping loop $L_t$ wraps $LN$. Theoretically, one could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and hoist them out of $L_e$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion, therefore, that the decrease in the number of operations would be completely overwhelmed by the bigger memory pressure.
 
-A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as one of many possible examples, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporaries of size equal to $N\cdot O$; depending on $N$, $O$ and the cardinality of such set (or, equivalently, "the rank and size of the geometry tensor"), it is not so unlikely to eventually break the local memory threshold.  
+A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as one of many possible examples, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporaries of size equal to $N\cdot O$; depending on the discretization employed it is not so uncommon to break the local memory threshold.  
 
 Based upon these considerations, we impose two memory constraints
 \begin{itemize}
@@ -320,7 +321,7 @@ Definition~\ref{def:optimality} states that a necessary condition for a loop nes
 
 Eliminating sharing from the multilinear loops does not suffice for nest optimality. In fact, we wonder whether the reduction imposed by $L_i$ could be pre-evaluated outside of $N$, as already suggested in~\ref{def:optimality}, thus potentially reducing the operation count.
 
-To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $N$, and finally pre-evaluated. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
+To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $LN$, and finally pre-evaluated. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
 
 The intuition of the algorithm to synthesize an optimal loop nest is shown in Figure~\ref{code:intuition}. 
 
@@ -345,35 +346,38 @@ for each expression:
 \label{code:intuition}
 \end{figure}
 
-The point of departure consists of understanding the impact, as number of operations performed ($\mbox{\texttt{ops}}$, in the following), of pre-evaluation. This is studied "locally"; that is, for each monomial, in isolation. We will later discuss the optimality of this approach and how we can determine $\mbox{\texttt{ops}}$ exploiting simple mathematical properties. 
+The point of departure consists of understanding the impact, as number of operations saved or introduced, of pre-evaluation. This is studied "locally"; that is, for each monomial, in isolation. We will later discuss the optimality of this approach and how we can precisely quantify such impact exploiting simple mathematical properties. 
 
 %now show that local reasoning is optimal in our context, while we postpone the discussion about the variation in \texttt{ops}. 
 %For the moment, just note that if we exclude pathological cases in which different monomials reduce to multiple identical tables, local reasoning satisfies our needs. 
 
 If we estimate that, for a given monomial, pre-evaluation will decrease the workload, then the corresponding sub-expression is extracted, a sequence of transformation steps -- involving expansion, factorization, code motion -- takes place (details in Section~\ref{sec:codegen}, and the evaluation eventually performed. The result is a set of $n$-dimensional tables (these can be seen as "slices" of the reference tensor at the math level), $n$ being the arity of the multilinear form. Identical tables are mapped to the same temporary. Eventually, sharing is removed from all resulting expressions by applying a procedure as described in Proposition~\ref{prop:optimal-mln}. 
 
-The transformed, operation-minimum loop nest is as in Figure~\ref{code:loopnest-opt}. 
+The transformed, optimal loop nest is as in Figure~\ref{code:loopnest-opt}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
 \end{CenteredBox}\caption{Optimized Loop nest example}\label{code:loopnest-opt}\end{figure}
 
-Before elaborating on how we determine $C$ and $NC$ of Figure~\ref{code:intuition}, we introduce the following proposition about the optimality of this approach.
+Before elaborating on how we determine the pre-evaluation gain (or loss), we demonstrate the optimality of the approach.
+%We introduce the following notation ...
 
 \begin{Prop}
-Consider an expression comprising a set of monomials $M$. Let $P$ be the set of all monomials for which it has been estimated that pre-evaluation decreases their operation count. Then, if pre-evaluation is applied to all of the monomials in $P$, the resulting loop nest, enclosing an expression which is the sum of all monomials in $Z = M \setminus P$, is optimal under memory constraints $C$ once sharing is removed.
+Consider an expression comprising a set of monomials $M$. Let $P$ be the set of all monomials for which it has been estimated that pre-evaluation decreases their operation count. Then, if pre-evaluation is applied to all of the monomials in $P$, the resulting loop nest $LN$, enclosing an expression which is the sum of all monomials in $Z = M \setminus P$, is optimal under memory constraints $C$ once sharing is removed.
 \end{Prop}
 \begin{proof}
-We start noting that $C$ ensures the only hoisting operations allowed are those inherent to both pre-evaluation and sharing. This implies that if we 1) optimally decide what should be pre-evaluated and 2) remove sharing, no better synthesis can be found. We then need to prove that following: A) ignoring the prediction cost and pre-evaluating $Z_P: Z_P \subseteq Z$ can only increase the operation count; B) ignoring the prediction code and not pre-evaluating $P_Z: P_Z \subseteq P$ can only increase the operation count. That is, local analysis of monomials leads to an optimal synthesis.
+We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$ for the pre-evaluated expressions in $P$, and $[L_e, L_i, L_j, L_k]$ enclosing the remaining monomials in $Z$. Since they only differer for the presence of $L_i$, we relieve the notation by omitting all shared loops when discussing operation counts. In particular, we use $I$ to refer to the iteration space size of $L_i$. The operation count of what we are proving to be the optimal $LN$ synthesis is, therefore, $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation cost of monomials in $P$ and $Z$.
 
-We observe that the cost of the loop nest when pre-evaluating only all monomials $P$ is $...$. 
+We start noting that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This allows us to search the optimum in the syntheses space by only 1) selecting candidates for pre-evaluation and 2) dealing with sharing. We need to prove that reasoning about the operation count on a monomial basis, rather than globally, suffices to reach our definition of optimality. We reduce this problem to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$. That is, we show there is no better way of constructing $P$ and $Z$ other than local reasoning.
 
-A) If there is no sharing between terms in $Z_P$ and $Z \setminus Z_P$, then the statement is trivially true. Conversely, if present, sharing can be removed. However, the operation count would still be larger than when pre-evaluating $Z_P$. In fact, the cost of the loop nest would be $Z_P^{pre} + P + \sharp L_i \cdot Z \setminus Z_P$, which is greater than $...$, since $Z_P^{pre} > \sharp L_i \cdot Z_P$. 
+A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if all symbols in $Z_P$ are also shared in $\overline{Z} = Z \setminus Z_P$,  then we have $LN_{ops_2}' = LN_{ops_2}$, so out statement is true. If, on the other hand, at least one symbol is not shared, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluated terms, $LN_{ops_1}' \geq LN_{ops_1} +  I \cdot\delta$ holds. This is the case if and only if pre-evaluated terms are not identical to others in $P$, which would otherwise expose sharing. However, if we exclude the pathological cases in which different sub-expressions reduce to the same values (due to symmetries in basis functions, for example), this must be true, otherwise the assumption about the optimality of the cost prediction would be contradicted.
 
-B) ...
+B) This holds due to a simple observation. In the absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$ and we are assuming that pre-evaluation was optimal for the monomials at hand. In the worst case, instead, all non pre-evaluated monomials share terms with those in $Z$. Anyway, the best we can do 
+
+%: regardless of whether there is sharing between terms in $Z_P$ and $\overline{Z} = Z \setminus Z_P$, then the statement is trivially true, since we are assuming that $Z$ contains all monomials for which pre-evaluation is sub-optimal. If, on the other hand, $\delta \in Z_P \cap \overline{Z}$, one can reason as follows. We can first remove sharing; this makes  to reach local optimality and we compare the operation counts. the cost of the loop nest would be $Z_P^{pre} + P + \sharp L_i \cdot Z \setminus Z_P$, which is greater than $...$, since $Z_P^{pre} > \sharp L_i \cdot Z_P$. 
+
  
 \end{proof}
-%This minimizes, according to our definition of optimality, the operation count of the multilinear loop nest.
 
 We now only need to tie our loose hand...
 
