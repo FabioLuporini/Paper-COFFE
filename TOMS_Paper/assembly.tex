@@ -323,7 +323,7 @@ Eliminating sharing from the multilinear loops does not suffice for nest optimal
 
 To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $LN$, and finally pre-evaluated. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
 
-The intuition of the algorithm to synthesize an optimal loop nest is shown in Figure~\ref{code:intuition}. 
+The intuition of the main algorithm for optimal loop nest synthesis is shown in Figure~\ref{code:intuition}. 
 
 % local optimization of monomials
 % local sharing elimination
@@ -360,7 +360,6 @@ The transformed, optimal loop nest is as in Figure~\ref{code:loopnest-opt}.
 \end{CenteredBox}\caption{Optimized Loop nest example}\label{code:loopnest-opt}\end{figure}
 
 Before elaborating on how we determine the pre-evaluation gain (or loss), we demonstrate the optimality of the approach.
-%We introduce the following notation ...
 
 \begin{Prop}
 Consider an expression comprising a set of monomials $M$. Let $P$ be the set of all monomials for which it has been estimated that pre-evaluation decreases their operation count. Then, if pre-evaluation is applied to all of the monomials in $P$, the resulting loop nest $LN$, enclosing an expression which is the sum of all monomials in $Z = M \setminus P$, is optimal under memory constraints $C$ once sharing is removed.
@@ -372,12 +371,10 @@ We start noting that, as explained in Section~\ref{sec:mem-const}, $C$ imposes c
 
 A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if all symbols in $Z_P$ are also shared in $\overline{Z} = Z \setminus Z_P$,  then we have $LN_{ops_2}' = LN_{ops_2}$, so out statement is true. If, on the other hand, at least one symbol is not shared, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluated terms, $LN_{ops_1}' \geq LN_{ops_1} +  I \cdot\delta$ holds. This is the case if and only if pre-evaluated terms are not identical to others in $P$, which would otherwise expose sharing. However, if we exclude the pathological cases in which different sub-expressions reduce to the same values (due to symmetries in basis functions, for example), this must be true, otherwise the assumption about the optimality of the cost prediction would be contradicted.
 
-B) This holds due to a simple observation. In the absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$ and we are assuming that pre-evaluation was optimal for the monomials at hand. In the worst case, instead, all non pre-evaluated monomials share terms with those in $Z$. Anyway, the best we can do 
-
-%: regardless of whether there is sharing between terms in $Z_P$ and $\overline{Z} = Z \setminus Z_P$, then the statement is trivially true, since we are assuming that $Z$ contains all monomials for which pre-evaluation is sub-optimal. If, on the other hand, $\delta \in Z_P \cap \overline{Z}$, one can reason as follows. We can first remove sharing; this makes  to reach local optimality and we compare the operation counts. the cost of the loop nest would be $Z_P^{pre} + P + \sharp L_i \cdot Z \setminus Z_P$, which is greater than $...$, since $Z_P^{pre} > \sharp L_i \cdot Z_P$. 
-
- 
+B) In the absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$ and we are starting from the assumption that pre-evaluation is optimal for the monomials considered. As opposed to this extreme case, there could be some degree of sharing between monomials in $P_Z$ an $\overline{P}$. However, as clarified in the next section, this situation is not possible: the cost function "sees sharing" and it would prevent pre-evaluation by counting on sharing-removal for optimality. Finally, partial sharing. Note that by not pre-evaluating $P_Z$, the following: $LN_{ops_1} - LN_{ops_1}' < LN_{ops_2}' - LN_{ops_2}$ trivially holds (i.e., the loss in operation count is larger than the gain). At best, once sharing is remove, 
 \end{proof}
+
+\subsection{Operation Counting}
 
 We now only need to tie our loose hand...
 
