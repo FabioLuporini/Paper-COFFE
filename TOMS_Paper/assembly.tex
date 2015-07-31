@@ -340,9 +340,9 @@ The intuition of the algorithm for optimal loop nest synthesis is shown in Figur
 \begin{lstlisting}[basicstyle=\small\ttfamily, frame=single]
 dissect the input expression into monomials
 for each monomial M:
-  C = estimate $\mbox{\texttt{ops}}$ after pre-evaluation
-  NC = estimate $\mbox{\texttt{ops}}$ without pre-evaluation
-  if C < NC and memory constraints satisfied:
+  $\theta_{w}$ = estimate $\mbox{\texttt{ops}}$ after pre-evaluation
+  $\theta_{wo}$ = estimate $\mbox{\texttt{ops}}$ without pre-evaluation
+  if $\theta_{w}$ < $\theta_{wo}$ and memory constraints satisfied:
     mark M as candidate for pre-evaluation
 for each monomial M:
   if M does not share terms with M$'$, an unmarked monomial:
@@ -387,23 +387,23 @@ B) In absence of sharing, the statement is trivially true since we would have $L
 
 \subsection{A-Priori Operation Counting}
 \label{sec:op_count}
-The loose hand we have to tie regards the construction of the pre-evaluation cost function. We introduce the cost function $\theta : M \to \mathbb{N} \times \mathbb{N}$ that, given a monomial, returns two natural numbers representing the ideal operation count without ($\theta_{wo}$) and with ($\theta_{w}$) pre-evaluation. Since $\theta$ is integrated in a compiler, a requirement is that its execution is fast.  
+It remains to tie one loose hand: the construction of the pre-evaluation cost function. We introduce the cost function $\theta : M \to \mathbb{N} \times \mathbb{N}$ that, given a monomial, returns two natural numbers representing the optimal operation count without ($\theta_{wo}$) and with ($\theta_{w}$) pre-evaluation. Since $\theta$ is expected to be used by a compiler to drive the transformation process, requirements are simplicity and velocity.  
 
-We start with $\theta_{wo}$. Without performing any kind of transformations, we can easily predict the number of operations in the innermost loop once sharing is removed. This is because of our key property, linearity. By just counting the number of unique terms along the multilinear loop nest, and by taking into account $I$, the size of $L_i$, we can infer the cost. This is also explained in Proposition~\ref{prop:optimal-mln}.
+We can easily predict $\theta_{wo}$ thanks to our key property, linearity. As described in Proposition~\ref{prop:optimal-mln}, a visit of the loop nest suffices to obtain the cost of the optimal synthesis of a multilinear loop nest, namely $MLN_{ops}$. Then, assuming $I$ to be the size of the $L_i$ iteration space, we simply have that $\theta_{wo} = MLN_{ops} \cdot I$.
 
-For $\theta_{w}$, things are more complicated. We first need to account for the presence of (derivatives of) coefficients. This is because we want to estimate the \textit{increase factor} $\iota$. The increase factor captures the increase in arithmetic complexity within the multilinear loop nest if pre-evaluation is performed. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
+For $\theta_{w}$, things are more complicated. We first need to account for the presence of (derivatives of) coefficients to estimate the \textit{increase factor} $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Optimized Loop nest example}\label{code:increase_factor}\end{figure}
 
-One can think of this as the (simplified) loop nest originating from a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} expresses the field $f$ over a function space from which $B$ was derived. In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from the other (reference element specific) quantities. This requires expanding a product, which, in turn, increases the number of $L_k$-dependent operations by a factor 3 (the number of the coefficient local degrees of freedom). $\iota$, or increase factor, precisely captures this growth in the number of $L_k$-dependent operations. Note that in an expression is not innermost loop dependent, then it can be hoisted, and therefore not significant for the operation count.
+One can think of this as the (simplified) loop nest originating from the assembly of a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} represents the field $f$ over (tabulated) basis functions $B$. In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from other (reference element specific) quantities. By expanding the product we observe an increase in the number of $L_k$-dependent operations of a factor 3 (the local degrees of freedom for the coefficient). $\iota$ serves to capture this growth. 
 
-To determine $\iota$, we distinguish two cases: coefficients expressed over different function spaces and coefficients expressed over the same function space. This is essential because there could be more than one (derivative of) coefficient pre-multiplying the same monomial. In the former case, $\iota$ is equal to the cost of expansion. In the latter, after expansion we obtain identical summands, which eventually pre-evaluate to the same table. Consequently, some sharing would be eventually removed from the loop nest resulting from pre-evaluation (e.g., expression X at line Y in Figure~\ref{code:loopnest-opt}). We then need to calculate the number of combinations with repetitions of the symbols appearing in the monomial's coefficients to precisely determine $\iota$.
+With just a single coefficient, $\iota$ directly descends from the cost of expansion. In general, however, the calculation is less straightforward. Consider, for example, the case in which multiple coefficients originate from the same function space. Expansion would then lead to identical terms (i.e., identical pre-evaluated tables). Therefore, for a precise estimate of $\iota$, we instead need to calculate the $k$-combinations with repetitions of $n$ elements, with $k$ being the arity of the multilinear loop nest and $n$ the set of terms involved in the coefficient expansion. 
 
 If $\iota \geq I$ we can immediately say that pre-evaluation will not be profitable. This is indeed a necessary condition that, intuitively, tells us that if we add to the innermost loop more operations than we actually save from eliminating $L_i$, then for sure $\theta_{wo} < \theta_{w}$. This observation can speed up the compilation time by decreasing the analysis cost.
 
-If, on the other hand, $\iota < I$, a further step is necessary to estimate $\theta_{w}$. In particular, we need to calculate the number of reference-element specific terms, $\rho$, by means of which we can set $\theta = \rho \cdot \iota$. Consider again Figure~\ref{code:increase_factor}. In the case of the mass matrix, the body of $L_k$ is characterized by the dot product of test and trial functions, \texttt{B[j]*B[k]}, so trivially $\rho = 1$. In general, $\rho$ varies with the discretization and the differential operators employed. For example, in the case of the bi-dimensional Poisson equation, $\rho = 3$. We determine $\rho$ by projecting the  
+If, on the other hand, $\iota < I$, a further step is necessary to estimate $\theta_{w}$. In particular, we need to calculate the number of reference-element specific terms, $\rho$, such that $\theta_{w} = \rho \cdot \iota$. Consider again Figure~\ref{code:increase_factor}. In the case of the mass matrix, the body of $L_k$ is characterized by just the dot product of test and trial functions, \texttt{B[j]*B[k]}, so trivially $\rho = 1$. In general, $\rho$ varies with the discretization and the differential operators employed. For example, in the case of the bi-dimensional Poisson equation, $\rho = 3$. There are several ways of determining $\rho$. The fastest would be to extract it from high-level analysis of the operators in the form; for convenience, in our implementation we instead project (by analysis of the expression tree) the output of expansion and factorization in the monomial.
 
 % apply memory constraints: reduction to knapsack problem ... not implemented, we use greedy
 
