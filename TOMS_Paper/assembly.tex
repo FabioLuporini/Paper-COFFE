@@ -132,6 +132,7 @@ Our research has resulted in ....
 ... we build on our previous work~\cite{Luporini} ... and present a ... We argue that for complex, realistic forms, peak performance can be achieved only by  ... 
 ... also low-level optimisation ...
 ...also for the first time we provide a formal explanation of the math in terms of compiler theory
+-  Deficiencies of previous approaches
 
 This is all implemented in COFFEE, which in turn is integrated with the Firedrake framework. We provide an extensive and unprecedented performance evaluation across a number of forms of increasing complexity, including some based on complex (hyperelasticity) models. We characterize our problems by varying polynomial order of the employed function spaces and number of pre-multiplying functions. To clearly distinguish the improvement achieved by this work, we will compare, for each test case, X sets of code variants: 1) unoptimized code, i.e. a local assembly routine as returned from the form compiler; 2) code optimized by FEniCS, i.e. the work in~\cite{quadrature1}; 3) code optimized as described in~\cite{Luporini}; ....
 
@@ -408,17 +409,17 @@ If, on the other hand, $\iota < I$, a further step is necessary to estimate $\th
 % apply memory constraints: reduction to knapsack problem ... not implemented, we use greedy
 
 
-
 \section{Code Generation}
 \label{sec:codegen}
+The analysis described in Section~\ref{sec:optimal-synthesis} has been fully automated in COFFEE, the optimization system for local assembly used in Firedrake. In this section, we describe the structure of the code generation system and we comment on a set of low-level optimizations.
 
-\begin{itemize}
-\item Deficiencies of previous approaches
-\item  Building block operations in coffee: 1) eliminating reuse, 2)  insights on the various tree algorithms employed
-\end{itemize}
+\subsection{Automation through the COFFEE Language}
+As opposed to what happens in FFC with quadrature and tensor modes, there are no separate trunks in COFFEE handling pre-evaluation, sharing, and code motion in general: all optimizations are expressed as composition of parametric "building-block" operations. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could ideally be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: other domains sharing properties similar to that of finite element integration (e.g., multilinear loop nests) could be optimized through the same compiler. Thirdly, robustness: the same building-block operations are exploited, and therefore stressed, by different optimization pipelines.
 
-\subsection{Heuristic Optimization of Integration-dependent Expressions}
-%insights that optimisation of loops outside of the multilinear nest can be tackled greedily and heuristically
+A non-exhaustive list of such operations includes expansion, factorization, re-association, generalized code motion. These are parametric operations. For example, one could ask to factorize only constant or only linear terms, while hoisting can be limited by imposing a constraint on the size of the temporaries. Each of these operations is implemented by suitable manipulation of the abstract syntax tree representing the integration routine. 
+
+\subsubsection{Heuristic Optimization of Integration-dependent Expressions}
+As a proof-of-concept of our generality claim, 
 
 \subsection{Low-level Optimization}
 \label{sec:code-spec}
