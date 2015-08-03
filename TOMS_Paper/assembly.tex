@@ -425,6 +425,7 @@ As opposed to what happens in FFC with quadrature and tensor modes, there are no
 A non-exhaustive list of such operations includes expansion, factorization, re-association, generalized code motion. These are parametric operations. For example, one could ask to factorize only constant or only linear terms, while hoisting can be limited by imposing a constraint on the size of the temporaries. Each of these operations is implemented by suitable manipulation of the abstract syntax tree representing the integration routine. 
 
 \subsubsection{Heuristic Optimization of Integration-dependent Expressions}
+\label{sec:heuristic-int-dep}
 As a proof-of-concept of our generality claim, we briefly discuss our optimization strategy for integration-dependent expressions. These are expressions that should logically be placed within $L_i$. They can originate, for example, from the extensive use of tensor algebra in the derivation of the weak variational form or from the use of a non-affine reference-to-physical element mapping, which Jacobian needs be re-evaluated at every quadrature point. For some complex monomials (e.g., see~\citeN{quadrature1} and for coarser discretizations, the operation count within $L_i$ could be comparable or, in some circumstances, outweigh that in the multilinear loop nest. In these cases, our definition of optimality becomes weaker, since the underlying assumption is that the bulk of the computation is carried out in innermost loops.
 
 Despite the fact that we are not characterizing optimality for this wider class of loops, we can still heuristically apply the same reasoning of Sections~\ref{sec:optimal-impl} and~\ref{sec:optimal-synthesis}, particularly for removing sharing, to minimize the operational cost. This is straightforward in our code generation system by composing rewrite operators. Our strategy is as follows. 
@@ -433,25 +434,33 @@ COFFEE is agnostic with respect to the high level form compiler, so the first st
 
 \subsection{Low-level Optimization}
 \label{sec:code-spec}
-...
+We comment on a set of low-level optimizations. These are essential to 1) achieve machine peak performance (Sections~\ref{sec:opt-review} and~\ref{sec:vect-prom}) and 2) make COFFEE independent of the high-level form compiler (Section~\ref{sec:zeros}). As we will see, there are interplays among different transformations. For completeness, we present all of the transformations available in the compiler, although we will only use a subset of them for a fair performance evaluation.
 
-\subsubsection{Avoiding Iteration over Zero-valued Blocks by Symbolic Execution}
+\subsubsection{Review of Existing Optimizations}
+\label{sec:opt-review}
+We start with briefly reviewing the low-level optimizations presented in~\citeN{Luporini}.
+
+\paragraph{Padding and data alignment} All of the arrays involved in the evaluation of the local element matrix or vector are padded to a multiple of the vector register length. This is a simple yet powerful transformation that maximizes the effectiveness of vectorization. Padding, and then loop bounds rounding, enable data alignment and avoid the introduction of scalar remainder loops. 
+
+\paragraph{Vector-register Tiling} Blocking (or tiling) at the level of vector registers improves data locality beyond traditional unroll-and-jam transformations. The blocking strategy consists of evaluating outer products by just using two vector register without ever spilling to cache. 
+
+\paragraph{Expression Splitting} When the number of basis functions arrays (or, equivalently, temporaries introduced by code motion) and constants is large, the chances of spilling to cache are high in architectures with a relatively low number of logical registers (e.g. 16/32). By exploiting sum’s associativity, an expression can be fissioned so that the resulting sub-expressions can be computed in a separate loop nest. 
+
+\subsubsection{Vector-promotion of Integration-dependent Expressions}
+\label{sec:vect-prom}
+Integration-dependent expressions are inherently executed as scalar code because vectorization (unless employing special hand-written schemes) occurs along a single loop, typically the innermost. In our loop nest, $L_i$ is clearly an outer loop. In situations such as in Section~\ref{sec:heuristic-int-dep}, we may want to vectorize also along $L_i$. One way to achieve this is vector-promotion. This implies creating a clone loop of $L_i$ in the preheader of the main loop nest, in which vector temporaries, instead of scalar ones, are evaluated. 
+
+\subsubsection{Handling Block-sparse Tables}
 \label{sec:zeros}
-%TODO : say that the reasons to have zeros is to keep the design of the form compiler simple, which just "puts zeros" and "outline the assembly expression".
+Consider a tabulated set of basis functions having quadrature points along the rows and functions along the columns. For example, \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. Unless using a smart form compiler (and one of our goals is precisely to relieve it from the burden of smart code generation), there are several circumstances in which the tables can be block-sparse. Zero-valued columns arise when taking derivatives on a reference element or when employing vector-valued elements. Zero-valued rows can result from using non-standard functions spaces, like Raviart-Thomas. Zero-valued blocks can appear in pre-evaluated temporaries. Our objective is a general system that avoids useless iteration over these zero-entries while preserving the effectiveness of the other low-level optimizations, especially vectorization. 
 
-% say that we just don't kill al zero-columns and use indirections to not break vectorisation
+In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. Our approach, which will be compared to this pioneering work, aims to free the generated code from any indirection arrays. This is because we want to avoid non-contiguous memory loads and stores, which can nullify the benefits of vectorization. 
 
-% generic engine to remove zeros. Can be rows (RT elements), columns (derivatives, vector elements), blocks (vector elements, "TC mode"). Based on symbolic execution.
+The idea is that if the dimension along which vectorization is performed (typically the innermost) has a contiguous slice (rows, columns) of zero-valued entries, and if that slice is smaller than the vector length, that we do nothing (i.e., the loop nest is not transformed). Otherwise, we restructure the loop nest. This has several complicated implications, including loop fission and a memory offsetting usually dangerous for padding and data alignment, which are, however, beyond the scope of this paper. The implementation is based on symbolic execution: the loop nests are traversed and for each statement the location of zeros in each of the involved symbols is tracked. Arithmetic operators have a different impact on the tracking. For example, for each loop dimension, multiplication requires computing the set intersection of the zero-valued slices, whereas addition requires computing the set union.
+
+% say that the reasons to have zeros is to keep the design of the form compiler simple, which just "puts zeros" and "outline the assembly expression".
 % rationale: contiguous in the innermost dimension are aggregated. contiguous in all other dimensions are not, unless complete overlap.
 % tables shrunk and merged
-
-
-\subsubsection{Padding and Data Alignment}
-\label{sec:padding}
-...
-
-\subsubsection{Vector-promotion of Integration Quantities}
-...
 
 \section{Performance Evaluation}
 \label{sec:perf-results}
