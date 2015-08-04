@@ -470,19 +470,19 @@ The idea is that if the dimension along which vectorization is performed (typica
 
 Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache and 256KB L2 cache. The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost, -ip}. 
 
-We analyze the runtime performance in four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix and the bilinear forms arising in a Helmholtz equation, in an elastic model, and in a hyperelastic model. The complete specification of these forms is made publicly available (\cite{ufl-code}). 
+We analyze the runtime performance in four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix ("\texttt{Mass}") and the bilinear forms arising in a Helmholtz equation ("\texttt{Helmholtz}"), in an elastic model ("\texttt{Elasticity}"), and in a hyperelastic model ("\texttt{Hyperelasticity}"). The complete specification of these forms is made publicly available (\cite{ufl-code}). 
 
 We evaluate the speed ups achieved by a wide variety of transformation systems over the original code (i.e., no optimizations applied) as returned by the FEniCS Form Compiler. We analyze the impact of
 \begin{itemize}
 \item the FEniCS Form Compiler's built-in optimization systems, namely
 \begin{itemize}
-\item optimized quadrature mode, \texttt{ffc-quad}
-\item tensor mode, \texttt{ffc-tens}
-\item automatic mode, \texttt{ffc-auto} (here, heuristics are used to infer the optimal mode for the form between quadrature and tensor)
+\item optimized quadrature mode, \texttt{quad}
+\item tensor mode, \texttt{tens}
+\item automatic mode, \texttt{auto} (here, heuristics are used to infer the optimal mode for the form between quadrature and tensor)
 \end{itemize}
-\item a novel back-end for the FEniCS Form Compiler, UFLACS \texttt{uflacs}, whose primary goals are improved code generation time and runtime
-\item the sole generalized loop-invariant code motion in COFFEE plus padding, \texttt{coffee-O1}, as discussed in~\citeN{Luporini}
-\item the optimal multilinear loop nest synthesis plus padding and symbolic execution, \texttt{coffee-O2}, which is the focus of this paper
+\item a novel back-end for the FEniCS Form Compiler, UFLACS, referred to as \texttt{ufls}, whose primary goals are improved code generation time and runtime
+\item the sole generalized loop-invariant code motion in COFFEE plus padding, \texttt{cfO1}, as discussed in~\citeN{Luporini}
+\item the optimal multilinear loop nest synthesis plus padding and symbolic execution, \texttt{cfO2}, which is the focus of this paper
 \end{itemize}
 
 The values that we report are the average of three runs with "warm cache" (no code generation time, no compilation time). They include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh used to run the simulations was chosen small enough to fit the L3 cache of the CPU, so as to minimize the ``noise'' due to operations outside of the element matrix evaluation. For a fair comparison, small patches (publicly available) were written to be able to use the aforementioned transformation systems in Firedrake; that is, all simulations are run through Firedrake. UFLACS and the FEniCS Form Compiler's optimization systems generate code suitable for FEniCS (\cite{Fenics}), which employs a data storage layout different than Firedrake. Our small patches fix this problem by producing code with a "correct" data storage layout. 
@@ -499,19 +499,18 @@ Constants of our analysis are instead
 \item the mesh, tetrahedral with a total of 4374 elements
 \end{itemize}
 
-Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}, which will deeply be commented in Section~\ref{sec:perf-results-forms}, can be interpreted as ``plots (grids) of plots''. Each grid (each figure) has two logical "outer" axes: $p$ varies along the horizontal axis, while $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. Looking at the diagonal of the grid one can obtain the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid (figure) can therefore be read in many different ways, which allows us to make structured considerations on the performance achieved. In each plot there are three groups of bars, each group referring to a particular version of the code (\texttt{ffc-quad, ffc-tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
+Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}, which will be commented in Section~\ref{sec:perf-results-forms}, are "nested" plots. We refer to the outer plot as the "grid", while the inner are the actual "plots". In a grid, $p$ varies along the horizontal axis and $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. The diagonal of the grid provides the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid can therefore be looked at from different perspectives, which allows us to make structured considerations on the performance achieved. In each plot there are six groups of bars, each group referring to a particular code variant (\texttt{quad, tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
 
 
 \subsection{Performance of Forms}
 \label{sec:perf-results-forms}
-%The four chosen forms allow us to perform an in-depth evaluation of different classes of optimizations for local assembly. We limit ourselves to analyzing the cost of computing element matrices, although all of the techniques presented in this paper are immediately extendible to the evaluation of local vectors. As anticipated, in the following we comment speed ups of \texttt{ffc}, \texttt{fix}, and \texttt{auto} over the non-optimized, FEniCS-Form-Compiler-generated code. 
-%
-%We first comment on results of general applicability. By looking at the various figures, we note there is a trend in COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
+The first, general observation is that optimality, as we defined it, does not necessarily imply best achievable performance. There are two reasons for this. The first reason is that low-level optimizations can impact the actual runtime. Compare, as an example, \texttt{tens} and \texttt{cfO2} in \texttt{Mass} and \texttt{Helmholtz} when $q=1$. With $p \in [2,3]$, \texttt{tens} tend to slightly outperform \texttt{cfO2} even though pre-evaluation is triggered. With $p=4$, \texttt{tens} is quite faster then \texttt{cfO2}; in particular, in this case \texttt{cfO2} considers pre-evaluation unprofitable. The motivation is the aggressive unrolling performed in \texttt{tens}, which allows to eliminate any operations involving zero-valued entries. In COFFEE we never unroll loops to maximize the chances of autovectorization, which results in considerable speed ups throughout the majority of test cases. The second reason is a direct consequence of our axiomatic modeling of optimality: if we are in a regime as in Section~\ref{sec:heuristic-int-dep}, then other code generation strategies for the integration loop might result in larger performance improvements. This is the primary reason we are studying \texttt{Hyperelasticity}, a form characterized by extensive tensor algebra. Nevertheless, as we will see, we found \texttt{cfO2} to be the best scheme also in this circumstance. 
+
 
 \paragraph{Mass}
 \begin{figure}[t] 
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
-\caption{Mass results.}\label{fig:mass}
+\caption{The mass matrix performance evaluation.}\label{fig:mass}
 \end{figure}
 
 
