@@ -468,7 +468,7 @@ The idea is that if the dimension along which vectorization is performed (typica
 
 \subsection{Experimental Setup}
 
-Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache and 256KB L2 cache. The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost, -ip}. 
+Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache and 256KB L2 cache. The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost, -ip}, which can trigger \texttt{AVX} autovectorization. 
 
 We analyze the runtime performance in four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix ("\texttt{Mass}") and the bilinear forms arising in a Helmholtz equation ("\texttt{Helmholtz}"), in an elastic model ("\texttt{Elasticity}"), and in a hyperelastic model ("\texttt{Hyperelasticity}"). The complete specification of these forms is made publicly available (\cite{ufl-code}). 
 
@@ -499,29 +499,31 @@ Constants of our analysis are instead
 \item the mesh, tetrahedral with a total of 4374 elements
 \end{itemize}
 
-Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}, which will be commented in Section~\ref{sec:perf-results-forms}, are "nested" plots. We refer to the outer plot as the "grid", while the inner are the actual "plots". In a grid, $p$ varies along the horizontal axis and $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. The diagonal of the grid provides the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid can therefore be looked at from different perspectives, which allows us to make structured considerations on the performance achieved. In each plot there are six groups of bars, each group referring to a particular code variant (\texttt{quad, tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
+The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}) are "nested" plots. We refer to the outer plot as the "grid", while the inner are the actual "plots". In a grid, $p$ varies along the horizontal axis and $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. The diagonal of the grid provides the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid can therefore be looked at from different perspectives, which allows us to make structured considerations on the performance achieved. In each plot there are six groups of bars, each group referring to a particular code variant (\texttt{quad, tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
 
+%TODO : can we just say padding is useless because in 3D ndofs is a multiple of our vector length?
 
 \subsection{Performance of Forms}
 \label{sec:perf-results-forms}
-The first, general observation is that optimality, as we defined it, does not necessarily imply best achievable performance. There are two reasons for this. The first reason is that low-level optimizations can impact the actual runtime. Compare, as an example, \texttt{tens} and \texttt{cfO2} in \texttt{Mass} and \texttt{Helmholtz} when $q=1$. With $p \in [2,3]$, \texttt{tens} tend to slightly outperform \texttt{cfO2} even though pre-evaluation is triggered. With $p=4$, \texttt{tens} is quite faster then \texttt{cfO2}; in particular, in this case \texttt{cfO2} considers pre-evaluation unprofitable. The motivation is the aggressive unrolling performed in \texttt{tens}, which allows to eliminate any operations involving zero-valued entries. In COFFEE we never unroll loops to maximize the chances of autovectorization, which results in considerable speed ups throughout the majority of test cases. The second reason is a direct consequence of our axiomatic modeling of optimality: if we are in a regime as in Section~\ref{sec:heuristic-int-dep}, then other code generation strategies for the integration loop might result in larger performance improvements. This is the primary reason we are studying \texttt{Hyperelasticity}, a form characterized by extensive tensor algebra. Nevertheless, as we will see, we found \texttt{cfO2} to be the best scheme also in this circumstance. 
+The first, general observation is that optimality, as we defined it, does not necessarily imply best achievable performance. There are two reasons for this. The first reason is that low-level optimizations can impact the actual runtime. Compare, as an example, \texttt{tens} and \texttt{cfO2} in \texttt{Mass} and \texttt{Helmholtz} when $q=1$. With $p \in [2,3]$, \texttt{tens} tend to slightly outperform \texttt{cfO2} even though pre-evaluation is triggered. With $p=4$, \texttt{tens} is quite faster then \texttt{cfO2}; in particular, in this case \texttt{cfO2} considers pre-evaluation unprofitable. The motivation is the aggressive unrolling performed in \texttt{tens}, which 1) allows to eliminate any operations involving zero-valued entries and 2) can drastically decrease the working set by not having to store entire temporaries. In COFFEE we never unroll loops to maximize the chances of autovectorization, which results in considerable speed ups throughout the majority of test cases. The second reason is a direct consequence of our axiomatic modeling of optimality: if we are in a regime as in Section~\ref{sec:heuristic-int-dep}, then other code generation strategies for the integration loop might result in larger performance improvements. This is the primary reason we are studying \texttt{Hyperelasticity}, a form characterized by extensive tensor algebra. Nevertheless, as we will see, we found \texttt{cfO2} to be the best scheme also in this circumstance. 
 
+A second observation concerns the triggering of pre-evaluation in \texttt{cfO2}. The fact that a bar in \texttt{cfO2} matches the corresponding bar in \texttt{cfO1} means that pre-evaluation was found unprofitable. The trend -- although there are quite a few exceptions -- is that as $nf$ increases, pre-evaluation tends to not be performed. This is a consequence of the larger increase factor, $\iota$, which we defined in Section~\ref{sec:op_count}.
+
+Also note some other minor things. The lack of improvements in all code variants with $[q=1, p=1]$ is due to the cost of matrix insertion, which outweighs that of local assembly. The slow downs experienced with \texttt{quad} should be imputable to the presence of indirection arrays in the generated code; when the tables are dense, these eventually break vectorization for a marginal gain due to avoiding iteration over isolated zero-valued columns. A missing bar in \texttt{tens} or \texttt{auto} means that the code generation system failed because of either exceeding the memory limit or being unable to manipulate the math characterizing the form (this happens in the case of \texttt{Hyperelasticity})
 
 \paragraph{Mass}
 \begin{figure}[t] 
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
-\caption{The mass matrix performance evaluation.}\label{fig:mass}
+\caption{Performance evaluation for the mass matrix .}\label{fig:mass}
 \end{figure}
-
-
+Apart from a very small number of points in our exploration space, from analysis of Figure~\ref{fig:mass} we can infer how \texttt{cfO2} represents the best code variant among the tested. This suggests that our definition of optimality is consistent in what is the simplest possible bilinear form we can test. As we increase the complexity, by adding more coefficients or by varying the polynomial orders, \texttt{cfO2} is always capable of generating optimal loop nests. The biggest exception is $[q=4, p=4, nf=1]$ in which the save on operations over zero-valued entries in tensor mode is considerably higher than the save in flops in \texttt{cfO1} and \texttt{cfO2}.
 
 \paragraph{Helmholtz}
 \begin{figure}[t] 
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/helmholtz}}
-\caption{Helmholtz results.}\label{fig:helmholtz}
+\caption{Performance evaluation for the bilinear form of a Helmholtz equation.}\label{fig:helmholtz}
 \end{figure}
-
-%The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
+Figure~\ref{fig:helmholtz} shows the performance improvements achieved by various code variants over the original code can be significant. It is worthwhile noting how \texttt{auto} is not capable of selecting the proper synthesis in most of the cases. One can also appreciate the evidence that the relative order of the employed function spaces plays a key role in the code synthesis choice. Take, for example, the case $[q=3, p=1, nf=2]$. The adoption of pre-evaluation makes a tremendous speed up be achievable by $cfO2$ over all other variants. On the other hand, \texttt{auto} triggers \texttt{quad} (since one monomial in the form has two derivatives and two coefficients, which exceed the threshold within which tensor mode is applied), which, just like the other quadrature-based variants \texttt{ufls} and \texttt{cfO1}, is sub-optimal.
 
 \paragraph{Elasticity}
 %\begin{figure}[t]  
@@ -536,15 +538,12 @@ The first, general observation is that optimality, as we defined it, does not ne
 %It is worth noting that speed ups of \texttt{auto} over \texttt{fix} decrease at $q=4$, particularly for low values of $p$. As we will discuss in Section~\ref{sec:auto-analysis}, this is because at $q=4$ the vector-register tiling transformation (in combination with loop unroll-and-jam) leads to the highest performance. In principle, vector-register tiling can be used in combination to the zero-avoidance technique; however, due to mere technical limitations, this is currently not supported in COFFEE. Once solved, we expect much higher speed ups in the $q=4$ regime as well.
 
 
-
-
-
 \paragraph{Hyperelasticity}
-%\begin{figure}[t]  
-%...
-%%\includegraphics[scale=0.7]{perf-results/hyperelasticity}
-%%\caption{Hyperelasticity results.}\label{fig:hyperelasticity}
-%\end{figure}
+\begin{figure}[t]
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/hyperelasticity}}
+\caption{Performance evaluation for the bilinear form arising in a Hyperelastic model}\label{fig:helmholtz}
+\end{figure}
+
 %
 %Speed ups for the hyperelasticity form are shown in Figure~\ref{fig:hyperelasticity}. Experiments for $nf \geq 2$ could not be executed because of FEniCS-Form-Compiler's technical limitations. 
 %

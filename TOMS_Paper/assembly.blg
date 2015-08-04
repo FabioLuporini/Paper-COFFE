@@ -5,6 +5,7 @@ The style file: ACM-Reference-Format-Journals.bst
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
+Warning--I didn't find a database entry for "Uflacs"
 Warning--no key, author in ufl-code
 Warning--no author, editor, organization, or key in ufl-code
 Warning--to sort, need author or key in ufl-code
@@ -13,59 +14,52 @@ Warning--no key, author in ufl-code
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--no key, author in ufl-code
 Warning--no author, editor, organization, or key in ufl-code
-Warning--articleno field, but no numpages field, in UFL
-Warning--INFO: reduced pages = [9:1--9:37] to numpages = [37]
-Warning--require articleno with numpages field in Bana
 Warning--require articleno with numpages field in PLUTO
 Warning--require articleno with numpages field in Kirby-FEM-opt
 Warning--articleno field, but no numpages field, in Kirby:TC
 Warning--page numbers missing in both pages and numpages fields in Kirby:TC
 Warning--require pages or numpages fields with articleno field in Kirby:TC
-Warning--require articleno with numpages field in Klockner
 Warning--empty address in Fenics
-Warning--no journal in Luporini
-Warning--no number and no volume in Luporini
-Warning--page numbers missing in both pages and numpages fields in Luporini
 Warning--page numbers missing in both pages and numpages fields in Francis
-You've used 13 entries,
+You've used 9 entries,
             5290 wiz_defined-function locations,
-            1338 strings with 17113 characters,
-and the built_in function-call counts, 13264 in all, are:
-= -- 1777
-> -- 601
-< -- 3
-+ -- 178
-- -- 209
-* -- 929
-:= -- 1468
-add.period$ -- 65
-call.type$ -- 13
-change.case$ -- 91
-chr.to.int$ -- 77
-cite$ -- 37
-duplicate$ -- 980
-empty$ -- 705
-format.name$ -- 240
-if$ -- 3197
+            1304 strings with 16211 characters,
+and the built_in function-call counts, 8424 in all, are:
+= -- 1111
+> -- 375
+< -- 2
++ -- 118
+- -- 132
+* -- 606
+:= -- 945
+add.period$ -- 45
+call.type$ -- 9
+change.case$ -- 61
+chr.to.int$ -- 9
+cite$ -- 27
+duplicate$ -- 637
+empty$ -- 470
+format.name$ -- 160
+if$ -- 2007
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 39
-newline$ -- 163
-num.names$ -- 96
-pop$ -- 332
+missing$ -- 24
+newline$ -- 123
+num.names$ -- 64
+pop$ -- 227
 preamble$ -- 1
-purify$ -- 156
+purify$ -- 106
 quote$ -- 0
-skip$ -- 285
+skip$ -- 174
 stack$ -- 0
-substring$ -- 896
-swap$ -- 116
-text.length$ -- 44
+substring$ -- 546
+swap$ -- 49
+text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 176
-warning$ -- 21
-while$ -- 88
+type$ -- 120
+warning$ -- 14
+while$ -- 54
 width$ -- 0
-write$ -- 280
-(There were 21 warnings)
+write$ -- 205
+(There were 15 warnings)

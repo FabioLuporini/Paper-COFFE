@@ -42,33 +42,6 @@
 \newblock
 
 
-\bibitem[\protect\citeauthoryear{Aln{\ae}s, Logg, {\O}lgaard, Rognes, and
-  Wells}{Aln{\ae}s et~al\mbox{.}}{2014}]%
-        {UFL}
-{M.~S. Aln{\ae}s}, {A. Logg}, {K.~B. {\O}lgaard}, {M.~E. Rognes}, {and} {G.~N.
-  Wells}. 2014.
-\newblock \showarticletitle{{U}nified {F}orm {L}anguage: {A} domain-specific
-  language for weak formulations of partial differential equations}.
-\newblock {\em ACM Trans Math Software\/} {40}, 2, Article 9 (2014), 9:1--9:37
-  pages.
-\newblock
-\showDOI{%
-\url{http://dx.doi.org/10.1145/2566630}}
-
-
-\bibitem[\protect\citeauthoryear{Bana, Plaszewski, and Maciol}{Bana
-  et~al\mbox{.}}{2014}]%
-        {Bana}
-{Krzysztof Bana}, {Przemyslaw Plaszewski}, {and} {Pawel Maciol}. 2014.
-\newblock \showarticletitle{Numerical Integration on GPUs for Higher Order
-  Finite Elements}.
-\newblock {\em Comput. Math. Appl.\/} {67}, 6 (April 2014), 1319--1344.
-\newblock
-\showISSN{0898-1221}
-\showDOI{%
-\url{http://dx.doi.org/10.1016/j.camwa.2014.01.021}}
-
-
 \bibitem[\protect\citeauthoryear{Bondhugula, Hartono, Ramanujam, and
   Sadayappan}{Bondhugula et~al\mbox{.}}{2008}]%
         {PLUTO}
@@ -119,32 +92,6 @@
 \url{http://dx.doi.org/10.1145/1268769.1268771}}
 
 
-\bibitem[\protect\citeauthoryear{Kl\"{o}ckner, Warburton, Bridge, and
-  Hesthaven}{Kl\"{o}ckner et~al\mbox{.}}{2009}]%
-        {Klockner}
-{A. Kl\"{o}ckner}, {T. Warburton}, {J. Bridge}, {and} {J.~S. Hesthaven}. 2009.
-\newblock \showarticletitle{Nodal Discontinuous Galerkin Methods on Graphics
-  Processors}.
-\newblock {\em J. Comput. Phys.\/} {228}, 21 (Nov. 2009), 7863--7882.
-\newblock
-\showISSN{0021-9991}
-\showDOI{%
-\url{http://dx.doi.org/10.1016/j.jcp.2009.06.041}}
-
-
-\bibitem[\protect\citeauthoryear{Knepley and Terrel}{Knepley and
-  Terrel}{2013}]%
-        {petsc-integration-gpu}
-{Matthew~G. Knepley} {and} {Andy~R. Terrel}. 2013.
-\newblock \showarticletitle{Finite Element Integration on GPUs}.
-\newblock {\em ACM Trans. Math. Softw.\/} {39}, 2, Article 10 (Feb. 2013), 13
-  pages.
-\newblock
-\showISSN{0098-3500}
-\showDOI{%
-\url{http://dx.doi.org/10.1145/2427023.2427027}}
-
-
 \bibitem[\protect\citeauthoryear{Logg, Mardal, Wells, et~al\mbox{.}}{Logg
   et~al\mbox{.}}{2012}]%
         {Fenics}
@@ -159,14 +106,18 @@
 
 
 \bibitem[\protect\citeauthoryear{Luporini, Varbanescu, Rathgeber, Bercea,
-  Ramanujam, Ham, and Kelly}{Luporini et~al\mbox{.}}{2014}]%
+  Ramanujam, Ham, and Kelly}{Luporini et~al\mbox{.}}{2015}]%
         {Luporini}
 {Fabio Luporini}, {Ana~Lucia Varbanescu}, {Florian Rathgeber}, {Gheorghe-Teodor
-  Bercea}, {J. Ramanujam}, {David~A. Ham}, {and} {Paul H.~J. Kelly}. 2014.
-\newblock \showarticletitle{COFFEE: an Optimizing Compiler for Finite Element
-  Local Assembly}.
-\newblock  (2014).
+  Bercea}, {J. Ramanujam}, {David~A. Ham}, {and} {Paul H.~J. Kelly}. 2015.
+\newblock \showarticletitle{Cross-Loop Optimization of Arithmetic Intensity for
+  Finite Element Local Assembly}.
+\newblock {\em ACM Trans. Archit. Code Optim.\/} {11}, 4, Article 57 (Jan.
+  2015), 25 pages.
 \newblock
+\showISSN{1544-3566}
+\showDOI{%
+\url{http://dx.doi.org/10.1145/2687415}}
 
 
 \bibitem[\protect\citeauthoryear{Olgaard and Wells}{Olgaard and Wells}{2010}]%
