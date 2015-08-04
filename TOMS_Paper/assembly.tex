@@ -191,7 +191,6 @@ The local element vector $L$ can be determined in an analogous way.
 Quadrature schemes are conveniently used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies a change of variables from reference coordinates $X_0$ to real coordinates $x = F_K (X_0)$ is necessary any time a new element is evaluated. The numerical integration routine based on quadrature representation over an element $K$ can be expressed as follows
 \begin{equation}
 \label{eq:quadrature}
-\scriptsize
 A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\beta=1}^d \frac{\partial X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial \phi_i^K(X^q)}{\partial X_{\alpha_1}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \frac{\partial \phi_j^K(X^q)}{\partial X_{\alpha_2}} det F_K' W^q
 \end{equation}
 where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
@@ -202,7 +201,6 @@ where $N$ is the number of integration points, $W^q$ the quadrature weight at th
 Starting from Equation~\ref{eq:quadrature}, exploiting basic mathematical properties we can rewrite the expression as
 \begin{equation}
 \label{eq:tensor}
-\scriptsize
 A_{ij}^K = \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\alpha_3=1}^n det F_K' w_{\alpha_3} \sum_{\beta=1}^d \frac{X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \int_{K_0} \phi_{\alpha_3} \frac{\partial \phi_{i_1}}{\partial X_{\alpha_1}} \frac{\partial \phi_{i_2}}{\partial X_{\alpha_2}} dX.
 \end{equation}
 A generalization of this transformation has been proposed in~\cite{Kirby:TC}. By only involving reference element terms, the integral in the equation can be pre-evaluated and stored in a temporary. The evaluation of the local tensor can then be abstracted as
@@ -501,7 +499,7 @@ Constants of our analysis are instead
 \item the mesh, tetrahedral with a total of 4374 elements
 \end{itemize}
 
-Figures~\ref{fig:helmholtz},~\ref{fig:elasticity},~\ref{fig:poisson}, and~\ref{fig:hyperelasticity}, which will deeply be commented in Section~\ref{sec:perf-results-forms}, can be interpreted as ``plots (grids) of plots''. Each grid (each figure) has two logical "outer" axes: $p$ varies along the horizontal axis, while $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. Looking at the diagonal of the grid one can obtain the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid (figure) can therefore be read in many different ways, which allows us to make structured considerations on the performance achieved. In each plot there are three groups of bars, each group referring to a particular version of the code (\texttt{ffc-quad, ffc-tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
+Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}, which will deeply be commented in Section~\ref{sec:perf-results-forms}, can be interpreted as ``plots (grids) of plots''. Each grid (each figure) has two logical "outer" axes: $p$ varies along the horizontal axis, while $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. Looking at the diagonal of the grid one can obtain the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid (figure) can therefore be read in many different ways, which allows us to make structured considerations on the performance achieved. In each plot there are three groups of bars, each group referring to a particular version of the code (\texttt{ffc-quad, ffc-tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
 
 
 \subsection{Performance of Forms}
@@ -511,20 +509,19 @@ Figures~\ref{fig:helmholtz},~\ref{fig:elasticity},~\ref{fig:poisson}, and~\ref{f
 %We first comment on results of general applicability. By looking at the various figures, we note there is a trend in COFFEE's optimizations to become more and more effective as $q$, $p$, and $nf$ increase. This is because most of the transformations applied aim at optimizing for arithmetic intensity and SIMD vectorization, which obviously have a strong impact when arrays and iteration spaces are large. The corner cases of this phenomenon are indeed $[q=1, p=1]$ and $[q=4, p=4]$. We also observe how \texttt{auto}, in almost all scenarios, outperforms all of the other variants. In particular, it is not a surprise that \texttt{auto} is faster than \texttt{fix}, since \texttt{fix} is one of the autotuner's tested variants, as explained in Section~\ref{sec:autotune}. This proves the quality of the work presented in this paper, which shows significant advances over~\cite{Luporini}. The reasons for which \texttt{auto} exceeds both original code and \texttt{ffc} are discussed for each specific problem next. Also, details on the ``optimal'' code variant determined by autotuning are given in Section~\ref{sec:auto-analysis}.
 
 \paragraph{Mass}
-%\begin{figure}[t]  
-%...
-%%\includegraphics[scale=0.7]{perf-results/mass}
-%%\caption{Mass results.}\label{fig:mass}
-%\end{figure}
-%
+\begin{figure}[t] 
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
+\caption{Mass results.}\label{fig:mass}
+\end{figure}
+
 
 
 \paragraph{Helmholtz}
-%\begin{figure}[t]  
-%...
-%%\includegraphics[scale=0.7]{perf-results/helmholtz}
-%%\caption{Helmholtz results.}\label{fig:helmholtz}
-%\end{figure}
+\begin{figure}[t] 
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/helmholtz}}
+\caption{Helmholtz results.}\label{fig:helmholtz}
+\end{figure}
+
 %The results for the Helmholtz problem are provided in Figure~\ref{fig:helmholtz}. We observe that \texttt{ffc} slows the code down, especially for $q \geq 3$. This is a consequence of using indirection arrays in the generated code that, as explained in Section~\ref{sec:zeros}, prevent, among the other compiler optimizations, SIMD auto-vectorization. The \texttt{auto} version results in minimal performance improvements over \texttt{fix} when $nf=0$, unless $q=4$. This is due to the fact that if the loop over quadrature points is relatively small, then close-to-peak performance is obtainable through basic expression rewriting and code specialization; in this circumstance, generalized loop-invariant code motion and padding plus data alignment. The trend changes dramatically as $nf$ and $q$ increase: a more ample spectrum of transformations must be considered to find the optimal local assembly implementation. We will provide details about the selected transformations in the next section.
 
 \paragraph{Elasticity}
