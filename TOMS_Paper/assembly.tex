@@ -292,7 +292,7 @@ We now consider a wider class of loop nests in which perfectness and multilinear
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{Loop nest example}\label{code:loopnest}\end{figure}
 
-The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of $L_k$ as long as data dependencies are preserved (note that $LN$ is imperfect). One could think of searching for sub-expressions independent of $L_e$, for which the reduction could be pre-evaluated, thus obtaining a decrease proportional to $M$ in the operation count. However, finding or exposing such sub-expressions requires, in general, a full exploration of the expression tree transformation space. This is obviously challenging, and so is the problem of synthesizing an optimal $LN'$ starting from $LN$. Even though we assumed we could generate $LN'$ through a suitable transformation algorithm, the following issues should be addressed
+The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication. We observe that \texttt{F} might contain sub-expressions that depend on a subset of loops only and, as such, hoistable outside of $L_k$ as long as data dependencies are preserved (note that $LN$ is imperfect). One could think of searching for sub-expressions for which the reduction could be pre-evaluated, thus obtaining a decrease proportional to $M$ in the operation count. However, finding or exposing such sub-expressions requires, in general, a full exploration of the expression tree transformation space. This is obviously challenging, and so is the problem of synthesizing an optimal $LN'$ starting from $LN$. Even though we assumed we could generate $LN'$ through a suitable transformation algorithm, the following issues should be addressed
 \begin{itemize}
 \item as opposed to what happens with hoisting in perfect multilinear loop nests, the temporary variable size would be proportional to the number of non-reduction loops crossed (in the example, $N \cdot O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L \cdot N \cdot O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
 \item the transformations exposing invariant sub-expressions could require expansion and factorization. In terms of number of operations, the save originating from hoisting could be overwhelmed by the increase in arithmetic complexity within $L_k$ (expansion can increase the operation count, e.g. $A(B+C) = AB + AC$).
@@ -314,37 +314,31 @@ In this section, we instantiate Definition~\ref{def:optimality} in our domain of
 
 Our point of departure is the example loop nest in Figure~\ref{code:loopnest}. This loop nest is actually a simplified view of a typical bilinear form implementation. $L_e$ represents iteration over the elements of a mesh; $L_i$ derives from using numerical quadrature; $[L_j, L_k]$ implement the computation over test and trial functions. We deliberately omitted useless portions of code to not hinder readability (e.g. matrix insertion) and to avoid tying our discussion to specific forms (e.g. \texttt{F} is unspecified).
 
-From domain knowledge, we make the following observations. 1) $L >>> M, N, O$; that is, the number of elements $L$ is typically order of magnitude larger than both quadrature points ($M$) and degrees of freedom ($N$ and $O$ for test and trial functions); 2) $[L_j, L_k]$ (or simply $L_j$ with a linear form) is perfect and multilinear; this naturally descends from the translation of Equation~\ref{eq:quadrature} into a loop nest. 
+We make the following observations. 1) $L >>> M, N, O$; that is, the number of elements $L$ is typically order of magnitude larger than both quadrature points ($M$) and degrees of freedom ($N$ and $O$ for test and trial functions); 2) $[L_j, L_k]$ (or simply $L_j$ with a linear form) is perfect and multilinear; this naturally descends from the translation of Equation~\ref{eq:quadrature} into a loop nest. 
 
 % maybe say somewhere the order of the loop nest eijk is just the most natural --- the other present worse data locality for example
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-The fact that the iteration space of $L_e$ is so larger than that of other loops suggests we should be cautious when hoisting out of $LN$. Imagine a time stepping loop $L_t$ wraps $LN$. One could then think of identifying time-invariant sub-expressions that access both geometry and reference element terms and pre-evaluate them within $L_t$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by $O(L)$. It is our opinion, therefore, that the drop in number of operations would be overwhelmed, from the run-time viewpoint, by the larger memory pressure.
+The fact that the iteration space of $L_e$ is so larger than that of other loops suggests we should be cautious when hoisting out of $LN$. Imagine a time stepping loop $L_t$ wraps $LN$. One could think of identifying time-invariant sub-expressions that access both geometry and reference element terms, and pre-evaluate them within $L_t$. Unless adopting complex engineering solutions (e.g. aggressive blocking), which are practically difficult to devise and maintain, this kind of code motion increases the working set by a factor $L$. It is our opinion that the drop in number of operations would be overwhelmed, from the run-time viewpoint, by a much larger memory pressure.
 
-A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as one of many possible examples, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporary arrays of size $N\cdot O$; with some discretizations, this can break the local memory threshold.  
+A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of "some level of local memory" (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). We will provide precise details about this in the following sections. For the moment, and just as an example, note that applying tensor contraction mode (see Section~\ref{sec:background}), which essentially means lifting code outside of $L_e$, requires a set of temporary arrays of size $N\cdot O$; with some discretizations, this can break the local memory threshold.  
 
 Based upon these considerations, we add two constraints to $C$ (see Definition~\ref{def:optimality})  
 \begin{enumerate}
 \item The size of a temporary due to code motion cannot be bigger than the size of the multilinear loop nest iteration space. 
 \item The total size of the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
 \end{enumerate}
-A corollary of $C1$ is that hoisting expressions involving geometry terms outside of $L_e$ becomes forbidden.
+A corollary of $C_1$ is that hoisting expressions involving geometry terms outside of $L_e$ is now forbidden. Consequently, the search space for optimality becomes smaller.
 
 \subsection{Minimizing the Operation Cost}
-Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the number of operations in all innermost loops is minimum. We now discuss how we can systematically achieve this.
+Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the sum of the operation cost in the innermost loops is minimum. We now discuss how we can systematically achieve this.
 
 Eliminating sharing from the inner multilinear loops does not suffice. In fact, as suggested in Section~\ref{def:optimality}, we wonder whether, and under what transformations, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count.
 
 To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with the input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $LN$, and finally pre-evaluated into temporaries. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as "\textit{pre-evaluation}". 
 
-The challenge is to understand when, and for which monomials, pre-evaluation is profitable. We propose an algorithm and a discussion of its optimality.
-
-The intuition of the algorithm for optimal loop nest synthesis is shown in Figure~\ref{code:intuition}. 
-
-% local optimization of monomials
-% local sharing elimination
-% global sharing elimination
+The challenge is to understand when, and for which monomials, pre-evaluation is profitable. We propose an algorithm and a discussion of its optimality. The intuition of the main algorithm for reducing a loop nest to optimal form is shown in Figure~\ref{code:intuition}. 
 
 \begin{figure}[h]
 \begin{lstlisting}[basicstyle=\small\ttfamily, frame=single]
@@ -384,15 +378,15 @@ Consider an expression comprising a set of monomials $M$. Let $P$ be the set of 
 Then, the loop nest $LN$ is optimal under memory constraints $C$, once sharing is removed.
 \end{Prop}
 \begin{proof}
-We first comment on the assumptions. 1) How to create an optimal cost function is discussed in Section~\ref{sec:op_count}. 2) A pathological case due to symmetries in basis functions, which in practice rarely happens. 3) This could occur in complex forms with several monomials; for simplicity, we ignore this situation (otherwise, a "global" analysis of the monomials would be required).
+We first comment on the assumptions. 1) The creation of an optimal cost function is discussed in Section~\ref{sec:op_count}. 2) Identical pre-evaluated tables from distinct monomials could be the result of symmetries in tabulated basis functions. This is however a pathological case. 3) In complex forms with several monomials, different pre-evaluation candidates could actually share terms. For simplicity, we do not handle this case, which otherwise would require a "global" analysis of the monomials in the form. Further, even though, in practice, assumptions 2) and 3) did not hold, the resulting loop nest would still be nearly-optimal.
 
-We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$, for the pre-evaluated monomials in $P$, and $[L_e, L_i, L_j, L_k]$, enclosing the remaining monomials in $Z$. Since they only differ for the presence of $L_i$, we relieve notation by omitting all shared loops when discussing operation counts. In particular, we use $I$ to refer to the iteration space size of $L_i$. The operation count of what we are proving to be the optimal $LN$ synthesis is, therefore, $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation cost of monomials in $P$ and $Z$, respectively.
+We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$, for the pre-evaluated monomials in $P$, and $[L_e, L_i, L_j, L_k]$, enclosing the remaining monomials in $Z$. Since they only differ for the presence of $L_i$, we relieve the notation by omitting the shared loops when discussing operation counts. The operation count of what we are proving to be the optimal $LN$ synthesis is $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation cost of monomials in $P$ and $Z$, respectively, while $I$ is the iteration space size of $L_i$. This can also be inferred from Figure~\ref{code:loopnest-opt}.
 
-We start noting that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This narrows the proof to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$.
+We note that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This narrows the proof to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$.
 
-A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if monomials in $Z_P$ share symbols with $\overline{Z} = Z \setminus Z_P$, then we have $LN_{ops_2}' = LN_{ops_2}$, so our statement is true. If, on the other hand, at least one monomial does not share any symbols, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluations, $LN_{ops_1}' \geq LN_{ops_1} +  I \cdot\delta$ holds. This is indeed the case since we rely on assumption 2, which ensures the uniqueness of the pre-evaluated tables (i.e., the absence of sharing) and, therefore, the optimality of $LN$. 
+A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if monomials in $Z_P$ share terms with $\overline{Z} = Z \setminus Z_P$, then we have $LN_{ops_2}' = LN_{ops_2}$, so our statement is true. If, on the other hand, at least one monomial does not share any terms, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluations, $LN_{ops_1}' - LN_{ops_1} =  \gamma \geq I \cdot\delta$ holds. Because of assumption 2), the new pre-evaluations cannot expose further sharing. Therefore, the optimality of the cost function (assumption 1) ensures our claim holds.
 
-B) In absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$, with the cost function being optimal by assumption. Assumption 3 guarantees there can be no sharing within $P_Z$, which avoids subtle cases wherein pre-evaluation would result sub-optimal due to destroying sharing-removal opportunities. The last case we have to consider is when $p \in P_Z$ shares at least one term with $z \in Z$. This situation cannot actually occur by construction: all candidates for pre-evaluation sharing terms with monomials in $Z$ are "declassed" from $P$ to $Z$: the rationale is that we would have to pay anyway the presence of the shared terms in the innermost loop due to $z$, so aggregating $p$ in $Z$ does not increase the operation count. 
+B) In absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$, being the cost function optimal due to assumption 1). Assumption 3) guarantees there can be no sharing within $P_Z$, which avoids subtle cases wherein pre-evaluation would result sub-optimal due to destroying sharing-removal opportunities. The last case we have to consider is when $p \in P_Z$ shares at least one term with $z \in Z$. This situation cannot actually occur by construction: all candidates for pre-evaluation sharing terms with monomials in $Z$ are "de-classed" from $P$ to $Z$: the rationale is that we would have to pay anyway the presence of the shared terms in the innermost loop due to $z$, so adding $p$ to $Z$ does not augment the operation count. 
 \end{proof}
 
 \subsection{A-Priori Operation Counting}
@@ -407,9 +401,9 @@ For $\theta_{w}$, things are more complicated. We first need to account for the 
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Optimized Loop nest example}\label{code:increase_factor}\end{figure}
 
-One can think of this as the (simplified) loop nest originating from the assembly of a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} represents the field $f$ over (tabulated) basis functions $B$. In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from the integration-dependent (i.e., $L_i$-dependent) quantities. By expanding the product we observe an increase in the number of $L_k$-dependent operations of a factor 3 (the local degrees of freedom for the coefficient). Intuitively, $\iota$ captures this growth in non-hoistable operation. 
+One can think of this as the (simplified) loop nest originating from the assembly of a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} represents the field $f$ over (tabulated) basis functions $B$. In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from the integration-dependent (i.e., $L_i$-dependent) quantities. By expanding the product we observe an increase in the number of $L_k$-dependent operations of a factor 3 (the local degrees of freedom for the coefficient). Intuitively, $\iota$ captures such a growth in non-hoistable operation. 
 
-With just a single coefficient, $\iota$ directly descends from the cost of expansion. In general, however, the calculation is less straightforward. Consider, for example, the case in which multiple coefficients originate from the same function space. Expansion would then lead to identical terms (i.e., identical pre-evaluated tables). Therefore, for a precise estimate of $\iota$, we instead need to calculate the $k$-combinations with repetitions of $n$ elements, with $k$ being the arity of the multilinear loop nest and $n$ the set of terms involved in the coefficient expansion. 
+With just a single coefficient, $\iota$ directly descends from the cost of expansion. In general, however, the calculation is less straightforward. Consider, for example, the case in which multiple coefficients originate from the same function space. Expansion would then lead to identical terms (i.e., identical pre-evaluated tables). Therefore, for a precise estimate of $\iota$, we instead need to calculate the $k$-combinations with repetitions of $n$ elements, with $k$ being the number of coefficient-dependent terms appearing in a product (in the example, there is only $f$, so $k=1$)  and $n$ the cardinality of the set of symbols involved in the coefficient expansion (in the example, \texttt{B[i,0]}, \texttt{B[i,1]}, and \texttt{B[i,2]}, so $n=3$; note that we are considering sets, so duplicates would be counted as 1). 
 
 If $\iota \geq I$ we can immediately say that pre-evaluation will not be profitable. This is indeed a necessary condition that, intuitively, tells us that if we add to the innermost loop more operations than we actually save from eliminating $L_i$, then for sure $\theta_{wo} < \theta_{w}$. This observation can speed up the compilation time by decreasing the analysis cost.
 
@@ -478,8 +472,8 @@ We evaluate the speed ups achieved by a wide variety of transformation systems o
 \begin{itemize}
 \item the FEniCS Form Compiler's built-in optimization systems, namely
 \begin{itemize}
-\item optimized quadrature mode, \texttt{quad}
-\item tensor mode, \texttt{tens}
+\item optimized quadrature mode, \texttt{quad} (work presented in~\citeN{quadrature1})
+\item tensor mode, \texttt{tens} (work presented in~\citeN{FFC-TC})
 \item automatic mode, \texttt{auto} (here, heuristics are used to infer the optimal mode for the form between quadrature and tensor)
 \end{itemize}
 \item a novel back-end for the FEniCS Form Compiler, UFLACS, referred to as \texttt{ufls}, whose primary goals are improved code generation time and runtime
@@ -487,9 +481,11 @@ We evaluate the speed ups achieved by a wide variety of transformation systems o
 \item the optimal multilinear loop nest synthesis plus padding and symbolic execution, \texttt{cfO2}, which is the focus of this paper
 \end{itemize}
 
-The values that we report are the average of three runs with "warm cache" (no code generation time, no compilation time). They include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh used to run the simulations was chosen small enough to fit the L3 cache of the CPU, so as to minimize the ``noise'' due to operations outside of the element matrix evaluation. For a fair comparison, small patches (publicly available) were written to be able to use the aforementioned transformation systems in Firedrake; that is, all simulations are run through Firedrake. UFLACS and the FEniCS Form Compiler's optimization systems generate code suitable for FEniCS (\cite{Fenics}), which employs a data storage layout different than Firedrake. Our small patches fix this problem by producing code with a "correct" data storage layout. 
+The values that we report are the average of three runs with "warm cache" (no code generation time, no compilation time). They include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh used to run the simulations was chosen small enough to fit the L3 cache of the CPU, so as to minimize the ``noise'' due to operations outside of the element matrix evaluation. 
 
-Following the methodology (and the notation) used in ~\cite{quadrature1} and~\cite{Francis}, we increasingly vary the complexity of each form. In particular:
+For a fair comparison, small patches (publicly available) were written to be able to run all simulations through Firedrake: this means the cost of matrix insertion and mesh iteration is exactly the same in all variants. UFLACS and the FEniCS Form Compiler's optimization systems generate code suitable for FEniCS, which employs a data storage layout different than Firedrake. Our patches fix this problem by producing code with a data storage layout as expected by Firedrake. 
+
+Following the methodology (and the notation) used in ~\citeN{quadrature1} and~\citeN{Francis}, we increasingly vary the complexity of each form. In particular:
 \begin{itemize}
 \item the polynomial order of test and trial functions, $q \in \lbrace1, 2, 3, 4\rbrace$. Test and trial functions always have same degree
 \item the polynomial order of coefficient (or ``pre-multiplying'') functions, $p \in \lbrace1, 2, 3, 4\rbrace$
@@ -511,35 +507,33 @@ The first, general observation is that optimality, as we defined it, does not ne
 
 A second observation concerns the triggering of pre-evaluation in \texttt{cfO2}. The fact that a bar in \texttt{cfO2} matches the corresponding bar in \texttt{cfO1} means that pre-evaluation was found unprofitable. The trend -- although there are quite a few exceptions -- is that as $nf$ increases, pre-evaluation tends to not be performed. This is a consequence of the larger increase factor, $\iota$, which we defined in Section~\ref{sec:op_count}.
 
-Also note some other minor things. The lack of improvements in all code variants with $[q=1, p=1]$ is due to the cost of matrix insertion, which outweighs that of local assembly. The slow downs experienced with \texttt{quad} should be imputable to the presence of indirection arrays in the generated code; when the tables are dense, these eventually break vectorization for a marginal gain due to avoiding iteration over isolated zero-valued columns. A missing bar in \texttt{tens} or \texttt{auto} means that the code generation system failed because of either exceeding the memory limit or being unable to manipulate the math characterizing the form (this happens in the case of \texttt{Hyperelasticity})
+Also note some other minor things. The lack of improvements in all code variants with $[q=1, p=1]$ is due to the cost of matrix insertion, which outweighs that of local assembly. The slow downs experienced with \texttt{quad} should be imputable to the presence of indirection arrays in the generated code; when the tables are dense, these eventually break vectorization for a marginal gain due to avoiding iteration over isolated zero-valued columns. A missing bar in \texttt{tens} or \texttt{auto} means that the code generation system failed because of either exceeding the memory limit or being unable to manipulate the math characterizing the form (this happens in the case of \texttt{Hyperelasticity}). Finally, note that the bars for $nf=0$ do not change as $p$ increases: this is expected since varying $p$ when there are no coefficients should not make any difference.
 
 \paragraph{Mass}
-\begin{figure}[t] 
+\begin{figure}
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
 \caption{Performance evaluation for the mass matrix .}\label{fig:mass}
 \end{figure}
 Apart from a very small number of points in our exploration space, from analysis of Figure~\ref{fig:mass} we can infer how \texttt{cfO2} represents the best code variant among the tested. This suggests that our definition of optimality is consistent in what is the simplest possible bilinear form we can test. As we increase the complexity, by adding more coefficients or by varying the polynomial orders, \texttt{cfO2} is always capable of generating optimal loop nests. The biggest exception is $[q=4, p=4, nf=1]$ in which the save on operations over zero-valued entries in tensor mode is considerably higher than the save in flops in \texttt{cfO1} and \texttt{cfO2}.
 
 \paragraph{Helmholtz}
-\begin{figure}[t] 
+\begin{figure}
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/helmholtz}}
 \caption{Performance evaluation for the bilinear form of a Helmholtz equation.}\label{fig:helmholtz}
 \end{figure}
 Figure~\ref{fig:helmholtz} shows the performance improvements achieved by various code variants over the original code can be significant. It is worthwhile noting how \texttt{auto} is not capable of selecting the proper synthesis in most of the cases. One can also appreciate the evidence that the relative order of the employed function spaces plays a key role in the code synthesis choice. Take, for example, the case $[q=3, p=1, nf=2]$. The adoption of pre-evaluation makes a tremendous speed up be achievable by $cfO2$ over all other variants. On the other hand, \texttt{auto} triggers \texttt{quad} (since one monomial in the form has two derivatives and two coefficients, which exceed the threshold within which tensor mode is applied), which, just like the other quadrature-based variants \texttt{ufls} and \texttt{cfO1}, is sub-optimal.
 
 \paragraph{Elasticity}
-%\begin{figure}[t]  
-%...
-%%\includegraphics[scale=0.7]{perf-results/elasticity}
-%%\caption{Elasticity results.}\label{fig:elasticity}
-%\end{figure}
-
-
+\begin{figure}
+\includegraphics[scale=0.7]{perf-results/elasticity}
+\caption{Performance evaluation for the bilinear form arising in a elastic model.}\label{fig:elasticity}
+\end{figure}
+...
 
 \paragraph{Hyperelasticity}
-\begin{figure}[t]
+\begin{figure}
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/hyperelasticity}}
-\caption{Performance evaluation for the bilinear form arising in a Hyperelastic model}\label{fig:hyperelasticity}
+\caption{Performance evaluation for the bilinear form arising in a hyperelastic model}\label{fig:hyperelasticity}
 \end{figure}
 In the hyperelastic model experiments, pre-evaluation is never triggered by \texttt{cfO2}. This is a consequence of the form complexity, which makes the increase factor overwhelm any potential flop reduction. Another distinguishing aspect is the use of vector-valued function spaces, which requires a technique as in Section~\ref{sec:zeros} to avoid wasteful operations over zero-valued entries; \texttt{quad}, \texttt{tens}, \texttt{ufls} and \texttt{cfO2} employ different techniques to this purpose. Results are displayed in Figure~\ref{fig:hyperelasticity}. \texttt{cfO2} is the best alternative due to removing sharing from the multilinear loop nest and optimization of integration-dependent expressions. \texttt{ufls} performs generally well and exhibits significant speed ups over non-optimized syntheses; this is a result of the effort in optimizing integration-dependent expressions. 
 
