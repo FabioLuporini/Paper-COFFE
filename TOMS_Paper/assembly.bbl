@@ -80,6 +80,17 @@
 \url{http://dx.doi.org/10.1137/040607824}}
 
 
+\bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2006}]%
+        {FFC-Compiler}
+{Robert~C. Kirby} {and} {Anders Logg}. 2006.
+\newblock \showarticletitle{A Compiler for Variational Forms}.
+\newblock {\em ACM Trans. Math. Softw.\/} {32}, 3 (Sept. 2006), 417--444.
+\newblock
+\showISSN{0098-3500}
+\showDOI{%
+\url{http://dx.doi.org/10.1145/1163641.1163644}}
+
+
 \bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2007}]%
         {Kirby:TC}
 {Robert~C. Kirby} {and} {Anders Logg}. 2007.
