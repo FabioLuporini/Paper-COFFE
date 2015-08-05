@@ -86,7 +86,7 @@ We tackle the problem of automatically generating optimal finite element integra
 
 \terms{Design, Performance}
 
-\keywords{Finite element integration, local assembly, compilers, optimizations, SIMD vectorization}
+\keywords{Finite element integration, local assembly, compilers, performance optimization}
 
 \acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2015. Optimal Finite Element Integration.}
 
@@ -110,7 +110,7 @@ grants EP/I00677X/1, EP/I006761/1, and EP/L000407/1, by NERC grants
 NE/K008951/1 and NE/K006789/1, by the U.S.  National Science
 Foundation through grants 0811457 and 0926687, by the U.S. Army
 through contract W911NF-10-1-000, and by a HiPEAC collaboration
-grant. The authors would like to thank Dr. Carlo Bertolli,
+grant. The authors would like to thank Mr. Andrew T.T. McRae,
 Dr. Lawrence Mitchell, and Dr. Francis Russell for their invaluable
 suggestions and their contribution to the Firedrake project.
 
@@ -542,8 +542,7 @@ In the hyperelastic model experiments, pre-evaluation is never triggered by \tex
 
 \section{Conclusions}
 \label{sec:conclusions}
-...
-
+With this research we have made a first step towards producing a theory and an automated system for the optimal synthesis of loop nests arising in finite element integration. The results are extremely encouraging, suggesting our model applies to a variety of contexts. We have discussed the conditions under which our optimality definition becomes weaker. An open problem is understanding how to refine this definition to include outer loops. This will probably require studying and exploiting properties of different differential operators. A second open problem is extending our methodology to classes of loops arising in spectral methods; here, the interaction with low level optimization will probably become stronger due to the typically larger working sets deriving from the high order function spaces. 
 
 % Bibliography
 \bibliographystyle{ACM-Reference-Format-Journals}
