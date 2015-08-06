@@ -494,6 +494,7 @@ Constants of our analysis are instead
 \begin{itemize}
 \item the space of test, trial, and coefficient functions, Lagrange
 \item the mesh, tetrahedral with a total of 4374 elements
+\item exact numerical quadrature (the same scheme as in~\citeN{quadrature1}, based on the Gauss-Legendre-Jacobi rule, is employed)
 \end{itemize}
 
 The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}) are ``nested'' plots. We refer to the outer plot as the ``grid'', while the inner are the actual ``plots''. In a grid, $p$ varies along the horizontal axis and $q$ varies along the vertical axis. The top-left plot in a grid shows the speed up over unmodified code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. The diagonal of the grid provides the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid can therefore be looked at from different perspectives, which allows us to make structured considerations on the performance achieved. In each plot there are six groups of bars, each group referring to a particular code variant (\texttt{quad, tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
