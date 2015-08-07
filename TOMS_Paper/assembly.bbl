@@ -32,16 +32,6 @@
 \ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
 \ifx \showURL      \undefined \def \showURL       #1{#1}          \fi
 
-\bibitem[\protect\citeauthoryear{??}{ufl}{2014}]%
-        {ufl-code}
- 2014.
-\newblock {UFL forms}.
-\newblock
-  \url{https://github.com/firedrakeproject/firedrake-bench/blob/experiments/forms/firedrake_forms.py}.
-    (2014).
-\newblock
-
-
 \bibitem[\protect\citeauthoryear{Bondhugula, Hartono, Ramanujam, and
   Sadayappan}{Bondhugula et~al\mbox{.}}{2008}]%
         {PLUTO}
@@ -64,20 +54,6 @@
 \newblock {The Firedrake Project}.
 \newblock \url{http://www.firedrakeproject.org}.   (2014).
 \newblock
-
-
-\bibitem[\protect\citeauthoryear{Kirby, Knepley, Logg, and Scott}{Kirby
-  et~al\mbox{.}}{2005}]%
-        {Kirby-FEM-opt}
-{Robert~C. Kirby}, {Matthew Knepley}, {Anders Logg}, {and} {L.~Ridgway Scott}.
-  2005.
-\newblock \showarticletitle{Optimizing the Evaluation of Finite Element
-  Matrices}.
-\newblock {\em SIAM J. Sci. Comput.\/} {27}, 3 (Oct. 2005), 741--758.
-\newblock
-\showISSN{1064-8275}
-\showDOI{%
-\url{http://dx.doi.org/10.1137/040607824}}
 
 
 \bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2006}]%

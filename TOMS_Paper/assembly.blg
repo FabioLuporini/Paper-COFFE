@@ -6,61 +6,53 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Database file #1: biblio.bib
 Warning--I didn't find a database entry for "Uflacs"
-Warning--no key, author in ufl-code
-Warning--no author, editor, organization, or key in ufl-code
-Warning--to sort, need author or key in ufl-code
-Warning--no key, author in ufl-code
-Warning--no key, author in ufl-code
 Reallocated singl_function (elt_size=4) to 100 items from 50.
-Warning--no key, author in ufl-code
-Warning--no author, editor, organization, or key in ufl-code
 Warning--require articleno with numpages field in PLUTO
-Warning--require articleno with numpages field in Kirby-FEM-opt
 Warning--require articleno with numpages field in FFC-TC
 Warning--articleno field, but no numpages field, in Kirby:TC
 Warning--page numbers missing in both pages and numpages fields in Kirby:TC
 Warning--require pages or numpages fields with articleno field in Kirby:TC
 Warning--empty address in Fenics
 Warning--page numbers missing in both pages and numpages fields in Francis
-You've used 10 entries,
+You've used 8 entries,
             5290 wiz_defined-function locations,
-            1313 strings with 16336 characters,
-and the built_in function-call counts, 9624 in all, are:
-= -- 1315
-> -- 413
+            1296 strings with 15900 characters,
+and the built_in function-call counts, 7842 in all, are:
+= -- 1068
+> -- 361
 < -- 2
-+ -- 132
-- -- 148
-* -- 677
-:= -- 1062
-add.period$ -- 50
-call.type$ -- 10
-change.case$ -- 67
-chr.to.int$ -- 10
-cite$ -- 29
-duplicate$ -- 724
-empty$ -- 532
-format.name$ -- 180
-if$ -- 2319
++ -- 116
+- -- 132
+* -- 554
+:= -- 902
+add.period$ -- 41
+call.type$ -- 8
+change.case$ -- 55
+chr.to.int$ -- 8
+cite$ -- 15
+duplicate$ -- 573
+empty$ -- 419
+format.name$ -- 160
+if$ -- 1862
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 28
-newline$ -- 134
-num.names$ -- 72
-pop$ -- 247
+missing$ -- 24
+newline$ -- 115
+num.names$ -- 64
+pop$ -- 185
 preamble$ -- 1
-purify$ -- 117
+purify$ -- 95
 quote$ -- 0
-skip$ -- 205
+skip$ -- 163
 stack$ -- 0
-substring$ -- 647
-swap$ -- 61
+substring$ -- 511
+swap$ -- 46
 text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 134
-warning$ -- 15
-while$ -- 65
+type$ -- 106
+warning$ -- 7
+while$ -- 58
 width$ -- 0
-write$ -- 225
-(There were 16 warnings)
+write$ -- 188
+(There were 8 warnings)
