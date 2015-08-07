@@ -482,7 +482,7 @@ The values that we report are the average of three runs with ``warm cache'' (no 
 
 For a fair comparison, small patches (publicly available) were written to be able to run all simulations through Firedrake: this means the cost of matrix insertion and mesh iteration is exactly the same in all variants. UFLACS and the FEniCS Form Compiler's optimization systems generate code suitable for FEniCS, which employs a data storage layout different than Firedrake. Our patches fix this problem by producing code with a data storage layout as expected by Firedrake. 
 
-Since we are running sequential programs, with respect to the memory constraint $C_2$ introduced in Section~\ref{sec:mem-const}, we set $T_H = \infty$; that is, temporaries can occupy an arbitrary amount of memory. This is because a single process that has exclusive access to all of the bandwidth available in the system can count on pre-fetching to minimize cache misses. If, on the other hand, a parallel program were run, then a more sensible value for $T_H$ would be the size of the last level of private cache; this would avoid memory bank conflicts and, therefore, potential drops in runtime. 
+With respect to the memory constraint $C_2$ introduced in Section~\ref{sec:mem-const}, since we are running sequential programs we set $T_H = LLC_{size}$; that is, the amount of space that temporaries due to pre-evaluation can occupy is bounded by the size of the processor L3 cache. If, on the other hand, a parallel program were run, then a more sensible value for $T_H$ would be the size of the last level of private cache (L2, on our Sandy Bridge machine); this would avoid cache misses and memory conflicts and, therefore, potential drops in runtime. 
 
 Following the methodology adopted in ~\citeN{quadrature1}, we increasingly vary the complexity of each form. In particular:
 \begin{itemize}
@@ -501,11 +501,31 @@ The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity},
 
 %TODO : can we just say padding is useless because in 3D ndofs is a multiple of our vector length?
 
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
+\caption{Performance evaluation for the mass matrix .}\label{fig:mass}
+\end{figure}
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/helmholtz}}
+\caption{Performance evaluation for the bilinear form of a Helmholtz equation.}\label{fig:helmholtz}
+\end{figure}
+
+\begin{figure}
+\includegraphics[scale=0.7]{perf-results/elasticity}
+\caption{Performance evaluation for the bilinear form arising in a elastic model.}\label{fig:elasticity}
+\end{figure}
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/hyperelasticity}}
+\caption{Performance evaluation for the bilinear form arising in a hyperelastic model}\label{fig:hyperelasticity}
+\end{figure}
+
 \subsection{Performance of Forms}
 \label{sec:perf-results-forms}
 % 52 test cases per form, so 52*4 = 208 test cases in total. In 7, there is a non-marginal slow down in cfO2. 
 
-The first observation is that our optimality model does not imply minimum execution time. In particular, in the 0.03$\%$ of the test cases (we are not counting marginal differences), \texttt{cfO2} does not result in the best runtime. There are two reasons for this. The former is that low-level optimization can have a significant impact. Compare, as an example, \texttt{tens} and \texttt{cfO2} in \texttt{Mass} and \texttt{Helmholtz} when $q=1$. With $p \in [2,3]$, \texttt{tens} tends to slightly outperform \texttt{cfO2}. With $p=4$, \texttt{tens} is quite faster than \texttt{cfO2}. The motivation is the aggressive unrolling performed in \texttt{tens}, which 1) allows to eliminate all operations involving zero-valued entries and 2) can drastically decrease both working set and register pressure by avoiding storing entire temporaries. In COFFEE we never unroll loops to maximize the chances of autovectorization, which usually results in considerable speed ups throughout the majority of test cases. The latter reason is simply inherent to our optimality model. As explained in Section~\ref{sec:heuristic-int-dep}, we use heuristics to optimize the integration loop. The reason we are studying an hyperelastic model is indeed to assess their effectiveness; the systematic performance improvements observed over all other variants are, however, extremely encouraging. 
+The first observation is that our optimality model does not imply minimum execution time. In particular, in the 0.03$\%$ of the test cases (we are not counting marginal differences), \texttt{cfO2} does not result in the best runtime. There are two reasons for this. The former is that low-level optimization can have a significant impact. Compare, as an example, \texttt{tens} and \texttt{cfO2} in \texttt{Mass} and \texttt{Helmholtz} when $q=1$. With $p \in [2,3]$, \texttt{tens} slightly outperforms \texttt{cfO2}. With $p=4$, \texttt{tens} is quite faster than \texttt{cfO2}. The motivation is the aggressive unrolling performed in \texttt{tens}, which 1) allows to eliminate all operations involving zero-valued entries and 2) can drastically decrease both working set and register pressure by avoiding storing entire temporaries. In COFFEE we never unroll loops to maximize the chances of autovectorization, which usually results in considerable speed ups throughout the majority of test cases. The latter reason is simply inherent to our optimality model. As explained in Section~\ref{sec:heuristic-int-dep}, we use heuristics to optimize the integration loop. The reason we are studying an hyperelastic model is indeed to assess their effectiveness; the systematic performance improvements observed over all other variants are, however, extremely encouraging. 
 
 A second observation concerns the ``triggering'' of pre-evaluation in \texttt{cfO2}. The fact that a bar in \texttt{cfO2} matches the corresponding bar in \texttt{cfO1} usually suggests that pre-evaluation was found unprofitable. The trend -- although there are quite a few exceptions -- is that as $nf$ increases, pre-evaluation tends not to be performed. This is a consequence of a larger increase factor, as discussed in Section~\ref{sec:op_count}.
 
@@ -518,31 +538,15 @@ Also note some other minor things.
  \end{itemize}
 
 \paragraph{Mass}
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
-\caption{Performance evaluation for the mass matrix .}\label{fig:mass}
-\end{figure}
 From analysis of Figure~\ref{fig:mass}, we can see that \texttt{cfO2} represents the best variant among the ones tested, apart from the few points previously discussed. This suggests that the optimality model holds in these simple bilinear forms; that is, \texttt{cfO2} generates loop nests that are optimal from both a theoretical and practical viewpoints. It is worthwhile noting how \texttt{auto} is not capable of selecting the proper synthesis in many of the test cases, especially as $nf \geq 2$. 
 
 \paragraph{Helmholtz}
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/helmholtz}}
-\caption{Performance evaluation for the bilinear form of a Helmholtz equation.}\label{fig:helmholtz}
-\end{figure}
 Figure~\ref{fig:helmholtz} shows that the performance improvements achieved by various code variants over a non-optimized implementation can be significant. We appreciate the fact that the relative order of the employed function spaces plays a key role in the code synthesis choice. Take, for example, the case $[q=3, p=1, nf=2]$. The adoption of pre-evaluation makes a tremendous speed up be achievable by $cfO2$ over the competitors. On the other hand, \texttt{auto} triggers \texttt{quad} (since one monomial in the form has two derivatives and two coefficients, which exceeds the threshold within which \texttt{tens} is selected), which, just like the other quadrature-based variants \texttt{ufls} and \texttt{cfO1}, is sub-optimal. 
 
 \paragraph{Elasticity}
-\begin{figure}
-\includegraphics[scale=0.7]{perf-results/elasticity}
-\caption{Performance evaluation for the bilinear form arising in a elastic model.}\label{fig:elasticity}
-\end{figure}
-The performance results for the elastic model are displayed in Figure~\ref{fig:elasticity}. We note how the fact that\texttt{auto} opts for \texttt{tens} when $nf=1$ leads, generally, to sub-optimal execution times. This is different than in the case of the Helmholtz equation, in which \texttt{tens} (and, generally, pre-evaluation through \texttt{cfO2}), tends to be the best alternative when a single coefficient is present.  
+The performance results for the elastic model are displayed in Figure~\ref{fig:elasticity}. We note how the fact that\texttt{auto} opts for \texttt{tens} when $nf=1$ leads, generally, to sub-optimal execution times. This is different than in the case of the Helmholtz equation, in which \texttt{tens} (and, generally, pre-evaluation through \texttt{cfO2}), tends to be the best alternative when a single coefficient is present. With $q=4$, pre-evaluation is triggered in \texttt{cfO2} when $nf0$. When $nf=1$, pre-evaluation is found profitable in terms of operation count, but it is not performed because of exceeding the working set threshold $T_H$ imposed by memory constraint $C_2$. We have tried running the same experiments with $T_H = \infty$ and noticed a significant drop in runtime for all values of $p$ (\texttt{cfO2} was generally slower than \texttt{cfO1}). This confirms the importance of memory constraints. 
 
 \paragraph{Hyperelasticity}
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/hyperelasticity}}
-\caption{Performance evaluation for the bilinear form arising in a hyperelastic model}\label{fig:hyperelasticity}
-\end{figure}
 In the hyperelastic model experiments, pre-evaluation is never triggered by \texttt{cfO2}. This is a consequence of the form complexity, which makes the increase factor overwhelm any potential flop reduction. Another distinguishing aspect is the use of vector-valued function spaces, which requires a technique as in Section~\ref{sec:zeros} to avoid wasteful operations over zero-valued entries; \texttt{quad}, \texttt{tens}, \texttt{ufls} and \texttt{cfO2} employ different techniques. Results are displayed in Figure~\ref{fig:hyperelasticity}. \texttt{cfO2} is the best alternative due to removing sharing from the multilinear loop nest and optimization of integration-dependent expressions. \texttt{ufls} performs generally well and exhibits significant speed ups over non-optimized syntheses; this is a result of the effort in optimizing integration-dependent expressions. 
 
 
