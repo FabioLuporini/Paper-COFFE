@@ -1,3 +1,3 @@
-for (j = 0; j< O; j++)
+for (j = 0; j < O; j++)
   for (i = 0; i < N; i++)
-    A[i,j] += B[j]*C[i]*b + B[j]*D[i]*c
+    a += B[j]*C[i] + B[j]*D[i]

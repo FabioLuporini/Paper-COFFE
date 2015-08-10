@@ -1,4 +1,4 @@
 for (i = 0; i < N; i++)
-  T = C[i]*b + D[i]*c
-  for (j = 0; j< O; j++)
-    A[i,j] += B[j]*T
+  T = C[i] + D[i]
+  for (j = 0; j < O; j++)
+    a += B[j]*T

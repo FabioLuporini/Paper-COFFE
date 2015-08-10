@@ -1,0 +1,7 @@
+for (i = 0; i < M; i++)
+  for (k = 0; k < O; k++)
+    T1[k] += B[i,k]*C[i]
+    T2[k] += B[i,k]*D[i]
+
+for (k = 0; k < O; k++)
+  A[k] = T1[k]*a + T2[k]*b

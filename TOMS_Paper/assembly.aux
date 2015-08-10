@@ -24,24 +24,36 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Qualitative Comparison}{4}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Optimality of Loop Nests}{4}}
 \newlabel{sec:optimal-impl}{{3}{4}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest.code}{5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Multilinear loop nest with sharing\relax }}{5}}
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{code:multi_loopnest}{{1}{5}}
+\newlabel{code:multi_loopnest_a}{{1(a)}{5}}
+\newlabel{sub@code:multi_loopnest_a}{{(a)}{5}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest.code}{5}}
+\newlabel{code:multi_loopnest_b}{{1(b)}{5}}
+\newlabel{sub@code:multi_loopnest_b}{{(b)}{5}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest\textunderscore opt.code}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces A simple multilinear loop nest\relax }}{5}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With sharing}}}{5}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Optimal form}}}{5}}
 \newlabel{prop:share-removal}{{1}{5}}
 \newlabel{prop:optimal-mln}{{2}{6}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest\textunderscore opt.code}{6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Multilinear loop nest in optimal form\relax }}{6}}
-\newlabel{code:multi_loopnest_optimal}{{2}{6}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest.code}{6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Loop nest example\relax }}{6}}
-\newlabel{code:loopnest}{{3}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces An imperfect loop nest, with one reduction loop ($L_i$), an inner perfect multilinear loop nest ($[L_j, L_k]$), and sharing potentially present in $F$\relax }}{6}}
+\newlabel{code:loopnest}{{2}{6}}
+\newlabel{code:loopnest_red}{{3(a)}{7}}
+\newlabel{sub@code:loopnest_red}{{(a)}{7}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore red.code}{7}}
+\newlabel{code:loopnest_nored}{{3(b)}{7}}
+\newlabel{sub@code:loopnest_nored}{{(b)}{7}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore nored.code}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The effect of pre-evaluating reductions. Note the decrease in operation count grows with the loop nest depth.\relax }}{7}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With reduction}}}{7}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Pre-evaluated reduction}}}{7}}
 \newlabel{def:optimality}{{7}{7}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Synthesis of Optimal Loop Nests in Finite Element Integration}{7}}
 \newlabel{sec:optimal-synthesis}{{4}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Memory constraints}{7}}
-\newlabel{sec:mem-const}{{4.1}{7}}
 \citation{Kirby:TC}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Memory constraints}{8}}
+\newlabel{sec:mem-const}{{4.1}{8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Minimizing the Operation Cost}{8}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Intuition of the main algorithm\relax }}{9}}
 \newlabel{code:intuition}{{4}{9}}
@@ -51,50 +63,51 @@
 \newlabel{prop:optimal-approach}{{3}{9}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}A-Priori Operation Counting}{10}}
 \newlabel{sec:op_count}{{4.3}{10}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Optimized Loop nest example\relax }}{10}}
-\newlabel{code:increase_factor}{{6}{10}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Optimized Loop nest example\relax }}{11}}
+\newlabel{code:increase_factor}{{6}{11}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Code Generation}{11}}
 \newlabel{sec:codegen}{{5}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE Language}{11}}
 \citation{quadrature1}
 \citation{Luporini}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE Language}{12}}
 \newlabel{sec:heuristic-int-dep}{{5.1.1}{12}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Heuristic Optimization of Integration-dependent Expressions}{12}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Low-level Optimization}{12}}
 \newlabel{sec:code-spec}{{5.2}{12}}
 \newlabel{sec:opt-review}{{5.2.1}{12}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Review of Existing Optimizations}{12}}
-\@writefile{toc}{\contentsline {paragraph}{Padding and data alignment}{12}}
-\@writefile{toc}{\contentsline {paragraph}{Vector-register Tiling}{12}}
-\@writefile{toc}{\contentsline {paragraph}{Expression Splitting}{12}}
 \citation{quadrature1}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Review of Existing Optimizations}{13}}
+\@writefile{toc}{\contentsline {paragraph}{Padding and data alignment}{13}}
+\@writefile{toc}{\contentsline {paragraph}{Vector-register Tiling}{13}}
+\@writefile{toc}{\contentsline {paragraph}{Expression Splitting}{13}}
 \newlabel{sec:vect-prom}{{5.2.2}{13}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Vector-promotion of Integration-dependent Expressions}{13}}
 \newlabel{sec:zeros}{{5.2.3}{13}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Handling Block-sparse Tables}{13}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{13}}
-\newlabel{sec:perf-results}{{6}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{13}}
 \citation{quadrature1}
 \citation{FFC-TC}
 \citation{Fenics}
 \citation{Luporini}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{14}}
+\newlabel{sec:perf-results}{{6}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{14}}
 \citation{quadrature1}
 \citation{quadrature1}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Performance evaluation for the mass matrix .\relax }}{15}}
-\newlabel{fig:mass}{{7}{15}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance of Forms}{15}}
 \newlabel{sec:perf-results-forms}{{6.2}{15}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the bilinear form of a Helmholtz equation.\relax }}{16}}
-\newlabel{fig:helmholtz}{{8}{16}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form arising in a elastic model.\relax }}{17}}
-\newlabel{fig:elasticity}{{9}{17}}
-\@writefile{toc}{\contentsline {paragraph}{Mass}{17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Performance evaluation for the mass matrix .\relax }}{16}}
+\newlabel{fig:mass}{{7}{16}}
+\@writefile{toc}{\contentsline {paragraph}{Mass}{16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the bilinear form of a Helmholtz equation.\relax }}{17}}
+\newlabel{fig:helmholtz}{{8}{17}}
 \@writefile{toc}{\contentsline {paragraph}{Helmholtz}{17}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in a hyperelastic model\relax }}{18}}
-\newlabel{fig:hyperelasticity}{{10}{18}}
-\@writefile{toc}{\contentsline {paragraph}{Elasticity}{18}}
+\@writefile{toc}{\contentsline {paragraph}{Elasticity}{17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form arising in a elastic model.\relax }}{18}}
+\newlabel{fig:elasticity}{{9}{18}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{18}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{18}}
+\newlabel{sec:conclusions}{{7}{18}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{PLUTO}{\citeauthoryear {Bondhugula, Hartono, Ramanujam, and Sadayappan}{Bondhugula et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2008}}
@@ -103,9 +116,8 @@
 \bibcite{Kirby:TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2007}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in a hyperelastic model\relax }}{19}}
+\newlabel{fig:hyperelasticity}{{10}{19}}
 \bibcite{quadrature1}{\citeauthoryear {Olgaard and Wells}{Olgaard and Wells}{2010}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\lastpage{19}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{19}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{19}}
-\newlabel{sec:conclusions}{{7}{19}}
+\lastpage{20}

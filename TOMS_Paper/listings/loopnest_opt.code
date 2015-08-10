@@ -1,18 +1,15 @@
+// Pre-evaluated tables
+...
 for (e = 0; e < L; e++)
-  ...
-  // Pre-evaluated tables
-  ...
-  // Loop nests for each dissected monomial
+  // Loop nest for pre-evaluated monomials
   for (j = 0; j < N; j++)
-    for (k = 0; k< O; k++)
-      A[e,j,k] += F(...)
-    for (k = 0; k< O; k++)
-      A[e,j,k] += G(...)
-    ...
+    for (k = 0; k < O; k++)
+      A[e,j,k] += G$'$(...) + G$''$(...) + ...
+
   // Loop nest for monomials for which run-time
-  // integration (/i/ loop) is preferable
+  // integration is preferable
   for (i = 0; i < M; i++)
   ..
     for (j = 0; j < N; j++)
-      for (k = 0; k< O; k++)
+      for (k = 0; k < O; k++)
         A[e,j,k] += H(...)

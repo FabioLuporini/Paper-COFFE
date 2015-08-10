@@ -1,4 +1,4 @@
 for (i = 0; i < M; i++)
   for (j = 0; j < N; j++)
-    for (k = 0; k< O; k++)
+    for (k = 0; k < O; k++)
       A[j,k] += B[i,j]*B[i,k]*(f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2])
