@@ -79,6 +79,20 @@
 \url{http://dx.doi.org/10.1145/1268769.1268771}}
 
 
+\bibitem[\protect\citeauthoryear{Larsen and Amarasinghe}{Larsen and
+  Amarasinghe}{2000}]%
+        {SLP-vect}
+{Samuel Larsen} {and} {Saman Amarasinghe}. 2000.
+\newblock \showarticletitle{Exploiting Superword Level Parallelism with
+  Multimedia Instruction Sets}. In {\em Proceedings of the ACM SIGPLAN 2000
+  Conference on Programming Language Design and Implementation} {\em (PLDI
+  '00)}. ACM, New York, NY, USA, 145--156.
+\newblock
+\showISBNx{1-58113-199-2}
+\showDOI{%
+\url{http://dx.doi.org/10.1145/349299.349320}}
+
+
 \bibitem[\protect\citeauthoryear{Logg, Mardal, Wells, et~al\mbox{.}}{Logg
   et~al\mbox{.}}{2012}]%
         {Fenics}
