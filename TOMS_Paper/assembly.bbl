@@ -32,6 +32,14 @@
 \ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
 \ifx \showURL      \undefined \def \showURL       #1{#1}          \fi
 
+\bibitem[\protect\citeauthoryear{Aln{\ae}s}{Aln{\ae}s}{2015}]%
+        {Uflacs}
+{Martin~Sandve Aln{\ae}s}. 2015.
+\newblock UFLACS - UFL Analyser and Compiler System.
+\newblock \url{https://bitbucket.org/fenics-project/uflacs}.   (2015).
+\newblock
+
+
 \bibitem[\protect\citeauthoryear{Bondhugula, Hartono, Ramanujam, and
   Sadayappan}{Bondhugula et~al\mbox{.}}{2008}]%
         {PLUTO}
