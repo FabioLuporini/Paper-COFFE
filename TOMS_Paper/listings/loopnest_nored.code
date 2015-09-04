@@ -3,5 +3,6 @@ for (i = 0; i < M; i++)
     T1[k] += B[i,k]*C[i]
     T2[k] += B[i,k]*D[i]
 
-for (k = 0; k < O; k++)
-  A[k] = T1[k]*a + T2[k]*b
+for (e = 0; e < L; e++)
+  for (k = 0; k < O; k++)
+    A[e][k] = D[e]*(T1[k] + T2[k])

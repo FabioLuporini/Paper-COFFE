@@ -1,3 +1,4 @@
-for (i = 0; i < M; i++)
-  for (k = 0; k < O; k++)
-    A[k] += B[i,k]*(C[i]*a + D[i]*b)
+for (e = 0; e < L; e++)
+  for (i = 0; i < M; i++)
+    for (k = 0; k < O; k++)
+      A[e][k] += D[e]*B[i,k]*(C[i] + D[i])
