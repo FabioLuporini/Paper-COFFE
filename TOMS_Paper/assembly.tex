@@ -223,19 +223,34 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 In this section, we provide a characterization of loop nest optimality. In order to make the document self-contained, we start with reviewing basic compiler terminology.
 
 \begin{Def}[Perfect and imperfect loop nests]
-A perfect loop nest is a loop whose body either 1) comprises only a sequence of non-loop statements or 2) is itself a perfect loop nest. If this condition does not hold, a loop nest is said imperfect. 
+A perfect loop nest is a loop whose body either 1) comprises only a sequence
+of non-loop statements or 2) is itself a perfect loop nest. If this
+condition does not hold, a loop nest is said to be imperfect. 
 \end{Def}
 
 \begin{Def}[Independent basic block]
-An independent basic block is a sequence of statements that present no data dependencies
+An independent basic block is a sequence of statements such that no data
+dependencies exist between statements in the block.
 \end{Def}
 
-We focus on perfect nests whose innermost loop body is an independent basic block. A straightforward property of this class is that hoisting invariant expressions from the innermost to any of the outer loops or the preheader (i.e., the block that precedes the entry point of the nest) is always safe, as long as the obvious loop dependencies are preserved. We will make use of this property. The results of this section could also be generalized to larger classes of loop nests, in which basic block independence does not hold, although this would require a refinement that goes beyond the scope of this paper. 
+We focus on perfect nests whose innermost loop body is an independent basic
+block. A straightforward property of this class is that hoisting invariant
+expressions from the innermost to any of the outer loops or the preheader
+(i.e., the block that precedes the entry point of the nest) is always safe,
+as long as any dependencies on loop indices are honored. We will make use of this property. The results of this section could also be generalized to larger classes of loop nests, in which basic block independence does not hold, although this would require refinements beyond the scope of this paper. 
 
-By mapping mathematical properties to the loop nest level, we propose the concept of \textit{linear loop}.
+By mapping mathematical properties to the loop nest level, we introduce the
+concept of a \textit{linear loop}.
 
 \begin{Def}[Linear loop]
-A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if all expressions appearing in the body of $L$ that use $i$ to access some memory locations are linear functions over $I$.
+A loop $L$ defining the iteration space $I$ through the iteration variable
+$i$, or simply $L_i$, is \textit{linear} if 
+\begin{enumerate}
+\item $i$ appears in the body of $L$
+only as an array index, and
+\item whenever an array $a$ is indexed by $i$
+($a[i]$), all expressions in which this appears are affine in $a$.
+\end{enumerate}
 \end{Def}
 
 In particular, we are interested in the following class since it naturally arises in finite element integration.
@@ -264,35 +279,59 @@ We now have the ingredients to formulate a simple yet fundamental result.
 
 \begin{Prop}
 \label{prop:share-removal}
-Assume $LN = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ is a perfect multilinear loop nest with the body of $L_{i_{n-1}}$ being an independent basic block. Then sharing can always be eliminated from $LN$.
+Assume $\Lambda = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ is a perfect multilinear loop nest with the body of $L_{i_{n-1}}$ being an independent basic block. Then sharing can always be eliminated from $\Lambda$.
 \end{Prop}
 \begin{proof}
-The demonstration is by construction and exploits linearity. We want to transform $LN$ into $LN'$ such that there is no sharing in any $L_i \in LN'$. Starting from the innermost loop $L_{i_{n-1}}$, the expressions are ''flattened'' by expanding all products involving terms depending on $L_{i_{n-1}}$. Being now on the same level of the expression tree, such terms can be factorized. Due to linearity, each factored product only has one term depending on $L_{i_{n-1}}$, and such term is now unique in the expression. The other terms, independent of $L_{i_{n-1}}$, are, by definition, loop-invariant, and as such can be hoisted at the level of $L_{i_{n-2}}$. This procedure can be applied recursively up to $L_{i_{0}}$: multilinearity allows factorization at each level; perfectness ensures hoisting is safe.
+  The demonstration is by construction and exploits linearity. We want to
+  transform $\Lambda$ into $\Lambda'$ such that there is no sharing in any
+  $L_i \in \Lambda'$. Starting from the innermost loop $L_{i_{n-1}}$, the
+  expressions are ``flattened'' by expanding all products involving terms
+  depending on $L_{i_{n-1}}$. Being now on the same level of the expression
+  tree, such terms can be factorized. Due to linearity, each factored
+  product only has one term depending on $L_{i_{n-1}}$, and this term is now
+  unique in the expression. The other terms, independent of $L_{i_{n-1}}$,
+  are, by definition, loop-invariant, and as such can be hoisted at the
+  level of $L_{i_{n-2}}$. This procedure can be applied recursively up to
+  $L_{i_{0}}$: multilinearity allows factorization at each level;
+  perfectness ensures hoisting is safe.
 \end{proof}
 
 This result will be essential to prove that optimality, characterized as follows, can always be reached in this class of loops.
 
 \begin{Def}[Optimality of a multilinear loop nest]
 \label{def:mln-optimality}
-The synthesis of a multilinear loop nest is optimal if the number of operations performed in the innermost loop is minimum.
+The synthesis of a multilinear loop nest is optimal if the number of
+operations performed in the loop nest is minimal.
 \end{Def}
 
-In other words, optimality implies there is no other synthesis able to further decrease the number of operations in the innermost loop. We will see that the restriction to inner loops has the effect of simplifying the transformation model; the price to pay will be the generation of quasi-optimal code in presence of costly outer loops (this, in finite element integration, happens when forms are characterized by extensive use of tensor algebra).
+%We will see that the restriction to inner loops has the effect of simplifying the transformation model; the price to pay will be the generation of quasi-optimal code in presence of costly outer loops (this, in finite element integration, happens when forms are characterized by extensive use of tensor algebra).
 
-Note that Definition~\ref{def:mln-optimality} does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. In the following, we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. This suits the context of finite element integration.
+Note that Definition~\ref{def:mln-optimality} does not take into account
+memory requirements. If the loop nest were memory-bound -- the ratio of
+operations to bytes transferred from memory to the CPU being too low -- then
+speaking of optimality would clearly make no sense. In the following, we
+assume to operate in a CPU-bound regime, in which arithmetic-intensive
+expressions need be evaluated. In the context of finite element, this is
+often true for more complex multilinear forms and/or higher order elements.
 
-\begin{Rem*}
-In the following, when discussing ``optimality'' or ``loop nests in optimal form'', we will always tacitly refer to inner optimality (unless explicitly specified differently). 
-\end{Rem*}
+%\begin{Rem*}
+%In the following, when discussing ``optimality'' or ``loop nests in optimal form'', we will always tacitly refer to inner optimality (unless explicitly specified differently). 
+%\end{Rem*}
 
 As anticipated, perfect multilinear loop nests can be brought to optimal form. The following result proves this claim.
 
 \begin{Prop}
 \label{prop:optimal-mln}
-A perfect multilinear loop nest $LN$ with basic block independence can always be reduced to optimal form.
+A perfect multilinear loop nest $\Lambda$ with basic block independence can always be reduced to optimal form.
 \end{Prop}
 \begin{proof}
-By construction. Loop-dependent terms are logically grouped into $n$ disjoint sets $S_i$, each $S_i$ containing all terms depending on $L_i$. These sets are sorted in descending order based on their cardinality. We produce a new loop permutation that reflects the ${S_i}$ ordering; that is, loops are placed such that, as going down the nest, $L_i$ is characterized by less unique terms than $L_{i-1}$. Note the loop permutation is semantically correct because of perfectness. Starting from $L_{i_{n-1}}$, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ optimal. In particular, the number of operations is equal to $LN_{ops} = \# S_{i_{n-1}} + (\# S_{i_{n-1}} - 1)$, in which the second term represents the cost of summing the $\# S_{i_{n-1}}$ terms.
+By construction. Loop-dependent terms are logically grouped into $n$
+disjoint sets $S_i$, each $S_i$ containing all terms depending on
+$L_i$. These sets are sorted in descending order based on their
+cardinality. We produce a new loop permutation that reflects the ${S_i}$
+ordering; that is, loops are placed such that each loop has fewer unique
+terms than the outer loops containing it. Since the loop nest is perfect,
+any such permutation is semantically correct.  Starting from $L_{i_{n-1}}$, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ optimal. In particular, the number of operations is equal to $\Lambda_{ops} = \# S_{i_{n-1}} + (\# S_{i_{n-1}} - 1)$, in which the second term represents the cost of summing the $\# S_{i_{n-1}}$ terms.
 \end{proof}
 
 For example, by applying the construction described in Proposition~\ref{prop:optimal-mln} to the code in Figure~\ref{code:multi_loopnest_a}, we obtain the optimal form in Figure~\ref{code:multi_loopnest_b}.
@@ -301,7 +340,7 @@ For example, by applying the construction described in Proposition~\ref{prop:opt
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{An imperfect loop nest, with one reduction loop ($L_i$), an inner perfect multilinear loop nest ($[L_j, L_k]$), and sharing potentially present in $F$}\label{code:loopnest}\end{figure}
 
-We now consider a wider class of loop nests in which perfectness and multilinearity apply to a sub-nest only. Consider the example in Figure~\ref{code:loopnest}. The imperfect nest $LN=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication, possibly characterized by sharing. Here, one could think of searching for sub-expressions for which the reduction could be pre-evaluated, thus obtaining a decrease proportional to $M$ in the operation count. This is exemplified through Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored} by fixing $F$ in a simpler loop nest.
+We now consider a wider class of loop nests in which perfectness and multilinearity apply to a sub-nest only. Consider the example in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a reduction loop $L_i$ and a perfect doubly nested loop $[L_j, L_k]$, which we assume to be multilinear. The right hand side of the statement computing the multidimensional array \texttt{A} is a generic expression \texttt{F} including standard arithmetic operations such as addition and multiplication, possibly characterized by sharing. Here, one could think of searching for sub-expressions for which the reduction could be pre-evaluated, thus obtaining a decrease proportional to $M$ in the operation count. This is exemplified through Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored} by fixing $F$ in a simpler loop nest.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 19pt \subfigure[With reduction]{\label{code:loopnest_red}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_red.code}}}
@@ -309,7 +348,7 @@ We now consider a wider class of loop nests in which perfectness and multilinear
 {\subfigcapskip = 2pt \subfigure[Pre-evaluated reduction]{\label{code:loopnest_nored}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_nored.code}}}
 \end{CenteredBox}\caption{The effect of pre-evaluating reductions. Note the decrease in operation count grows with the loop nest depth.}\end{figure}
 
-It is then obvious that reaching an optimal form $LN'$ is, in the general case, a challenging issue, since a full exploration of the expression tree transformation space is necessary. Even though we assumed we could generate $LN'$ through a suitable transformation algorithm, the following issues should be addressed
+It is then obvious that reaching an optimal form $\Lambda'$ is, in the general case, a challenging issue, since a full exploration of the expression tree transformation space is necessary. Even though we assumed we could generate $\Lambda'$ through a suitable transformation algorithm, the following issues should be addressed
 \begin{itemize}
 \item as opposed to what happens with hoisting in perfect multilinear loop nests, the temporary variable size would be proportional to the number of non-reduction loops crossed (in the example of Figure~\ref{code:loopnest}, $N \cdot O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L \cdot N \cdot O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
 \item the transformations exposing sub-expressions amenable to pre-evaluation could increase the arithmetic complexity within $L_k$ (e.g., expansion may increase the operation count; further examples will be provided later). This could overwhelm the gain inherent in pre-evaluation.
@@ -337,23 +376,23 @@ We make the following observations. 1) $L \gg M, N, O$; that is, the number of e
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting out of $LN$. Imagine $LN$ is enclosed in a time stepping loop. One could think of exposing and then hoisting time-invariant sub-expressions. For those sub-expressions that depend on the mesh geometry (i.e., they would depend on $L_e$), code motion would increase the working set by a factor $L$. The gain in number of operations executed could then be overwhelmed, from a runtime viewpoint, by a much larger memory pressure.
+The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting out of $\Lambda$. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing and then hoisting time-invariant sub-expressions. For those sub-expressions that depend on the mesh geometry (i.e., they would depend on $L_e$), code motion would increase the working set by a factor $L$. The gain in number of operations executed could then be overwhelmed, from a runtime viewpoint, by a much larger memory pressure.
 
-A second, more general fact is that, for certain forms and discretizations, excessive hoisting can make the working set exceed the size of ``some level of local memory'' (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, applying tensor contraction mode, which essentially means pre-evaluating geometry-independent expressions outside of $LN$, requires temporary arrays of size $N\cdot O$. This can sometimes break the local memory threshold. We will clarify and experiment this in Section~\ref{sec:perf-results-forms}.
+A second, more general fact is that, for certain forms and discretizations, excessive hoisting can make the working set exceed the size of ``some level of local memory'' (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, applying tensor contraction mode, which essentially means pre-evaluating geometry-independent expressions outside of $\Lambda$, requires temporary arrays of size $N\cdot O$. This can sometimes break the local memory threshold. We will clarify and experiment this in Section~\ref{sec:perf-results-forms}.
 
 Based on these considerations, we characterize the set of memory constraints $C$ (see Definition~\ref{def:optimality}) as follows
 \begin{enumerate}
 \item The size of a temporary due to code motion cannot be larger than that of the multilinear iteration space. 
 \item The total amount of memory occupied by the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
 \end{enumerate}
-A corollary of $C_1$ is that hoisting expressions involving geometry-dependent terms outside of $LN$, which we discussed at the beginning of this section, is now forbidden. Consequently, the search space for optimality becomes smaller.
+A corollary of $C_1$ is that hoisting expressions involving geometry-dependent terms outside of $\Lambda$, which we discussed at the beginning of this section, is now forbidden. Consequently, the search space for optimality becomes smaller.
 
 \subsection{Minimizing the Operation Count in Inner Loops}
 Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the sum of the innermost loop operation counts is minimum. We now discuss how we can systematically achieve this.
 
 Eliminating sharing from the inner multilinear loops does not suffice. In fact, as suggested in Section~\ref{sec:optimal-impl}, we wonder whether, and under what transformations, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count.
 
-To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $LN$, and finally pre-evaluated into temporaries. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as ``\textit{pre-evaluation}''. 
+To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $\Lambda$, and finally pre-evaluated into temporaries. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as ``\textit{pre-evaluation}''. 
 
 The challenge is to understand when, and for which monomials, pre-evaluation is profitable. We propose an algorithm and a discussion of its optimality. The intuition of the main algorithm for reducing a loop nest to optimal form is shown in Figure~\ref{code:intuition}. 
 
@@ -386,7 +425,7 @@ Before elaborating on the profitability of pre-evaluation (i.e., how to determin
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider an integration routine originating from an arbitrary multilinear form. A loop nest $LN$, as previously characterized, evaluates an expression comprising a set of monomials, $M$. Let $P$ be the set of monomials for which pre-evaluation is applied because found profitable, and let $Z$ be the set of non pre-evaluated monomials (i.e., $Z = M \setminus P$). Assume that:
+Consider an integration routine originating from an arbitrary multilinear form. A loop nest $\Lambda$, as previously characterized, evaluates an expression comprising a set of monomials, $M$. Let $P$ be the set of monomials for which pre-evaluation is applied because found profitable, and let $Z$ be the set of non pre-evaluated monomials (i.e., $Z = M \setminus P$). Assume that:
 \begin{enumerate}
 \item the cost function $\theta$ employed is optimal; that is, it predicts correctly whether pre-evaluation is profitable or not for a monomial
 \item pre-evaluating different monomials does not result in identical tables
@@ -397,13 +436,13 @@ Then, the main algorithm in Figure~\ref{code:intuition} leads to inner optimalit
 \begin{proof}
 We first comment on the assumptions. 1) We postpone the discussion of how to build $\theta$ to Section~\ref{sec:op_count}. 2) Identical pre-evaluated tables from distinct monomials could be the result of symmetries in tabulated basis functions. This is however a pathological case that we can harmlessly ignore. 3) In complex forms with several monomials, different pre-evaluation candidates could actually share terms. We abstract from this case, which otherwise would require a ``global'' analysis of the monomials in the form that we believe would not justify the gain (if any) in operation count. 
 
-We distinguish two classes of loop nests rooted in $LN$: $[L_e, L_j, L_k]$, for the pre-evaluated monomials in $P$, and $[L_e, L_i, L_j, L_k]$, enclosing the remaining monomials in $Z$. Since they only differ for the presence of $L_i$, we relieve the notation by omitting the shared loops when discussing operation counts. The operation count of what we are proving to be the optimal $LN$ synthesis (inferable from Figure~\ref{code:loopnest-opt}) is $LN_{ops} = LN_{ops_1} + LN_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation count of monomials in $P$ and $Z$, respectively, while $I$ is the iteration space size of $L_i$.
+We distinguish two classes of loop nests rooted in $\Lambda$: $[L_e, L_j, L_k]$, for the pre-evaluated monomials in $P$, and $[L_e, L_i, L_j, L_k]$, enclosing the remaining monomials in $Z$. Since they only differ for the presence of $L_i$, we relieve the notation by omitting the shared loops when discussing operation counts. The operation count of what we are proving to be the optimal $\Lambda$ synthesis (inferable from Figure~\ref{code:loopnest-opt}) is $\Lambda_{ops} = \Lambda_{ops_1} + \Lambda_{ops_2} = \sum_{\alpha}^{\# P} p_{\alpha} + I \sum_{\beta}^{\# Z} z_{\beta}$, where $p_{\alpha}$ and $z_{\beta}$ represent the operation count of monomials in $P$ and $Z$, respectively, while $I$ is the iteration space size of $L_i$.
 
-We note that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This narrows the proof to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $LN_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $LN_{ops}$.
+We note that, as explained in Section~\ref{sec:mem-const}, $C$ imposes constraints on hoisting. This narrows the proof to demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would increase $\Lambda_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would increase $\Lambda_{ops}$.
 
-A) We prove that $LN_{ops}' = LN_{ops_1}' + LN_{ops_2}' > LN_{ops}$. It is rather obvious that $LN_{ops_1}' \geq LN_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if monomials in $Z_P$ share terms with $\overline{Z} = Z \setminus Z_P$, then we have $LN_{ops_2}' = LN_{ops_2}$, so our statement is true. If, on the other hand, at least one monomial does not share any terms, we obtain $LN_{ops_2}' < LN_{ops_2}$ or, equivalently, $LN_{ops_2}' = LN_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluations, $LN_{ops_1}' - LN_{ops_1} =  \gamma \geq I \cdot\delta$ holds. Because of assumption 2), the new pre-evaluations cannot expose further sharing. Therefore, the optimality of the cost function (assumption 1) ensures our claim holds.
+A) We prove that $\Lambda_{ops}' = \Lambda_{ops_1}' + \Lambda_{ops_2}' > \Lambda_{ops}$. It is rather obvious that $\Lambda_{ops_1}' \geq \Lambda_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if monomials in $Z_P$ share terms with $\overline{Z} = Z \setminus Z_P$, then we have $\Lambda_{ops_2}' = \Lambda_{ops_2}$, so our statement is true. If, on the other hand, at least one monomial does not share any terms, we obtain $\Lambda_{ops_2}' < \Lambda_{ops_2}$ or, equivalently, $\Lambda_{ops_2}' = \Lambda_{ops_2} - I \cdot\delta$. What we have to show now is that even by exposing more pre-evaluations, $\Lambda_{ops_1}' - \Lambda_{ops_1} =  \gamma \geq I \cdot\delta$ holds. Because of assumption 2), the new pre-evaluations cannot expose further sharing. Therefore, the optimality of the cost function (assumption 1) ensures our claim holds.
 
-B) In absence of sharing, the statement is trivially true since we would have $LN_{ops_2}' > LN_{ops_2}$, being the cost function optimal due to assumption 1). Assumption 3) guarantees there cannot be sharing within $P_Z$, which avoids subtle cases in which pre-evaluation would be sub-optimal due to destroying sharing-removal opportunities. The last case we have to consider is when $p \in P_Z$ shares at least one term with $z \in Z$. This situation cannot actually occur by construction: all candidates for pre-evaluation sharing terms with monomials in $Z$ are ``de-classed'' from $P$ to $Z$ (see Figure~\ref{code:intuition}, line 8). The rationale is that since we would have to pay anyway the presence of $z$ in the innermost loop, adding $p$ to $Z$ would not augment the operation count in our model, so we can safely avoid pre-evaluation. 
+B) In absence of sharing, the statement is trivially true since we would have $\Lambda_{ops_2}' > \Lambda_{ops_2}$, being the cost function optimal due to assumption 1). Assumption 3) guarantees there cannot be sharing within $P_Z$, which avoids subtle cases in which pre-evaluation would be sub-optimal due to destroying sharing-removal opportunities. The last case we have to consider is when $p \in P_Z$ shares at least one term with $z \in Z$. This situation cannot actually occur by construction: all candidates for pre-evaluation sharing terms with monomials in $Z$ are ``de-classed'' from $P$ to $Z$ (see Figure~\ref{code:intuition}, line 8). The rationale is that since we would have to pay anyway the presence of $z$ in the innermost loop, adding $p$ to $Z$ would not augment the operation count in our model, so we can safely avoid pre-evaluation. 
 
 % assunzione 3 è quella che previene la somma di due mass matrix moltiplicate da F0 una e da F1 l'altra...ma non solo ! chesso magari la trial function è derivata in un monomial e nell'altra no, ma la test function è sempre uguale...
 \end{proof}
@@ -412,7 +451,7 @@ B) In absence of sharing, the statement is trivially true since we would have $L
 \label{sec:op_count}
 It remains to tie one loose hand: the construction of the pre-evaluation cost function $\theta$. We define it such that $\theta : M \to \mathbb{N} \times \mathbb{N}$; that is, given a monomial, two natural numbers representing the sharing-free operation count without ($\theta_{wo}$) and with ($\theta_{w}$) pre-evaluation are returned. Since $\theta$ is expected to be used by a compiler to drive the transformation process, requirements are simplicity and velocity.  
 
-We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple analysis suffices to obtain the cost of a  sharing-free multilinear loop nest, namely $LN_{ops}^{sf}$. Assuming $I$ to be the size of the $L_i$ iteration space, we have that $\theta_{wo} = LN_{ops}^{sf} \cdot I$.
+We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple analysis suffices to obtain the cost of a  sharing-free multilinear loop nest, namely $\Lambda_{ops}^{sf}$. Assuming $I$ to be the size of the $L_i$ iteration space, we have that $\theta_{wo} = \Lambda_{ops}^{sf} \cdot I$.
 
 For $\theta_{w}$, things are more complicated. We first need to estimate the \textit{increase factor}, $\iota$, to account for the presence of (derivatives of) coefficients. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
 
