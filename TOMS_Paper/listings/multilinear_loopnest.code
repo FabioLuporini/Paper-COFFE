@@ -1,3 +1,3 @@
 for (j = 0; j < O; j++)
   for (i = 0; i < N; i++)
-    a += B[j]*C[i] + B[j]*D[i]
+    $a_{ji}$ += $b_j c_i$ + $b_j d_i$

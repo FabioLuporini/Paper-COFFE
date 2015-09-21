@@ -4,4 +4,4 @@ for (e = 0; e < L; e++)
   ..
     for (j = 0; j < N; j++)
       for (k = 0; k < O; k++)
-        A[e,j,k] += F(...)
+        $a_{ejk}$ += $F(...)$

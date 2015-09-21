@@ -22,46 +22,47 @@
 \newlabel{eq:tensor}{{8}{4}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Qualitative Comparison}{4}}
 \newlabel{sec:qualitative}{{2.3}{4}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Optimality of Loop Nests}{4}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Characterization}{4}}
 \newlabel{sec:optimal-impl}{{3}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Loop Nests and Optimality}{5}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest.code}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The typical loop nest implementing a bilinear form.\relax }}{5}}
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{code:multi_loopnest_a}{{1(a)}{5}}
-\newlabel{sub@code:multi_loopnest_a}{{(a)}{5}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest.code}{5}}
-\newlabel{code:multi_loopnest_b}{{1(b)}{5}}
-\newlabel{sub@code:multi_loopnest_b}{{(b)}{5}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest\textunderscore opt.code}{5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces A simple multilinear loop nest\relax }}{5}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With sharing}}}{5}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Optimal form}}}{5}}
-\newlabel{prop:share-removal}{{1}{5}}
+\newlabel{code:loopnest}{{1}{5}}
 \newlabel{def:mln-optimality}{{6}{6}}
-\newlabel{prop:optimal-mln}{{2}{6}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest.code}{7}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces An imperfect loop nest, with one reduction loop ($L_i$), an inner perfect multilinear loop nest ($[L_j, L_k]$), and sharing potentially present in $F$\relax }}{7}}
-\newlabel{code:loopnest}{{2}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Transformation Space}{6}}
+\newlabel{code:multi_loopnest_a}{{2(a)}{6}}
+\newlabel{sub@code:multi_loopnest_a}{{(a)}{6}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest.code}{6}}
+\newlabel{code:multi_loopnest_b}{{2(b)}{6}}
+\newlabel{sub@code:multi_loopnest_b}{{(b)}{6}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/multilinear\textunderscore loopnest\textunderscore opt.code}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces A simple tensor-product loop nest\relax }}{6}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With sharing}}}{6}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Optimal form}}}{6}}
+\newlabel{prop:optimal-mln}{{1}{6}}
 \newlabel{code:loopnest_red}{{3(a)}{7}}
 \newlabel{sub@code:loopnest_red}{{(a)}{7}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore red.code}{7}}
 \newlabel{code:loopnest_nored}{{3(b)}{7}}
 \newlabel{sub@code:loopnest_nored}{{(b)}{7}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore nored.code}{7}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The effect of pre-evaluating reductions. Note the decrease in operation count grows with the loop nest depth.\relax }}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Exposition (through factorization) and pre-evaluation of a reduction.\relax }}{7}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With reduction}}}{7}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Pre-evaluated reduction}}}{7}}
-\newlabel{def:optimality}{{7}{7}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Optimal-form Loop Nests in Finite Element Integration}{8}}
+\newlabel{def:optimality}{{8}{8}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Optimal Integration Routines}{8}}
 \newlabel{sec:optimal-synthesis}{{4}{8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Memory constraints}{8}}
 \newlabel{sec:mem-const}{{4.1}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Minimizing the Operation Count in Inner Loops}{8}}
 \citation{Kirby:TC}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Minimizing the Operation Count in Inner Loops}{9}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Intuition of the main algorithm\relax }}{9}}
 \newlabel{code:intuition}{{4}{9}}
-\newlabel{prop:optimal-approach}{{3}{9}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore opt.code}{10}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces A possible loop nest for the local assembly of a form after applying pre-evaluation to some of the monomials (resulting in sub-expressions \texttt  {G'}, \texttt  {G''}, ...)\relax }}{10}}
 \newlabel{code:loopnest-opt}{{5}{10}}
+\newlabel{prop:optimal-approach}{{2}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}A-Priori Operation Counting}{11}}
 \newlabel{sec:op_count}{{4.3}{11}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{11}}
@@ -71,8 +72,8 @@
 \newlabel{sec:codegen}{{5}{12}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE Language}{12}}
 \newlabel{sec:heuristic-int-dep}{{5.1.1}{12}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Heuristic Optimization of Integration-dependent Expressions}{12}}
 \citation{Luporini}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Heuristic Optimization of Integration-dependent Expressions}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Low-level Optimization}{13}}
 \newlabel{sec:code-spec}{{5.2}{13}}
 \newlabel{sec:opt-review}{{5.2.1}{13}}
@@ -81,43 +82,43 @@
 \@writefile{toc}{\contentsline {paragraph}{Vector-register Tiling}{13}}
 \@writefile{toc}{\contentsline {paragraph}{Expression Splitting}{13}}
 \newlabel{sec:vect-prom}{{5.2.2}{13}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Vector-promotion of Integration-dependent Expressions}{13}}
-\newlabel{sec:zeros}{{5.2.3}{13}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Handling Sparse Tables}{13}}
 \citation{quadrature1}
-\citation{quadrature1}
-\citation{FFC-TC}
-\citation{Fenics}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Vector-promotion of Integration-dependent Expressions}{14}}
+\newlabel{sec:zeros}{{5.2.3}{14}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Handling Sparse Tables}{14}}
 \@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{14}}
 \newlabel{sec:perf-results}{{6}{14}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{14}}
+\citation{quadrature1}
+\citation{FFC-TC}
+\citation{Fenics}
 \citation{Luporini}
 \citation{quadrature1}
 \citation{quadrature1}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance of Forms}{15}}
-\newlabel{sec:perf-results-forms}{{6.2}{15}}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Performance evaluation for the mass matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{16}}
 \newlabel{fig:mass}{{7}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance of Forms}{16}}
+\newlabel{sec:perf-results-forms}{{6.2}{16}}
 \citation{SLP-vect}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the bilinear form of a Helmholtz equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{17}}
 \newlabel{fig:helmholtz}{{8}{17}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form arising in a elastic model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{18}}
 \newlabel{fig:elasticity}{{9}{18}}
-\@writefile{toc}{\contentsline {paragraph}{Mass}{18}}
 \@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in a hyperelastic model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{19}}
 \newlabel{fig:hyperelasticity}{{10}{19}}
-\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{19}}
+\@writefile{toc}{\contentsline {paragraph}{Mass}{19}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{Uflacs}{\citeauthoryear {Aln{\ae }s}{Aln{\ae }s}{2015}}
-\bibcite{PLUTO}{\citeauthoryear {Bondhugula, Hartono, Ramanujam, and Sadayappan}{Bondhugula et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2008}}
-\bibcite{firedrake-code}{\citeauthoryear {{Firedrake contributors}}{{Firedrake contributors}}{2014}}
-\bibcite{FFC-TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2006}}
-\bibcite{Kirby:TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2007}}
+\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{20}}
 \@writefile{toc}{\contentsline {paragraph}{Elasticity}{20}}
 \@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{20}}
 \@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{20}}
 \newlabel{sec:conclusions}{{7}{20}}
+\bibcite{PLUTO}{\citeauthoryear {Bondhugula, Hartono, Ramanujam, and Sadayappan}{Bondhugula et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2008}}
+\bibcite{firedrake-code}{\citeauthoryear {{Firedrake contributors}}{{Firedrake contributors}}{2014}}
+\bibcite{FFC-TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2006}}
+\bibcite{Kirby:TC}{\citeauthoryear {Kirby and Logg}{Kirby and Logg}{2007}}
 \bibcite{SLP-vect}{\citeauthoryear {Larsen and Amarasinghe}{Larsen and Amarasinghe}{2000}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}

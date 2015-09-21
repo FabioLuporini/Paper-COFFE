@@ -1,8 +1,7 @@
 for (i = 0; i < M; i++)
   for (k = 0; k < O; k++)
-    T1[k] += B[i,k]*C[i]
-    T2[k] += B[i,k]*D[i]
+    $t_k$ += $b_{ik}$($c_i$ + $d_i$)
 
 for (e = 0; e < L; e++)
   for (k = 0; k < O; k++)
-    A[e][k] = D[e]*(T1[k] + T2[k])
+    $a_{ek}$ = $d_e t_k$

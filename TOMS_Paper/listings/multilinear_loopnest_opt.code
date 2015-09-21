@@ -1,4 +1,4 @@
 for (i = 0; i < N; i++)
-  T = C[i] + D[i]
+  $t_i$ = $c_i + d_i$
   for (j = 0; j < O; j++)
-    a += B[j]*T
+    $a_{ji}$ += $b_j t_i$
