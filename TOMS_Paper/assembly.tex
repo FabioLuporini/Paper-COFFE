@@ -220,7 +220,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 \section{Problem Characterization}
 \label{sec:optimal-impl}
 
-In this section, we characterize optimality, as well as the transformation space that needs be explored to achieve it, for finite element integration. 
+In this section, we characterize optimality for finite element integration, as well as the transformation space that needs be explored to achieve it. 
 
 \subsection{Loop Nests and Optimality}
 In order to make the document self-contained, we start with reviewing basic compiler terminology.
@@ -243,7 +243,7 @@ expressions from the innermost to any of the outer loops or the preheader
 as long as any dependencies on loop indices are honored. We will make use of this property. The results of this section could also be generalized to larger classes of loop nests, in which basic block independence does not hold, although this would require refinements beyond the scope of this paper. 
 
 By mapping mathematical properties to the loop nest level, we introduce the
-concepts of \textit{linear loop} and, more generally, (perfect) multilinear loop nest.
+concepts of a \textit{linear loop} and, more generally, a (perfect) multilinear loop nest.
 
 \begin{Def}[Linear loop]
 A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if 
@@ -259,22 +259,22 @@ A perfect multilinear loop nest of arity $n$ is a perfect nest composed of $n$ l
 
 Since our focus is on finite element integration, for simplicity we restrict ourselves to the following, notable subclass of perfect multilinear loop nests.
 
-\begin{Def}[Tensor-product loop nest]
-A tensor-product loop nest is a perfect multilinear loop nest $\Lambda = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ in which all of the expressions appearing in the body of $L_{i_{n-1}}$ are (summations of) tensor products $t_{i_{0}, i_{1}, ..., i_{n-1}} = a_{i_{0}}b_{i_1}...z_{i_{n-1}}$.
+\begin{Def}[Outer-product loop nest]
+An outer-product loop nest is a perfect multilinear loop nest of arity $n \leq 2$ in which all of the expressions appearing in the body of the innermost loop are summations of outer products.
 \end{Def}
 
-As shown later, tensor-product loop nests are important because they possess properties that simplify the synthesis of optimal code. They arise naturally when translating a multilinear form into code. Consider Equation~\ref{eq:quadrature} and the loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises the element loop $L_e$, the integration loop $L_i$ (a reduction loop), and the tensor-product loop-nest $[L_j, L_k]$ over test and trial functions. The expression \texttt{F} implements the operator.
+As shown later, outer-product loop nests are important because they possess properties that we can take advantage of to synthesize optimal code. They arise naturally when translating bilinear or linear forms into code. Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises the element loop $L_e$, the integration loop $L_i$ (a reduction loop), and the outer-product loop nest $[L_j, L_k]$ over test and trial functions. The expression \texttt{F} implements the operator.
 
 % (the Laplacian operator in the case of Equation~\ref{eq:quadrature}, but our discussion applies in general).
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The typical loop nest implementing a bilinear form.}\label{code:loopnest}\end{figure}
 
-Our aim is to formulate a strategy to synthesize optimal implementations of such loop nests. In particular, we characterize optimality as follows.
+Our aim is a strategy to synthesize optimal loop nests of this form. In particular, we characterize optimality as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
-The synthesis of a loop nest is optimal if the number of operations performed in the loop nest is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations that it performs to evaluate the result is minimal.
 \end{Def}
 
 Note that Definition~\ref{def:mln-optimality} does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements.
@@ -290,52 +290,42 @@ In this section, we construct the transformation space. We leave a few loose han
 We start with introducing the fundamental notion of sharing.
 
 \begin{Def}[Sharing]
-A loop $L_i$ presents \textit{sharing} if it contains at least two expressions depending on $i$ that are symbolically identical. 
+A loop $L_i$ presents sharing if it contains at least one statement $S$ in which two (sub-)expressions depending on $i$ are symbolically identical.
 \end{Def}
 
-Figure~\ref{code:multi_loopnest_a} shows an example of a trivial tensor-product loop nest of arity $n=2$ with sharing along dimension $j$.
+\begin{Def}[Sharing factor]
+The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of the set of symbols depending on $i$ (i.e., arrays indexed by $i$). It provides an intuition of how many symbols can ideally be factored along $L_i$
+\end{Def}
+
+Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer-product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[With sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
 ~~~~~~~~~~~~~~
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
-\end{CenteredBox}\caption{A simple tensor-product loop nest}\end{figure}
+\end{CenteredBox}\caption{A simple outer-product loop nest. Note that $L^{sf}_i = 2$ and $L^{sf}_j = 1$.}\end{figure}
 
-We prove that tensor-product loop nests can be reduced to optimal form (i.e., the number of operations in the resulting loop nest is minimal) by eliminating sharing through a suitable algorithm.
+We prove that outer-product loop nests can be reduced to optimal form. The proof focuses on outer-product loop nests of arity $n=2$ (for $n < 2$ the proof is trivial; for $n > 2$, which is beyond the scope of this paper, a more general treatise would be required to avoid sub-optimal outer loops in pathological cases).
 
 \begin{Prop}
 \label{prop:optimal-mln}
-Assume $\Lambda = [L_{i_{0}}, L_{i_{1}}, ..., L_{i_{n-1}}]$ is a tensor-product loop nest with the body of $L_{i_{n-1}}$ being an independent basic block. Then we can determine an optimal $\Lambda'$ applying a sequence of steps aiming at eliminating sharing.
+Assume $\Lambda = [L_{i_{0}}, L_{i_{1}}]$ is an outer-product loop nest with the body of $L_{i_{1}}$ being an independent basic block. Then an optimal synthesis $\Lambda'$ can be determined by eliminating sharing from both loops, starting from the loop with smallest sharing factor.
 \end{Prop}
 \begin{proof}
-The demonstration is by construction and exploits linearity (recall that tensor-product loop nests are multilinear by definition). We start with ``flattening'' the expressions appearing in the body of $L_{i_{n-1}}$; that is, products are recursively expanded. This exposes the space of all possible factorizations. The terms appearing in the expanded expressions are tensor products of the form $a_{i_{0}}b_{i_1}...z_{i_{n-1}}$ (a tensor product involves $n$ arrays , each array indexed by a linear loop, or simply symbols). 
+The demonstration is by construction and exploits linearity (recall that outer-product loop nests are multilinear by definition). We start with ``flattening'' the expressions appearing in the body of $L_{i_{1}}$; this is because, depending on the input structure, products might have to be recursively expanded in order to expose the space of all possible factorizations. The expanded expressions are summations of outer products (otherwise, the assumption of $\Lambda$ being an outer-product loop nest would trivially be contradicted).
 
-We logically group the symbols into $n$ disjoint sets $S_i$, each $S_i$ containing the symbols indexed through $L_i$. These sets are sorted in ascending order based on their cardinality. Based on this, we create the factorization list: the ordered list of all factorizable symbols. We then progressively try to factorize these symbols. That is, we start factorizing along the loop that has the least number of unique symbols, and then we go on with the other loops. 
+We traverse the expression tree and determine the sharing factor of the two linear loops. Starting from the loop with smallest sharing factor, $L_i$, we incrementally factorize its symbols. Due to linearity, each factored product $P$ only has one symbol depending on $L_i$, and this symbol is now unique in the expression. The other expression in $P$, independent of $L_i$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. This transformation is semantically correct, regardless of $L_i$ being $L_{i_{0}}$ or $L_{i_{1}}$: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting (see~\citeN{Luporini} for more details about code motion). We repeat the same process for the loop with higher sharing factor, $L_j$.
 
-Due to linearity, each factored product only has one symbol depending on $L_i$, and this symbol is now unique in the expression. The other symbols in the term, independent of $L_i$, are, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. This procedure is always semantically correct, regardless of the symbols (loops) being considered: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting.
-
-Two observations related to the aforementioned code motion: 1) hoisting might require the creation of ``clone loops'' outside of $\Lambda$ to honor the potential dependency on loop indices; 2) hoisted expressions are replaced with temporaries, which need be added to a suitable set $S_i$ of factorizable symbols . 
-
-It remains to clarify why the chosen factorization ordering leads to optimality. Naturally, as we factorize a symbol, we are potentially pruning other factorization opportunities. If that is the case, we might wonder whether there was a better factorization strategy.  . Therefore, this is not possible (in the best case, the resulting factorization would be identical).  
-
-%The key observation is that in a tensor-product loop nest, all terms depend on $\Lambda$ through $n$ distinct symbols. 
-
-Same cardinality, try both
+We now have to demonstrate that the chosen factorization ordering, based on sharing factors, leads to optimality. This reduces to prove that the two following facts are true
+\begin{enumerate}
+\item Taking $L_j$, the loop with higher sharing factor, as point of departure leads to a sub-optimal $\Lambda'$ (optimal only in the best case). By contradiction, let us assume this is false. There are two possibilities: A) both $L_i$ and $L_j$ present sharing, but this occurs over disjoint sets of outer products; B) at least one outer product induces sharing along both $L_i$ and $L_j$. Case A) is quite trivial since there are no side effects in swapping the order of factorizations, so $\Lambda'$ is actually optimal (best case scenario). In case B), due to linearity, factorization produces a summation of $L^{sf}_{j}$ outer products, as opposed to $L^{sf}_{i}$ if we had taken $L_i$ as point of departure. Therefore, since $L^{sf}_{j} > L^{sf}_{i}$, the innermost loop results more expensive. We still wonder about the cost of hoisting, since clearly we are hoisting less expressions in this scenario. However, a hoisted symbol always costs one operation (a sum), while a non-factored outer product always costs two operations (a product and a sum). That is, factorization is always convenient. The initial assumption is therefore wrong.
+\item Partial elimination of sharing leads to a sub-optimal $\Lambda'$ (optimal only in the best case). By contradiction, let us assume this is false. Because of linearity, we know that factorization eliminates sharing. We wonder what happens in the case of partial factorization; that is, at least one factorizable symbol, say along $L_i$, is left outside of the factored product (e.g., $a_i$ in $a_i(b_j + c_j + ...) + a_i e_j$). It is fairly simple to see that either there is a factorization opportunity along $L_j$, in which case no penalty needs be paid; or $\Lambda'$ is sub-optimal, since eventually the innermost loop will perform more operations. The initial assumption is therefore contradicted. Note that, if we were considering arities $n > 2$, this fact would generally be false.
+\end{enumerate}
 \end{proof}
-
-%\begin{proof}
-%By construction. Loop-dependent terms are logically grouped into $n$
-%disjoint sets $S_i$, each $S_i$ containing all terms depending on
-%$L_i$. These sets are sorted in descending order based on their
-%cardinality. We produce a new loop permutation that reflects the ${S_i}$
-%ordering; that is, loops are placed such that each loop has fewer unique
-%terms than the outer loops containing it. Since the loop nest is perfect,
-%any such permutation is semantically correct.  Starting from $L_{i_{n-1}}$, we can apply the sharing-removal procedure described in Proposition~\ref{prop:share-removal}. This renders $L_{i_{n-1}}$ optimal. In particular, the number of operations is equal to $\Lambda_{ops} = \# S_{i_{n-1}} + (\# S_{i_{n-1}} - 1)$, in which the second term represents the cost of summing the $\# S_{i_{n-1}}$ terms.
-%\end{proof}
 
 For example, by applying this procedure to the code in Figure~\ref{code:multi_loopnest_a}, we obtain the optimal form in Figure~\ref{code:multi_loopnest_b}.
   
-However, we observe that, for the larger class of finite element integration loop nests, the presence of sharing is a \textit{sufficient but not necessary} condition for being in \textit{non-optimal} form. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} (input) and~\ref{code:loopnest_nored} (output); Figure~\ref{code:loopnest_red} can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
+We now observe that, for the larger class of finite element integration loop nests, the presence of sharing is a \textit{sufficient but not necessary} condition for being in \textit{non-optimal} form. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} (input) and~\ref{code:loopnest_nored} (output); Figure~\ref{code:loopnest_red} can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 19pt \subfigure[With reduction]{\label{code:loopnest_red}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_red.code}}}
@@ -345,7 +335,7 @@ However, we observe that, for the larger class of finite element integration loo
 
 Pre-evaluation opportunities could have to be exposed, for instance through an exploration of the expression tree transformation space, which can be challenging. Further, the following issues arise when considering pre-evaluation opportunities:
 \begin{itemize}
-\item as opposed to what happens with hoisting in tensor-product loop nests, the temporary variable size is proportional to the number of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N \cdot O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L \cdot N \cdot O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
+\item as opposed to what happens with hoisting in outer-product loop nests, the temporary variable size is proportional to the number of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N \cdot O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L \cdot N \cdot O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
 \item the transformations exposing pre-evaluation opportunities could increase the arithmetic complexity (e.g., expansion may increase the operation count; further examples will be provided later). This could overwhelm the gain inherent in pre-evaluation.
 \end{itemize}
 
@@ -450,7 +440,7 @@ B) In absence of sharing, the statement is trivially true since we would have $\
 \label{sec:op_count}
 It remains to tie one loose hand: the construction of the pre-evaluation cost function $\theta$. We define it such that $\theta : M \to \mathbb{N} \times \mathbb{N}$; that is, given a monomial, two natural numbers representing the sharing-free operation count without ($\theta_{wo}$) and with ($\theta_{w}$) pre-evaluation are returned. Since $\theta$ is expected to be used by a compiler to drive the transformation process, requirements are simplicity and velocity.  
 
-We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple analysis suffices to obtain the cost of a  sharing-free multilinear loop nest, namely $\Lambda_{ops}^{sf}$. Assuming $I$ to be the size of the $L_i$ iteration space, we have that $\theta_{wo} = \Lambda_{ops}^{sf} \cdot I$.
+We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple analysis suffices to obtain the cost of a  sharing-free multilinear loop nest, namely $\Lambda_{ops}^{ns}$. Assuming $I$ to be the size of the $L_i$ iteration space, we have that $\theta_{wo} = \Lambda_{ops}^{ns} \cdot I$.
 
 For $\theta_{w}$, things are more complicated. We first need to estimate the \textit{increase factor}, $\iota$, to account for the presence of (derivatives of) coefficients. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
 
