@@ -333,7 +333,7 @@ We now observe that, for the larger class of finite element integration loop nes
 {\subfigcapskip = 2pt \subfigure[Pre-evaluated reduction]{\label{code:loopnest_nored}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_nored.code}}}
 \end{CenteredBox}\caption{Exposition (through factorization) and pre-evaluation of a reduction.}\end{figure}
 
-Pre-evaluation opportunities could have to be exposed, for instance through an exploration of the expression tree transformation space, which can be challenging. Further, the following issues arise when considering pre-evaluation opportunities:
+Pre-evaluation opportunities could be exposed through an exploration of the expression tree transformation space. For arbitrary loop nests, this can be challenging. Further, the following issues arise when considering pre-evaluation opportunities:
 \begin{itemize}
 \item as opposed to what happens with hoisting in outer-product loop nests, the temporary variable size is proportional to the number of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N \cdot O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L \cdot N \cdot O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
 \item the transformations exposing pre-evaluation opportunities could increase the arithmetic complexity (e.g., expansion may increase the operation count; further examples will be provided later). This could overwhelm the gain inherent in pre-evaluation.
@@ -344,46 +344,44 @@ To summarize, so far we have highlighted four problems:
 \item The need for an algorithm to expose pre-evaluation opportunities
 \item Potential explosion in working set size
 \item Potential increase in operation count due to manipulation of the expression tree
-\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities
+\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities (sharing elimination could prevent pre-evaluation; pre-evaluation might expose further sharing)
 \end{enumerate}
 
-We tackle these points in Section~\ref{sec:optimal-synthesis}. In the perspective of addressing point 2, it is useful to conclude this section refining our optimality statement as follows.
+We expand on these points in Section~\ref{sec:optimal-synthesis}. In the perspective of addressing point 2), we conclude this section refining our optimality statement as follows.
 
 \begin{Def}[Optimality of a loop nest with bounded working set]
 \label{def:optimality}
-The synthesis of a loop nest is optimal if, under a set of memory constraints $C$, the number of operations performed in the loop nest is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and a set of memory constraints is satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations that it performs to evaluate the result is minimal.
 \end{Def}
 
-\section{Optimal Integration Routines}
+\section{Transformation Algorithm}
 \label{sec:optimal-synthesis}
 
-In this section, we will reason at two different levels of abstraction: the math, in terms of the multilinear forms arising from the weak variational formulation of a problem; and the (partly multilinear) loop nests implementing such forms.
-
-Our point of departure is the example loop nest in Figure~\ref{code:loopnest}. We make the following observations. 1) $L \gg M, N, O$; that is, the number of elements $L$ is typically order of magnitude larger than both quadrature points ($M$) and degrees of freedom ($N$ and $O$ for test and trial functions); 2) $[L_j, L_k]$ (or simply $L_j$ with a linear form) is perfect and multilinear; this naturally descends from the translation of Equation~\ref{eq:quadrature} into a loop nest. 
-
-% maybe say somewhere the order of the loop nest eijk is just the most natural --- the other present worse data locality for example
+In this section, we build a transformation algorithm capable of reducing finite element integration loop nests to optimal form. A fundamental aspect is the definition of a suitable cost function to assess the profitability of pre-evaluation, the transformation introduced in the previous section (and later further expanded). The optimality of the transformation algorithm is discussed.
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting out of $\Lambda$. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing and then hoisting time-invariant sub-expressions. For those sub-expressions that depend on the mesh geometry (i.e., they would depend on $L_e$), code motion would increase the working set by a factor $L$. The gain in number of operations executed could then be overwhelmed, from a runtime viewpoint, by a much larger memory pressure.
+We provide intuitions about the need for memory constraints. Our point of departure is again the bilinear form implementation in Figure~\ref{code:loopnest}. Analogous considerations apply to forms of arbitrary arity.
 
-A second, more general fact is that, for certain forms and discretizations, excessive hoisting can make the working set exceed the size of ``some level of local memory'' (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, applying tensor contraction mode, which essentially means pre-evaluating geometry-independent expressions outside of $\Lambda$, requires temporary arrays of size $N\cdot O$. This can sometimes break the local memory threshold. We will clarify and experiment this in Section~\ref{sec:perf-results-forms}.
+The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting mesh-dependent (i.e., $L_e$-dependent) expressions. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting any time-invariant sub-expressions to minimize redundant computation at every time step. The working set size could then increase by a factor $L$. The gain in number of operations executed could therefore be overwhelmed, from a runtime viewpoint, by a much larger memory pressure.
 
-Based on these considerations, we characterize the set of memory constraints $C$ (see Definition~\ref{def:optimality}) as follows
+A second, more general observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of ``some level of local memory'' (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, pre-evaluating geometry-independent expressions outside of $\Lambda$ requires temporary arrays of size $N\cdot O$ for bilinear forms and of size $N$ (or $O$) for linear forms. This can sometimes break a ``local memory threshold''. We will report results of our experiments on the memory threshold in Section~\ref{sec:perf-results-forms}.
+
+Based on these considerations, we establish the following set of memory constraints
 \begin{enumerate}
-\item The size of a temporary due to code motion cannot be larger than that of the multilinear iteration space. 
-\item The total amount of memory occupied by the hoisted temporaries cannot exceed a threshold \texttt{$T_H$}
+\item The size of a temporary due to code motion cannot be larger than that of the outer-product loop nest iteration space. 
+\item The total amount of memory occupied by the temporaries created by code motion cannot exceed a threshold \texttt{$T_H$}
 \end{enumerate}
-A corollary of $C_1$ is that hoisting expressions involving geometry-dependent terms outside of $\Lambda$, which we discussed at the beginning of this section, is now forbidden. Consequently, the search space for optimality becomes smaller.
+A corollary of constraint 1) is that hoisting expressions involving geometry-dependent terms outside of $\Lambda$, which is a possibility we discussed at the beginning of this section, is now forbidden. This clearly shrinks the transformation space, pruning points that most likely would result in sub-optimal performance.
 
-\subsection{Minimizing the Operation Count in Inner Loops}
-Definition~\ref{def:optimality} states that a necessary condition for a loop nest synthesis to be optimal is that the sum of the innermost loop operation counts is minimum. We now discuss how we can systematically achieve this.
+\subsection{Minimization of the Operation Count}
+We here discuss how we can systematically reach the goal set by Definition~\ref{def:optimality}.
 
-Eliminating sharing from the inner multilinear loops does not suffice. In fact, as suggested in Section~\ref{sec:optimal-impl}, we wonder whether, and under what transformations, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count.
+We reinforce that eliminating sharing from the outer-product loop nest does not suffice. As suggested in Section~\ref{sec:optimal-impl}, we wonder whether, and under what conditions, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count. 
 
-To answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is then factorized so as to split constant from $[L_i, L_j, L_k]$-dependent terms, the latter ones are hoisted outside of $\Lambda$, and finally pre-evaluated into temporaries. As part of this pre-evaluation, the reduction induced by $L_i$ vanishes. In the following, we simply refer to this special sort of code hoisting as ``\textit{pre-evaluation}''. 
+To partly answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is factorizable so as to split constants from $[L_i, L_j, L_k]$-dependent terms. These $[L_i, L_j, L_k]$-dependent terms can be hoisted outside of $\Lambda$, and finally pre-evaluated into temporaries. As part of this process, the reduction induced by $L_i$ is computed and, therefore, disappears from $\Lambda$. This is actually what we were referring to when we introduced the pre-evaluation transformation in Section~\ref{sec:optimal-impl}. 
 
-The challenge is to understand when, and for which monomials, pre-evaluation is profitable. We propose an algorithm and a discussion of its optimality. The intuition of the main algorithm for reducing a loop nest to optimal form is shown in Figure~\ref{code:intuition}. 
+There are two issues: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter prevents the former. We start with the second issue. For this, it is convenient to introduce the transformation algorithm. Figure~\ref{code:intuition} provides the pseudo-code of the algorithm. An explanation and a discussion on its optimality follow. 
 
 \begin{figure}[h]
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
@@ -400,7 +398,7 @@ for each monomial M:
 for each expression:
   remove sharing    
 \end{lstlisting}
-\caption{Intuition of the main algorithm}
+\caption{Intuition of the transformation algorithm}
 \label{code:intuition}
 \end{figure}
 
@@ -436,7 +434,7 @@ B) In absence of sharing, the statement is trivially true since we would have $\
 % assunzione 3 è quella che previene la somma di due mass matrix moltiplicate da F0 una e da F1 l'altra...ma non solo ! chesso magari la trial function è derivata in un monomial e nell'altra no, ma la test function è sempre uguale...
 \end{proof}
 
-\subsection{A-Priori Operation Counting}
+\subsection{Cost Function}
 \label{sec:op_count}
 It remains to tie one loose hand: the construction of the pre-evaluation cost function $\theta$. We define it such that $\theta : M \to \mathbb{N} \times \mathbb{N}$; that is, given a monomial, two natural numbers representing the sharing-free operation count without ($\theta_{wo}$) and with ($\theta_{w}$) pre-evaluation are returned. Since $\theta$ is expected to be used by a compiler to drive the transformation process, requirements are simplicity and velocity.  
 
