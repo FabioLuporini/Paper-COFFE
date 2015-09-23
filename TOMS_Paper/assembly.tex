@@ -525,20 +525,19 @@ We evaluate the speed-ups achieved by a wide variety of transformation systems o
 \item FEniCS Form Compiler: tensor mode (work presented in~\citeN{FFC-TC}). Referred to as \texttt{tens} 
 \item FEniCS Form Compiler: automatic mode (choice between \texttt{tens} and \texttt{quad} driven by heuristic, detailed in~\citeN{Fenics} and summarized in Section~\ref{sec:qualitative}). Referred to as \texttt{auto} 
 \item UFLACS: a novel back-end for the FEniCS Form Compiler (whose primary goals are improved code generation time and runtime). Referred to as \texttt{ufls} 
-\item COFFEE: generalized loop-invariant code motion and padding (work presented in~\citeN{Luporini}). Referred to as \texttt{cfO1} 
-\item COFFEE: optimal multilinear loop nest synthesis, padding and symbolic execution (captures the contributions of this paper). Referred to as \texttt{cfO2} 
+\item COFFEE: generalized loop-invariant code motion (work presented in~\citeN{Luporini}). Referred to as \texttt{cfO1} 
+\item COFFEE: optimal loop nest synthesis plus symbolic execution for zero-elimination (work of this article). Referred to as \texttt{cfO2} 
 \end{itemize}
 
 The values that we report are the average of three runs with ``warm cache'' (no code generation time, no compilation time). They include the cost of local assembly as well as the cost of matrix insertion. However, the unstructured mesh used to run the simulations was chosen small enough to fit the L3 cache of the CPU, so as to minimize the ``noise'' due to operations outside of the element matrix evaluation. 
 
 For the fairest comparison possible, small patches (publicly available) were written to be able to run all simulations through Firedrake: this means the cost of matrix insertion and mesh iteration is exactly the same in all variants. UFLACS and the FEniCS Form Compiler's optimization systems generate code suitable for FEniCS, which employs a data storage layout different than Firedrake. Our patches fix this problem by producing code with a data storage layout as expected by Firedrake. 
 
-For what concerns the memory constraint $C_2$ introduced in Section~\ref{sec:mem-const}, we set $T_H = L2_{size}$; that is, the amount of space that temporaries due to pre-evaluation can occupy is bounded by the size of the processor L2 cache (the last level of private cache). For the test cases in which $T_H$ was determinant to prevent pre-evaluation, we also repeated the experiments setting $T_H = L3_{size}$ to assess our hypotheses. Results of these trials are discussed below.
+For what concerns the second memory constraint introduced in Section~\ref{sec:mem-const}, we set $T_H = L2_{size}$; that is, the amount of space that temporaries due to pre-evaluation can occupy is bounded by the size of the processor L2 cache (the last level of private cache). For the test cases in which $T_H$ was determinant to prevent pre-evaluation, we also repeated the experiments setting $T_H = L3_{size}$ to assess our hypotheses. Results of these trials are discussed below.
 
 Following the methodology adopted in~\citeN{quadrature1}, we increasingly vary the complexity of each form. In particular:
 \begin{itemize}
-\item the polynomial order of test and trial functions, $q \in \lbrace1, 2, 3, 4\rbrace$. Test and trial functions always have same degree
-\item the polynomial order of coefficient (or ``pre-multiplying'') functions, $p \in \lbrace1, 2, 3, 4\rbrace$
+\item the polynomial order of test and trial functions, $q \in \lbrace1, 2, 3, 4\rbrace$. Test, trial, and coefficient (or ``pre-multiplying'') functions always have same degree
 \item the number of coefficient functions $nf \in \lbrace0, 1, 2, 3\rbrace$
 \end{itemize}
 Constants of our analysis, instead, are
@@ -548,7 +547,7 @@ Constants of our analysis, instead, are
 \item exact numerical quadrature (the same scheme as in~\citeN{quadrature1}, based on the Gauss-Legendre-Jacobi rule, is employed)
 \end{itemize}
 
-The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}) can be interpreted as ``nested'' plots. We refer to the outer plot as the ``grid'', while the inner are the actual ``plots''. In a grid, $p$ varies along the horizontal axis and $q$ varies along the vertical axis. The top-left plot in a grid shows the speed-up over original code for $[q=1, p=1]$; the plot on its right for $[q=1, p=2]$, and so on. The diagonal of the grid provides the behaviour when test, trial and coefficient functions have same polynomial order, that is $q=p$. A grid can therefore be looked at from different perspectives, which allows us to make structured considerations on the performance achieved. In each plot there are six groups of bars, each group referring to a particular code variant (\texttt{quad, tens, ...}). There are four bars per group: the leftmost bar corresponds to the case $nf = 0$, the one on its right to the case $nf = 1$, and so on. 
+The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity}) are three-dimensional plots. The three axes are for $q$, $nf$, and code transformation system. The code transformation system varies within different subplots, such that one can easily evince the fastest alternative for each problem instance: the taller a bar, the better, since, as explained, we are reporting speed-ups.
 
 %TODO : can we just say padding is useless because in 3D ndofs is a multiple of our vector length?
 
@@ -563,7 +562,7 @@ The upcoming Figures (\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity},
 \end{figure}
 
 \begin{figure}
-\includegraphics[scale=0.7]{perf-results/elasticity}
+\includegraphics[scale=0.77]{perf-results/elasticity}
 \caption{Performance evaluation for the bilinear form arising in a elastic model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:elasticity}
 \end{figure}
 
@@ -580,7 +579,7 @@ The first observation is that our optimality model does not imply minimum execut
 
 The second aspect regards the ``triggering'' of pre-evaluation in \texttt{cfO2}. The fact that a bar in \texttt{cfO2} matches the corresponding bar in \texttt{cfO1} usually suggests that pre-evaluation was found unprofitable. The trend -- although there are quite a few exceptions -- is that as $nf$ increases, pre-evaluation tends not to be performed. This is a consequence of a larger increase factor, as discussed in Section~\ref{sec:op_count}.
 
-The third point concerns the effect of the chosen discretizations on autovectorization. The discretizations employed ensure both multilinear loop nest and tabulated basis function sizes to be multiple of the machine vector length. Given the suitable choice of compilation options, this promotes autovectorization in the majority of code variants. The biggest exception is \texttt{quad}, in which, due to the presence of indirection arrays in the generated code, vectorization is rarely triggered. In \texttt{tens}, the loop nests are fully unrolled, so the standard loop vectorization is simply not possible; however, manual inspection of the compiled code suggests block vectorization (\cite{SLP-vect}) is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces tend to have the same ``structure'' (there are very few exceptions due to low level optimization), with loop vectorization being regularly applied, as far as we could evince. It is worth noting the fact that the size of loops and tabulated basis functions is a multiple of the vector length render padding and data alignment (in \texttt{cfO1} and \texttt{cfO2}), to the best of our understanding, basically irrelevant. 
+The third point concerns the effect of the chosen discretizations on autovectorization. The discretizations employed ensure both multilinear loop nests and tabulated basis function sizes to be multiple of the machine vector length. Given the suitable choice of compilation options, this promotes autovectorization in the majority of code variants. The biggest exception is \texttt{quad}, in which, due to the presence of indirection arrays in the generated code, vectorization is rarely triggered. In \texttt{tens}, the loop nests are fully unrolled, so the standard loop vectorization is not possible; however, manual inspection of the compiled code suggests block vectorization (\cite{SLP-vect}) is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces tend to have the same structure (there are a few exceptions in \texttt{cfO2} due to zero-elimination), with loop vectorization being regularly applied, as far as we could understand. 
 
 Also note some other minor things.
 \begin{itemize}
