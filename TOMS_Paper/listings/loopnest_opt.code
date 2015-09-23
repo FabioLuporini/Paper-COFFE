@@ -1,15 +1,19 @@
 // Pre-evaluated tables
 ...
 for (e = 0; e < L; e++)
+  // Temporaries due to sharing elimination
+  // (Sharing was a by-product of pre-evaluation)
+  ...
   // Loop nest for pre-evaluated monomials
   for (j = 0; j < N; j++)
     for (k = 0; k < O; k++)
       A[e,j,k] += G$'$(...) + G$''$(...) + ...
 
   // Loop nest for monomials for which run-time
-  // integration is preferable
+  // integration was found faster
   for (i = 0; i < M; i++)
-  ..
+    // Temporaries due to sharing elimination
+    ...
     for (j = 0; j < N; j++)
       for (k = 0; k < O; k++)
         A[e,j,k] += H(...)
