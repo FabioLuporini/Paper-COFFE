@@ -462,38 +462,17 @@ If, on the other hand, $\iota < I$, a further step is necessary to estimate $\th
 The transformation algorithm described in Section~\ref{sec:optimal-synthesis} has been implemented in COFFEE, the optimizer of finite element integration routines used in Firedrake. In this section, we describe several aspects related to code generation.
 
 \subsection{Automation through the COFFEE Language}
-As opposed to what happens in the FEniCS Form Compiler, in which quadrature and tensor modes are completely separated code modules, COFFEE implements all optimizations by composing ``building-block'' transformations, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: any sort of codes characterized by (linear, but also non-linear) loop nests with sharing can be optimized (obviously, without guarantees on optimality). COFFEE exploits domain properties, although is not specifically tied to finite element in any way. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines.
+COFFEE implements all optimizations by composing ``building-block'' transformations, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: any sort of codes characterized by (linear, but also non-linear) loop nests with sharing can be optimized (obviously, without guarantees on optimality). In other words, COFFEE only exploits domain properties, and it is not specifically tied to finite element in any way. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines.
 
-A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion. The rewrite operators can be seen as the COFFEE language. They are flexible: for example, one could ask to factorize constants instead of linear terms. Their implementation is based on manipulation of the abstract syntax tree representing the integration routine. 
+The rewrite operators, which implementation is based on abstract syntax tree manipulation, compose the COFFEE language. A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion. We have primarily used these operators to implement sharing elimination and pre-evaluation. Further, we have exploited them for heuristic optimization of the integration loop when this is non-linear (e.g., whenever the form has non-linear coefficients). In such a case, expansion, factorization, and code motion are applied greedily, selecting the term with highest sharing factor at each iteration, based on the observation that this should minimize sharing and promote hoisting. 
 
-\subsubsection{Heuristic Optimization of Non-linear Loops}
-\label{sec:heuristic-int-dep}
-As a proof-of-concept of our generality claim, we briefly discuss our optimization strategy for non-linear loops. Non-linear loops (expressions) are the natural result of non-linear coefficients in the form. The non-linear expressions logically depend on $L_i$. In complex monomials and/or with coarser discretizations, the operation count can experience a significant increase due to non-linear terms.
-
-Despite the fact that we are not characterizing optimality for this wider class of problems, we still heuristically apply the same reasoning of Sections~\ref{sec:optimal-impl} and~\ref{sec:optimal-synthesis} for (potentially) partial sharing elimination, thus reducing the operation count. This is straightforward in our code generation system by composing rewrite operators. Our strategy is as follows. 
-
-COFFEE is agnostic with respect to the high level form compiler, so the first step consists of removing redundant sub-expressions. This is because a form compiler abstracting from optimization will translate expressions as in Equation~\ref{eq:quadrature} directly to code without performing any sort of analysis. Eliminating redundant sub-expressions is usually helpful to relieve the arithmetic pressure inherent in $L_i$. We then synthesize an optimal loop nest as described in the previous sections. This may in turn expose a set of $L_i$-dependent expressions. For each of this expressions, we try to remove sharing by greedily applying factorization and code motion. In the COFFEE language, this process is expressed by simply composing five rewrite operators.
-
-\subsection{Low-level Optimization}
-\label{sec:code-spec}
-We comment on a set of low-level optimizations. These are essential to 1) achieve machine peak performance (Sections~\ref{sec:opt-review} and~\ref{sec:vect-prom}) and 2) make COFFEE independent of the high-level form compiler (Section~\ref{sec:zeros}). As we will see, there are interplays among different transformations. For completeness, we present all of the transformations available in the compiler, although we will only use a subset of them for a fair performance evaluation.
-
-\subsubsection{Review of Existing Optimizations}
-\label{sec:opt-review}
-We start with briefly reviewing the low level optimizations presented in~\citeN{Luporini}.
-
-\paragraph{Padding and data alignment} All of the arrays involved in the evaluation of the local element matrix or vector are padded to a multiple of the vector register length. This is a simple yet powerful transformation that maximizes the effectiveness of vectorization. Padding, and then loop bounds rounding, enable data alignment and avoid the introduction of scalar remainder loops. 
-
-\paragraph{Vector-register Tiling} Blocking (or tiling) at the level of vector registers improves data locality beyond traditional unroll-and-jam transformations. This blocking strategy consists of evaluating outer products by using just two vector register and without ever spilling to cache. 
-
-\paragraph{Expression Splitting} When the number of basis functions arrays (or, equivalently, temporaries introduced by code motion) and constants is large, the chances of spilling to cache are high in architectures with a few logical registers (e.g. 16/32). By exploiting sum’s associativity, an expression can be fissioned so that the resulting sub-expressions can be computed in separate loop nests. This reduces the register pressure. 
-
-\subsubsection{Vector-promotion of Integration-dependent Expressions}
-\label{sec:vect-prom}
-Integration-dependent expressions are inherently executed as scalar code because vectorization (unless employing special hand-written schemes) occurs along a single loop, typically the innermost. For the same reasons discussed in Section~\ref{sec:heuristic-int-dep}, we also want to vectorize along $L_i$. One way to achieve this is vector-promotion. This requires creating a ``clone'' of $L_i$ in the preheader of the loop nest, in which vector temporaries are evaluated in what is now an innermost loop. 
-
-\subsubsection{Handling Sparse Tables}
+\subsection{Independence from Form Compilers}
 \label{sec:zeros}
+COFFEE expects generic abstract syntax trees, so clearly any form compiler can be adapted to produce this kind of input. This is what we have done with the FEniCS Form Compiler, suitably modified to produce abstract syntax trees rather than strings. However, form compilers that translate quadrature-based expressions into code could decide, for simplicity, to implement non-scalar function spaces in trivial yet sub-optimal ways. For example ...by producing a trivial loop nest that iterates over basis function tables filled with blocks of zeros 
+
+
+Another viewpoint is: COFFEE takes care of the optimization process, ...
+
 Consider a set of tabulated basis functions with quadrature points along rows and functions along columns. For example, \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. Unless using a smart form compiler (which we want to avoid), there are circumstances in which the tables are sparse. Zero-valued columns arise when taking derivatives on a reference element or when employing vector-valued elements. Zero-valued rows can result from using non-standard functions spaces, like Raviart-Thomas. Zero-valued blocks can appear in pre-evaluated temporaries. Our objective is a transformation that avoids useless iteration over zeros while preserving the effectiveness of the other low-level optimizations, especially vectorization. 
 
 In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. Our approach, which will be compared to this pioneering work, aims to free the generated code from such indirection arrays. This is because we want to avoid non-contiguous memory loads and stores, which can nullify the benefits of vectorization. 
