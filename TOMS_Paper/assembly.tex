@@ -47,7 +47,8 @@
 \renewcommand{\ttdefault}{txtt}
 
 \usepackage{listings}
-\lstset{language=C, breaklines=true, mathescape}
+\lstset{language=C, breaklines=true, mathescape,
+			 morekeywords={and, each}}
 
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
@@ -379,30 +380,26 @@ We reinforce the idea that eliminating sharing from the outer product loop nest 
 
 To partly answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is factorizable so as to split constants from $[L_i, L_j, L_k]$-dependent terms. These $[L_i, L_j, L_k]$-dependent terms can be hoisted outside of $\Lambda$ and stored into temporaries. As part of this process, the reduction induced by $L_i$ is evaluated. Consequently, $L_i$ disappears from $\Lambda$. This transformation is actually what we were referring to when we introduced pre-evaluation in Section~\ref{sec:optimal-impl}. 
 
-Two issues should be addressed: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter inhibits the former. In this section, we tackle the second issue, while we deal with the first one in Section~\ref{sec:op_count}. 
-
-We start with introducing the transformation algorithm. Figure~\ref{code:intuition} provides the pseudo-code of the algorithm. An explanation and a discussion about its optimality follow. 
+Two issues should be addressed: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter inhibits the former. In this section, we tackle the second issue, while we deal with the first one in Section~\ref{sec:op_count}. For this, we start with explaining the transformation algorithm, which pseudo-code is provided in Figure~\ref{code:intuition}.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
 dissect the input expression into monomials
-for each monomial M:
-  $\theta_{w}$ = estimate operation count with pre-evaluation
-  $\theta_{wo}$ = estimate operation count without pre-evaluation
-  if $\theta_{w}$ < $\theta_{wo}$ and memory constraints satisfied:
-    mark M as candidate for pre-evaluation
-for each monomial M:
-  if M does not share terms with M$'$, an unmarked monomial:
-    extract M into a separate loop nest
-    apply pre-evaluation to M
+for each monomial $m$:
+  if $\theta(m)$ > 0 and memory constraints satisfied:
+    mark $m$ as candidate for pre-evaluation
+for each monomial $m$:
+  if $m$ does not share terms with $m'$, an unmarked monomial:
+    extract $m$ into a separate loop nest
+    apply pre-evaluation to $m$
 for each expression:
   remove sharing    
 \end{lstlisting}
-\caption{Intuition of the transformation algorithm}
+\caption{High level view of the transformation algorithm}
 \label{code:intuition}
 \end{figure}
 
-Our choice is to study the impact of pre-evaluation, as number of operations saved or introduced, ``locally''; that is, for each monomial, ``in isolation''. If we estimate that, for a given monomial $M$, pre-evaluation will decrease the operation count, then: the sub-expression implementing $M$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
+Our choice is to study the impact of pre-evaluation, as number of operations saved or introduced, ``locally''; that is, for each monomial, ``in isolation''. We then introduce the cost function $\theta : M \rightarrow \mathbb{Z}$, where $M$ is the set of monomials in the form. $\theta(m)$ represents the change in operation count if pre-evaluation were applied to monomial $m$: a negative value indicates an increase, whereas a positive value indicates a gain. If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
 
 Because of symmetries in basis functions, pre-evaluation could produce identical tables. These are mapped to the same temporary. The transformed sub-expression (monomial) can therefore be characterized by the presence of sharing. This is why the last two lines of the algorithm, which goal is to eliminate sharing following the procedure described in Proposition~\ref{prop:optimal-mln}, are transparently applied to all sub-expressions, regardless of whether pre-evaluation was used. The output of the transformation algorithm is as in Figure~\ref{code:loopnest-opt}, assuming the usual input of Figure~\ref{code:loopnest}. 
 
@@ -410,37 +407,40 @@ Because of symmetries in basis functions, pre-evaluation could produce identical
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
 \end{CenteredBox}\caption{The loop nest produced by the algorithm for an input as in Figure~\ref{code:loopnest}.}\label{code:loopnest-opt}\end{figure}
 
-With the following Proposition~\ref{prop:optimal-approach}, we elaborate on the optimality of this approach. First, however, note that because of the first memory constraint imposed in the previous section, sharing elimination and pre-evaluation fully describe the transformation space, with the search for the optimal by the algorithm being performed in a suitably constructed space.
+Note that due to the memory constraints imposed in the previous section, sharing elimination and pre-evaluation fully describe the transformation space in which the optimal is searched. We have defined them as high level operations on top of traditional expression-restructuring transformations such as code motion, re-association, and factorization. Other classes of loop transformations, for instance aimed at improving data locality or exposing parallelism, can obviously be neglected since they do not impact the operation count.
+
+Finally, with Proposition~\ref{prop:optimal-approach}, we elaborate on the optimality of this approach. 
 
 \begin{Prop}
 \label{prop:optimal-approach}
 Consider an arbitrary multilinear form and the corresponding loop nest $\Lambda$ implementing it. The form comprises a set of monomials, $M$. Let $P$ be the set of pre-evaluated monomials, and let $Z$ be the set of non pre-evaluated monomials (i.e., $Z = M \setminus P$). Assume that:
 \begin{enumerate}
-\item the cost function $\theta$ is optimal. We define it such that $\theta : M \to \mathbb{N} \times \mathbb{N}$; that is, given a monomial, it returns two values $\theta_{w}$ and $\theta_{wo}$, representing the operation counts with and without pre-evaluation;
 \item pre-evaluating different monomials does not result in identical tables;
 \item there is no sharing of terms between monomials in $P$ and monomials in $Z$.
 \end{enumerate} 
 Then, the transformation algorithm produces an optimal $\Lambda'$ as established by Definition~\ref{def:optimality}.
 \end{Prop}
 \begin{proof}
-We first comment on the assumptions. 1) We postpone the construction of the oracle $\theta$ to Section~\ref{sec:op_count}. 2) This is inherently a pathological case, which we neglect. 3) In complex forms with several monomials, different pre-evaluation candidates could actually share terms. We also neglect this scenario, which would otherwise require a ``global'' analysis of the monomials in $P$.
+We first comment on the assumptions. First, we notice that neither of them is a sufficient condition for non-optimality. In addition: 1) is inherently a pathological case, which we neglect; 2) might actually occur in forms with several monomials, although, in practice, this was never the case in none of the problems that we have investigated (which are more than those studied in this article). Therefore, we also neglect this scenario, which would otherwise require a ``global analysis'' of $M$.
 
 The operation count for $\Lambda'$ is $\Lambda'_{ops} = L N O (\Lambda'_{ops_1} + I \Lambda'_{ops_2})$ where $\Lambda'_{ops_1}$ and $\Lambda'_{ops_2}$ represent the operation counts for $P$ and $Z$, respectively. $L$, $M$, $N$, and $O$ are the trip counts of the corresponding loops.
 
 We prove our claim by demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would result in $\Lambda''_{ops}$ such that $\Lambda''_{ops} > \Lambda'_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would result in $\Lambda''_{ops}$ such that $\Lambda''_{ops} > \Lambda'_{ops}$.
 
-A) It is rather obvious that $\Lambda''_{ops_1} \geq \Lambda'_{ops_1}$ (it is equal only if, trivially, $Z_P = \emptyset$). We note that if all monomials in $Z_P$ share terms with $\overline{Z} = Z \setminus Z_P$, then we have $\Lambda''_{ops_2} = \Lambda'_{ops_2}$, so our statement is trivially true. If, on the other hand, there is no (or only partial) sharing, we obtain $\Lambda''_{ops_2} < \Lambda'_{ops_2}$ or, equivalently, $\Lambda''_{ops_2} = \Lambda'_{ops_2} - I \cdot\delta$. What we have to show now is that even by pre-evaluating more monomials, $\Lambda''_{ops_1} - \Lambda'_{ops_1} \geq I \cdot\delta$ holds. The intuition is that this should naturally be true since $\theta$ is optimal (assumption 1) and it predicted pre-evaluation to be a losing strategy for $Z_P$. However, to guarantee this we need to rely on assumption 2): if the new pre-evaluated tables were identical to those resulting from $P$, then we would have more sharing opportunities, which would generally break the optimality claim. Therefore, assumptions 1) and 2) are necessary for A) to be true.
+A) By pre-evaluating the monomials in $Z_P$, we clearly have $\Lambda''_{ops_2} = \Lambda'_{ops_2} - I \cdot\delta$, where $\delta > 0$ is a parameter to indicate the reduction in operation count exhibited by the non pre-evaluated monomials. To prove A), we then need to convince ourselves that $\Lambda''_{ops_1} -  I \cdot\delta \geq \Lambda'_{ops_1}$ holds. The only (corner) situation in which this might occur is whenever some of the pre-evaluated monomials in $Z_P$ result in tables identical to those already deriving from $P$. If that were the case, more sharing elimination opportunities would be exposed, which in turn could break the optimality claim. Assumption 1) prevents this situation, so the statement is true. 
 
-B) Let us consider the non-trivial case: there are at least two monomials $p$ and $z$ that share terms, with $p \in P_Z$ and $z \in Z$. We have to consider the fact that there could be (practically rare) circumstances in which despite $\theta_{wo}(z) < \theta_w(z)$ and $\theta_{w}(p) < \theta_{wo}(p)$ (both obvious due to assumption 1), we could have $\theta^G_{wo}(z, p)  < \theta_w(p) + \theta_{wo}(z)$, where $\theta^G_{wo}$ is a hypothetical global oracle. The intuition behind this is that there could be a larger potential gain in sharing elimination that goes lost if monomials are inspected in isolation. An extreme example is the summation of mass matrices, in which each monomial is characterized by same test and trial functions, but also by a different pre-multiplying coefficient (i.e., known) function. Assumption 3) enables us abstracting from such a scenario. 
+B) Let us consider the non-trivial case: there are at least two monomials $p$ and $z$ that share terms, with $p \in P_Z$ and $z \in Z$. We have to consider the fact that there could be (practically rare) circumstances in which despite $\theta_{wo}(z) < \theta_w(z)$ and $\theta_{w}(p) < \theta_{wo}(p)$, we could have $\theta^G_{wo}(z, p)  < \theta_w(p) + \theta_{wo}(z)$, where $\theta^G_{wo}$ is a hypothetical global oracle. The intuition behind this is that there could be a larger potential gain in sharing elimination that goes lost if monomials are inspected in isolation. An extreme example is a summation of mass matrices, in which each monomial is characterized by same test and trial functions, and by a different pre-multiplying coefficient (i.e., known) function. The previously discussed assumption 2) allows us to neglect this possibility, which then makes B) true. 
 \end{proof}
 
 \subsection{Cost Function}
 \label{sec:op_count}
-It remains to tie one loose hand: the definition of the cost function $\theta = [\theta_{w}, \theta_{wo}]$. Since $\theta$ is expected to be used by a compiler to drive the transformation algorithm, requirements are simplicity and velocity.
+It remains to tie up one loose end: the definition of the cost function $\theta$. Since $\theta$ is expected to be used by a compiler to drive the transformation algorithm, requirements are simplicity and velocity.
 
-We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple expression tree traversal suffices to obtain the cost of a  sharing-free multilinear loop nest, namely $\Lambda_{ops}^{ns}$. Assuming $I$ to be the size of $L_i$, we have that $\theta_{wo} = \Lambda_{ops}^{ns} \cdot I$.
+We define $\theta(m) = \theta_{wo}(m) - \theta_{w}(m)$, where $\theta_{wo}$ and $\theta_{w}$ represent the operation counts for a monomial $m$ without and with pre-evaluation, respectively. In the following, we explain how to derive these two values.
 
-For $\theta_{w}$, things are more complicated. We first need to estimate the \textit{increase factor}, $\iota$, to account for the presence of (derivatives of) coefficients. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
+We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple expression tree traversal suffices to obtain the cost of a  sharing-free outer product loop nest, namely $\Lambda_{ops}^{ns}$. Assuming $I$ to be the size of $L_i$, we have that $\theta_{wo} = \Lambda_{ops}^{ns} \cdot I$.
+
+Determining $\theta_{w}$ is more complicated. We first need to estimate the \textit{increase factor}, $\iota$, to account for the presence of (derivatives of) coefficients. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
@@ -448,7 +448,7 @@ For $\theta_{w}$, things are more complicated. We first need to estimate the \te
 
 One can think of this as the (simplified) loop nest originating from the local assembly of a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} represents the field $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from the integration-dependent (i.e., $L_i$-dependent) quantities. By expanding the products, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor 3 (the number of basis functions for $f$). Intuitively, $\iota$ captures the increase in non-hoistable operations due to the transformations that expose pre-evaluation opportunities. 
 
-With a single coefficient, as we just saw, $\iota$ directly descends from the cost of product expansion. In general, however, predicting $\iota$ is less straightforward. For example, consider the case in which a monomial has multiple coefficients over the same function space. Product expansion would now lead to identical sub-expressions that, as such, would be mapped to the same temporary once pre-evaluated. The resulting loop nest would then be characterized by sharing, with the actual operation count (i.e., once sharing elimination is applied) being smaller than that expected by a naive analysis. For a precise evaluation of $\iota$, we need to calculate the $k$-combinations with repetitions of $n$ elements, with $k$ being the number of coefficient-dependent terms appearing in a product (in the example, there is only $f$, so $k=1$) and $n$ the cardinality of the set of symbols involved in the coefficient expansion (in the example, \texttt{B[i,0]}, \texttt{B[i,1]}, and \texttt{B[i,2]}, so $n=3$; note that we are talking about sets here, so duplicates would be counted once). 
+With a single coefficient, as we just saw, $\iota$ directly descends from the cost of product expansion. In general, however, predicting $\iota$ is less straightforward. For example, consider the case in which a monomial has multiple coefficients over the same function space. Product expansion would now lead to identical sub-expressions that, as such, would be mapped to the same temporary once pre-evaluated. The resulting loop nest would then be characterized by sharing, with the actual operation count (i.e., once sharing elimination is applied) being smaller than that found with a more naive analysis. For a precise evaluation of $\iota$, we need to calculate the $k$-combinations with repetitions of $n$ elements, with $k$ being the number of coefficient-dependent terms appearing in a product (in the example, there is only $f$, so $k=1$) and $n$ the cardinality of the set of symbols involved in the coefficient expansion (in the example, \texttt{B[i,0]}, \texttt{B[i,1]}, and \texttt{B[i,2]}, so $n=3$; note that we are talking about sets here, so duplicates would be counted once). 
 
 If $\iota \geq I$ we can immediately say that pre-evaluation will not be profitable. This is indeed a necessary condition that, intuitively, tells us that if we add to the innermost loop more operations than we actually save from eliminating $L_i$, then for sure $\theta_{wo} < \theta_{w}$. This observation can speed up the compilation time by decreasing the analysis cost.
 
