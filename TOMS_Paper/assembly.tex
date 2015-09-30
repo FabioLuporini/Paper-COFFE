@@ -78,7 +78,7 @@ Paul H.J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Optimality is defined in terms of floating point operations required to execute a loop nest. The generation of optimal loop nests is driven by a model that exploits mathematical properties of the domain of interest. A theoretical analysis and extensive experimentation prove the effectiveness of our approach, showing systematic performance improvements over a number of alternative code generation systems. The effect of low-level optimization is also discussed.
+We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Optimality is defined in terms of floating point operations required to execute a loop nest. The generation of optimal loop nests is driven by a model that exploits mathematical properties of the domain of interest. A theoretical analysis and extensive experimentation prove the effectiveness of our approach, showing systematic performance improvements over a number of alternative code generation systems.
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
@@ -133,9 +133,9 @@ As demonstrated by the considerable body of research on the topic, automating th
 However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach to solve this problem. Summarizing, our contributions are as follows
 
 \begin{itemize}
-\item We define optimality for finite element integration. We study the transformation space for loops and expressions within which the optimal is sought.
+\item We define optimality for finite element integration and we build the transformation space within which the optimal is sought.
 \item We provide an algorithm to select optimal points in the transformation space. The algorithm uses a cost model to: 1) understand whether a transformation reduces or increases the operation count; 2) choose between different (non-composable) transformations.
-\item We state for which class of problems optimality can be reached, and for which class heuristics are instead needed to minimize the operation count.
+\item We state for which class of problems optimality can be reached, and for which class heuristics are instead needed to minimize (reduce) the operation count.
 \item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
