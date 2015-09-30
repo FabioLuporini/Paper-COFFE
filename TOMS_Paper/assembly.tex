@@ -133,17 +133,17 @@ As demonstrated by the considerable body of research on the topic, automating th
 However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach to solve this problem. Summarizing, our contributions are as follows
 
 \begin{itemize}
-\item We characterize loop nest optimality and we instantiate this concept to finite element integration. As part of this construction, we establish the notion of sharing and demonstrate that sharing can always be eradicated from the loop nests we are interested in.
-\item We provide a model centred on sharing and other mathematical properties of our domain of interest; the model drives the translation of a monomial appearing in a form into optimal loop nests.
-\item We comment on the cases in which such model does not lead to optimal loop nests. We will see that this might occur with particular forms that make extensive use of tensor algebra. We show, however, that our model still is capable of producing quasi-optimal loop nests.
-\item We integrate the model with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
+\item We define optimality for finite element integration. We study the transformation space for loops and expressions within which the optimal is sought.
+\item We provide an algorithm to select optimal points in the transformation space. The algorithm uses a cost model to: 1) understand whether a transformation reduces or increases the operation count; 2) choose between different (non-composable) transformations.
+\item We state for which class of problems optimality can be reached, and for which class heuristics are instead needed to minimize the operation count.
+\item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
 
-In addition, in order to place COFFEE on the same level of other code generation systems from the viewpoint of low-level optimization (which is essential for a fair performance comparison)
+In addition, in order to place COFFEE on the same level of other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison)
 
 \begin{itemize}
-\item We introduce an engine based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities). We elaborate on the performance impact of this optimization, making a clear distinction between flop optimality and efficient code.
+\item We introduce an engine based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities).
 \end{itemize}
 
 
