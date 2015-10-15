@@ -10,7 +10,7 @@ for (e = 0; e < L; e++)
       A[e,j,k] += G$'$(...) + G$''$(...) + ...
 
   // Loop nest for monomials for which run-time
-  // integration was found faster
+  // integration was determined to be faster
   for (i = 0; i < M; i++)
     // Temporaries due to sharing elimination
     ...
