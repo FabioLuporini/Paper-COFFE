@@ -41,6 +41,8 @@
 % Theorems, definitions, lemmas, etc
 \newtheorem{Def}{Definition}
 \newtheorem{Prop}{Proposition}
+\newtheorem{Algo}{Algorithm}
+\newtheorem{Const}{Constraint}
 \newtheorem*{Rem*}{Remark}
 
 \usepackage{alltt}
@@ -201,6 +203,7 @@ where $N$ is the number of integration points, $W^q$ the quadrature weight at th
 % Magari la summation sui coefficients la sputo dentro? che dici?
 
 \subsection{Tensor Contraction Mode}
+\label{sec:tc}
 Starting from Equation~\ref{eq:quadrature}, exploiting linearity, associativity and distributivity of the involved mathematical operators, we can rewrite the expression as
 \begin{equation}
 \label{eq:tensor}
@@ -304,18 +307,20 @@ The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of t
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple outer product loop nest to optimal form.}\end{figure}
 
-Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. Figure~\ref{code:multi_loopnest_b} shows an optimal synthesis for the loop nest in Figure~\ref{code:multi_loopnest_a}. More generally, arbitrarily complex outer product loop nests can systematically be reduced to optimal form. The constructive proof that we provide below focuses on outer product loop nests of arity $n=2$. Note that for $n < 2$ the proof is trivial, whereas for $n > 2$ a more general treatment would be required; fortunately, this case is never of interest in finite element integration.
+Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. Figure~\ref{code:multi_loopnest_b} shows an optimal synthesis for the loop nest in Figure~\ref{code:multi_loopnest_a}. More generally, arbitrarily complex outer product loop nests can systematically be reduced to optimal form using an algorithm that exploits the properties of linearity and perfectness. The algorithm and the proof that we provide below focus on outer product loop nests of arity $n=2$. For $n < 2$ the proof would be trivial, whereas for $n > 2$ a more general treatment would be required; fortunately, this case is never of interest in finite element integration.
+
+\begin{Algo}[Optimal code motion for outer product loop nests]
+\label{algo:outer-product-optimal}
+\normalfont
+Consider an outer product loop nest $\Lambda = [L_i, L_j]$, with the body of $L_j$ being an independent basic block. The algorithm starts with ``flattening'' the expressions (e.g., by multiplication expansion) in the body of $L_j$; this exposes the space of all possible factorizations. Since $\Lambda$ is an outer product loop nest, the resulting expressions are summations of outer products. We traverse the expression tree and determine the sharing factor of the two linear loops. We take the symbols depending on the loop with smallest sharing factor, say $L_i$, and we incrementally factorize them. Due to linearity, each factored product $P$ only has one symbol depending on $L_i$, and this symbol is now unique in the expression. The other term in $P$, independent of $L_i$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. We repeat the same process for the symbols along the loop with higher sharing factor, $L_j$. The transformations are semantically correct: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting (see~\citeN{Luporini} for more details about generalized code motion).
+\end{Algo}
 
 \begin{Prop}
 \label{prop:optimal-mln}
-Assume $\Lambda = [L_{i_{0}}, L_{i_{1}}]$ is an outer product loop nest with the body of $L_{i_{1}}$ being an independent basic block. Then an optimal synthesis $\Lambda'$ can be determined by eliminating sharing from both loops, starting from the loop with smallest sharing factor.
+Let $\Lambda = [L_i, L_j]$ be an outer product loop nest with the body of $L_j$ being an independent basic block. Then Algorithm~\ref{algo:outer-product-optimal} leads to an optimal synthesis $\Lambda'$. 
 \end{Prop}
 \begin{proof}
-The demonstration is by construction and exploits linearity. We start with ``flattening'' the expressions (e.g., by multiplication expansion) in the body of $L_{i_{1}}$; this exposes the space of all possible factorizations. Since $\Lambda$ is an outer product loop nest, the resulting expressions are summations of outer products.
-
-We traverse the expression tree and determine the sharing factor of the two linear loops. We take the symbols depending on the loop with smallest sharing factor, $L_i$, and we incrementally factorize them. Due to linearity, each factored product $P$ only has one symbol depending on $L_i$, and this symbol is now unique in the expression. The other term in $P$, independent of $L_i$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. We repeat the same process for the symbols along the loop with higher sharing factor, $L_j$. The transformations are semantically correct: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting (see~\citeN{Luporini} for more details about generalized code motion).
-
-We now have to demonstrate that the chosen factorization strategy, based on sharing factors, leads to optimality. This reduces to prove that the two following facts are true (we do it by contradiction).
+Assume, without loss of generality, that $L_i$ is the loop with smallest sharing factor. We reduce the proof to showing that the two following facts are true (we do it by contradiction).
 \begin{enumerate}
 \item Taking $L_j$, the loop with higher sharing factor, as point of departure would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). If we assumed this were false, there would be two possibilities to consider: A) both $L_i$ and $L_j$ present sharing over disjoint sets of outer products; B) at least one outer product induces sharing along both $L_i$ and $L_j$. Case A) is quite trivial since there are no side effects in swapping the order of factorizations, so $\Lambda'$ would actually be optimal (best case scenario). In case B), due to linearity, factorization produces a summation of $L^{sf}_{j}$ outer products, as opposed to $L^{sf}_{i}$ if we had started with $L_i$. However, note that factorization followed by hoisting is always a winning strategy: evaluation, at every iteration, of hoisted symbols requires one operation (a sum) instead of the two operations (a product and a sum) needed by an outer product. Since $L^{sf}_{j} > L^{sf}_{i}$, it is clear that $\Lambda'$ could not be optimal, which contradicts the hypothesis.
 \item Partial elimination of sharing would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). Let us assume, for a moment, that this is false. In this scenario, at least one symbol is excluded from the factored product. Without loss of generality, consider, for instance, $a_i(b_j + c_j + ...) + a_i e_j + ...$. We see that either there is another factorization opportunity along $L_j$ ($e_j$ is shared with some other terms), in which case no additional operations need be performed, or $\Lambda'$ is sub-optimal. Consequently, the hypothesis is generally contradicted.
@@ -332,8 +337,8 @@ We observe, however, that for finite element integration loop nests the presence
 
 Pre-evaluation opportunities can be exposed through an exploration of the expression tree transformation space. This would be challenging if we were to deal with arbitrary loop nests and expressions, while we will see that a simpler algorithm can be adopted for the class arising in finite element integration. In any case, however, the following issues should be considered:
 \begin{itemize}
-\item as opposed to what happens with hoisting in outer product loop nests, the temporary variable size is proportional to the number of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual runtime
-\item the transformations exposing pre-evaluation opportunities could increase the arithmetic complexity (e.g., expansion may increase the operation count; further examples will be provided later). This could overwhelm the gain inherent in pre-evaluation.
+\item In contrast to what happens with hoisting in outer product loop nests, the temporary variable size is proportional to the number and trip counts of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual execution time.
+\item The transformations exposing pre-evaluation opportunities could increase the arithmetic complexity (e.g., expansion may increase the operation count; further examples will be provided later). This could outweigh the gain due to pre-evaluation.
 \end{itemize}
 
 To summarize, so far we have highlighted four problems:
@@ -358,9 +363,9 @@ In this section, we build a transformation algorithm capable of reducing finite 
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-Two observations motivate the need for memory constraints. Our point of departure is again the bilinear form implementation in Figure~\ref{code:loopnest}. Analogous considerations apply to forms of arbitrary arity.
+Two observations motivate the need for memory constraints. Our starting point is again the bilinear form implementation in Figure~\ref{code:loopnest}. Analogous considerations apply to forms of arbitrary arity.
 
-The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting mesh-dependent (i.e., $L_e$-dependent) expressions. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting any time-invariant sub-expressions to minimize redundant computation at every time step. The working set size could then increase by a factor $L$. The gain in number of operations executed could therefore be overwhelmed, from a runtime viewpoint, by a much larger memory pressure.
+The fact that $L \gg M, N, O$ suggests we should be cautious about hoisting mesh-dependent (i.e., $L_e$-dependent) expressions. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting any time-invariant sub-expressions to minimize redundant computation at every time step. The working set size could then increase by a factor $L$. The gain in number of operations executed could therefore be outweighed, from a runtime viewpoint, by a much larger memory pressure.
 
 The second observation is that, for certain forms and discretizations, aggressive hoisting can make the working set exceed the size of some level of local memory (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, pre-evaluating geometry-independent expressions outside of $\Lambda$ requires temporary arrays of size $N O$ for bilinear forms and of size $N$ (or $O$) for linear forms. This can sometimes break such a ``local memory threshold''. In our experiments (Section~\ref{sec:perf-results-forms}) we will carefully study this aspect.
 
@@ -376,9 +381,9 @@ We here discuss how we can systematically reach the goal set by Definition~\ref{
 
 We reinforce the idea that eliminating sharing from the outer product loop nest does not suffice. As presaged in Section~\ref{sec:optimal-impl}, we consider whether, and under what conditions, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count. 
 
-To partly answer this question, we make use of a result -- the foundation of tensor contraction mode -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is factorizable so as to split constants from $[L_i, L_j, L_k]$-dependent terms. These $[L_i, L_j, L_k]$-dependent terms can be hoisted outside of $\Lambda$ and stored into temporaries. As part of this process, the reduction induced by $L_i$ is evaluated. Consequently, $L_i$ disappears from $\Lambda$. This transformation is actually what we were referring to when we more informally introduced pre-evaluation in Section~\ref{sec:optimal-impl}. 
+To partly answer this question, we make use of a result -- the foundation of tensor contraction mode (Section~\ref{sec:tc}) -- from~\citeN{Kirby:TC}. Essentially, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors (see Section~\ref{sec:background}). We interpret this result at the loop nest level: with an input as in Figure~\ref{code:loopnest}, we can always dissect \texttt{F} into distinct sub-expressions (the monomials). Each sub-expression is factorizable so as to split constants from $[L_i, L_j, L_k]$-dependent terms. These $[L_i, L_j, L_k]$-dependent terms can be hoisted outside of $\Lambda$ and stored into temporaries. As part of this process, the reduction induced by $L_i$ is evaluated. Consequently, $L_i$ disappears from $\Lambda$. This transformation is actually what we were referring to when we more informally introduced pre-evaluation in Section~\ref{sec:optimal-impl}. 
 
-Two issues should be addressed: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter inhibits the former. In this section, we tackle the second issue, while we deal with the first one in Section~\ref{sec:op_count}. For this, we start with explaining the transformation algorithm, which pseudo-code is provided in Figure~\ref{code:intuition}.
+Two issues should be addressed: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter inhibits the former. In this section, we tackle the second issue, while we deal with the first one in Section~\ref{sec:op_count}. For this, we start with explaining the transformation algorithm, for which pseudo-code is provided in Figure~\ref{code:intuition}.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
