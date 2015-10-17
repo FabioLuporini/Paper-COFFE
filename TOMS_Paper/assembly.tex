@@ -224,7 +224,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 \section{Problem Characterization}
 \label{sec:optimal-impl}
 
-In this section, we characterize optimality for finite element integration and the loop transformation space that we need to explore to achieve it. 
+In this section, we characterize optimality for finite element integration and the transformation space that we need to explore to achieve it. 
 
 \subsection{Loop Nests and Optimality}
 In order to make the article self-contained, we start with reviewing basic compiler terminology.
@@ -250,9 +250,9 @@ By mapping mathematical properties to the loop nest level, we introduce the
 concepts of a \textit{linear loop} and, more generally, a (perfect) multilinear loop nest.
 
 \begin{Def}[Linear loop]
-A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is \textit{linear} if 
+A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is linear if in its body
 \begin{enumerate}
-\item $i$ appears in the body of $L$ only as an array index, and
+\item $i$ appears only as an array index, and
 \item whenever an array $a$ is indexed by $i$ ($a[i]$), all expressions in which this appears are affine in $a$.
 \end{enumerate}
 \end{Def}
@@ -267,14 +267,35 @@ Since our focus is on finite element integration, for simplicity we restrict our
 An outer product loop nest is a perfect multilinear loop nest of arity $n \leq 2$ in which all of the expressions appearing in the body of the innermost loop are summations, and every loop index occurs once in every summand.
 \end{Def}
 
-As shown later, outer product loop nests are important because they possess properties that we can take advantage of to synthesize optimal code. They arise naturally when translating bilinear or linear forms into code. Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises the element loop $L_e$, the integration loop $L_i$ (a reduction loop), and the outer product loop nest $[L_j, L_k]$ over test and trial functions. The expression \texttt{F} implements the operator.
+As shown later, outer product loop nests are important because they possess properties that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
 
-% (the Laplacian operator in the case of Equation~\ref{eq:quadrature}, but our discussion applies in general).
+Two other classes of loops need be characterized. 
+
+\begin{Def}[Reduction loop]
+A loop $L_i$ is said to be a reduction loop if in its body
+\begin{enumerate}
+\item $i$ appears only as an array index, and
+\item for each augmented assignment statement $S$ (e.g., increments), arrays indexed by $i$ appear only on the right hand side of $S$.
+\end{enumerate}
+\end{Def}
+
+\begin{Def}[Free space loop]
+A loop $L_i$ is said to be a free space loop if its iterations can be executed in any arbitrary order; that is, no dependencies exist across different iterations. 
+\end{Def}
+
+Altogether, these definitions lead us to formalize the class of loop nests for which we seek optimality.
+
+\begin{Def}[Finite element integration loop nest]
+A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free space loop, a (generally) imperfect, linear or non-linear reduction loop, and an outer product loop nest.
+\end{Def}
+
+To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free space loop $L_e$ (over the elements in the mesh), a reduction loop $L_i$ (along which numerical integration is performed), and an outer product loop nest $[L_j, L_k]$ (over test and trial functions). The expression \texttt{F} implements the operator. 
+
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The typical loop nest implementing a bilinear form.}\label{code:loopnest}\end{figure}
 
-Our aim is a strategy to synthesize optimal loop nests of this form. In particular, we characterize optimality as follows.
+We emphasize that our aim is a strategy to synthesize optimal loop nests of this specific form. In particular, we characterize optimality as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
