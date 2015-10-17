@@ -126,21 +126,21 @@ Department of Mathematics, Imperial College London;
 
 \section{Introduction}
 
-The need for rapidly implementing high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proved successful in the context of the FEniCS (\cite{Fenics}) and Firedrake (\cite{firedrake-code}) projects, which have become increasingly popular over the last years. In these frameworks, the weak variational form of a problem is expressed at high-level by means of a domain-specific language. The mathematical specification is manipulated by a form compiler that generates a representation of assembly operators. By applying these operators to an element in the discretized domain, a local matrix and a local vector, which represent the contributions of that element to the equation solution, are computed. The code for assembly operators should be high performance: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
+The need for rapid implementation of high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proven successful in the context of the FEniCS (\cite{Fenics}) and Firedrake (\cite{firedrake-code}) projects. In these frameworks, the weak variational form of a problem is expressed at high level by means of a domain-specific language. The mathematical specification is manipulated by a form compiler that generates a representation of assembly operators. By applying these operators to an element in the discretized domain, a local matrix and a local vector, which represent the contributions of that element to the equation approximated solution, are computed. The code for assembly operators must be carefully optimized: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
 
-As demonstrated by the considerable body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent to the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO (\cite{PLUTO}), focus on parallelization and loop optimization for cache locality, so they are not particularly helpful in our context. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. In~\citeN{quadrature1}, it is shown how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. In~\citeN{FFC-TC} and~\citeN{Francis}, mathematical reformulations of finite element integration are studied with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low-level optimizations are analysed. It is also worth mentioning an on-going effort to produce a novel form compiler, called UFLACS (\cite{Uflacs}), which adds to the already abundant set of code transformation systems for assembly operators. 
+As demonstrated by the substantial body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent to the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary; we show this is Section~\ref{sec:perf-results}). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO (\cite{PLUTO}), focus on parallelization and optimization for cache locality, treating issues orthogonal to the question of minimising flops. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. In~\citeN{quadrature1}, it is shown how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. In~\citeN{FFC-TC} and~\citeN{Francis}, mathematical reformulations of finite element integration are studied with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low level optimizations are analysed. It is also worth mentioning an on-going effort to produce a new form compiler, called UFLACS (\cite{Uflacs}), which adds to the already abundant set of code transformation systems for assembly operators. The performance evaluation in Section~\ref{sec:perf-results} includes most of these optimization systems.
 
-However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach to solve this problem. Summarizing, our contributions are as follows
+However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach to solve this problem. Summarizing, our contributions are as follows:
 
 \begin{itemize}
-\item We define optimality for finite element integration and we build the transformation space within which the optimal is sought.
+\item We define optimality for finite element integration as number of flops given a memory bound; we build the transformation space within which the optimal is sought.
 \item We provide an algorithm to select optimal points in the transformation space. The algorithm uses a cost model to: 1) understand whether a transformation reduces or increases the operation count; 2) choose between different (non-composable) transformations.
 \item We state for which class of problems optimality can be reached, and for which class heuristics are instead needed to minimize (reduce) the operation count.
 \item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
 
-In addition, in order to place COFFEE on the same level of other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison)
+In addition, in order to place COFFEE on the same level as other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison)
 
 \begin{itemize}
 \item We introduce an engine based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities).
@@ -154,13 +154,13 @@ We review finite element integration using the same notation and examples adopte
 We consider the weak formulation of a linear variational problem
 \begin{equation}
 \begin{split}
-Find\ u\ \in U\ such\ that \\
+\text{Find}\ u \in U\ \text{such that} \\
 a(u, v) = L(v), \forall v \in V
 \end{split}
 \end{equation}
 where $a$ and $L$ are, respectively, a bilinear and a linear form. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are discrete function spaces. For simplicity, we assume $U = V$. Let $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$:
 \begin{equation}
-A\textbf{u} = b
+Au = b
 \end{equation}
 in which $A$ and $b$ discretize $a$ and $L$ respectively:
 \begin{equation}
@@ -172,7 +172,7 @@ b_i = L(\phi_i(x))
 \end{equation}
 The matrix $A$ and the vector $b$ are ``assembled'' and subsequently used to solve the linear system through (typically) an iterative method.
 
-We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation solution. In global assembly, such local contributions are ``coupled'' by suitably inserting them into $A$ and $b$. 
+We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation approximated solution. In global assembly, such local contributions are ``coupled'' by suitably inserting them into $A$ and $b$. 
 
 We illustrate local assembly in a concrete example, the evaluation of the local element matrix for a Laplacian operator. Consider the weighted Laplace equation
 \begin{equation}
@@ -206,7 +206,7 @@ Starting from Equation~\ref{eq:quadrature}, exploiting linearity, associativity 
 \label{eq:tensor}
 A_{ij}^K = \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\alpha_3=1}^n det F_K' w_{\alpha_3} \sum_{\beta=1}^d \frac{X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \int_{K_0} \phi_{\alpha_3} \frac{\partial \phi_{i_1}}{\partial X_{\alpha_1}} \frac{\partial \phi_{i_2}}{\partial X_{\alpha_2}} dX.
 \end{equation}
-A generalization of this transformation has been proposed in~\cite{Kirby:TC}. By only involving reference element terms, the integral in the equation can be pre-evaluated and stored in temporary variables. The evaluation of the local tensor can then be abstracted as
+A generalization of this transformation has been proposed in~\cite{Kirby:TC}. Because of only involving reference element terms, the integral in the equation can be pre-evaluated and stored in temporary variables. The evaluation of the local tensor can then be abstracted as
 \begin{equation}
 A_{ij}^K = \sum_{\alpha} A_{i_1 i_2 \alpha}^0 G_{K}^\alpha
 \end{equation}
@@ -216,7 +216,7 @@ in which the pre-evaluated ``reference tensor'' $A_{i_1 i_2 \alpha}$ and the cel
 \label{sec:qualitative}
 Depending on form and discretization, the relative performance of the two modes, in terms of the operation count, can vary quite dramatically. The presence of derivatives or coefficient functions in the input form tends to increase the size of the geometry tensor, making the traditional quadrature mode preferable for ``complex'' forms. On the other hand, speed-ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains ``sufficiently small''. The discretization, particularly the relative polynomial order of trial, test, and coefficient functions, also plays a key role in the resulting operation count. 
 
-These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:optimal-synthesis}. For the moment, we just recall that one of the goals of this research is to produce an intelligent system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
+These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:optimal-synthesis}. For the moment, we just recall that one of the goals of this research is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
 
 \section{Problem Characterization}
 \label{sec:optimal-impl}
@@ -224,7 +224,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 In this section, we characterize optimality for finite element integration and the loop transformation space that we need to explore to achieve it. 
 
 \subsection{Loop Nests and Optimality}
-In order to make the document self-contained, we start with reviewing basic compiler terminology.
+In order to make the article self-contained, we start with reviewing basic compiler terminology.
 
 \begin{Def}[Perfect and imperfect loop nests]
 A perfect loop nest is a loop whose body either 1) comprises only a sequence
@@ -275,7 +275,7 @@ Our aim is a strategy to synthesize optimal loop nests of this form. In particul
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations that it performs to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (sums, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
 Note that Definition~\ref{def:mln-optimality} does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements.
@@ -304,7 +304,7 @@ The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of t
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple outer product loop nest to optimal form.}\end{figure}
 
-Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. Figure~\ref{code:multi_loopnest_b} shows an optimal synthesis for the loop nest in Figure~\ref{code:multi_loopnest_a}. More in general, arbitrarily complex outer product loop nests can systematically be reduced to optimal form. The constructive proof that we provide below focuses on outer product loop nests of arity $n=2$. Note that for $n < 2$ the proof is trivial, whereas for $n > 2$ a more general treatise would be required; fortunately, this case is never of interest in finite element integration.
+Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. Figure~\ref{code:multi_loopnest_b} shows an optimal synthesis for the loop nest in Figure~\ref{code:multi_loopnest_a}. More generally, arbitrarily complex outer product loop nests can systematically be reduced to optimal form. The constructive proof that we provide below focuses on outer product loop nests of arity $n=2$. Note that for $n < 2$ the proof is trivial, whereas for $n > 2$ a more general treatment would be required; fortunately, this case is never of interest in finite element integration.
 
 \begin{Prop}
 \label{prop:optimal-mln}
@@ -318,7 +318,7 @@ We traverse the expression tree and determine the sharing factor of the two line
 We now have to demonstrate that the chosen factorization strategy, based on sharing factors, leads to optimality. This reduces to prove that the two following facts are true (we do it by contradiction).
 \begin{enumerate}
 \item Taking $L_j$, the loop with higher sharing factor, as point of departure would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). If we assumed this were false, there would be two possibilities to consider: A) both $L_i$ and $L_j$ present sharing over disjoint sets of outer products; B) at least one outer product induces sharing along both $L_i$ and $L_j$. Case A) is quite trivial since there are no side effects in swapping the order of factorizations, so $\Lambda'$ would actually be optimal (best case scenario). In case B), due to linearity, factorization produces a summation of $L^{sf}_{j}$ outer products, as opposed to $L^{sf}_{i}$ if we had started with $L_i$. However, note that factorization followed by hoisting is always a winning strategy: evaluation, at every iteration, of hoisted symbols requires one operation (a sum) instead of the two operations (a product and a sum) needed by an outer product. Since $L^{sf}_{j} > L^{sf}_{i}$, it is clear that $\Lambda'$ could not be optimal, which contradicts the hypothesis.
-\item Partial elimination of sharing would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). Let us assume, for a moment, that this is false. In this scenario, at least one symbol is excluded from the factored product. Without loss of generality, consider, for instance, $a_i(b_j + c_j + ...) + a_i e_j + ...$. It is fairly obvious to see that either there is another factorization opportunity along $L_j$ ($e_j$ is shared with some other terms), in which case no additional operations need be performed, or $\Lambda'$ is sub-optimal. Consequently, the hypothesis is generally contradicted.
+\item Partial elimination of sharing would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). Let us assume, for a moment, that this is false. In this scenario, at least one symbol is excluded from the factored product. Without loss of generality, consider, for instance, $a_i(b_j + c_j + ...) + a_i e_j + ...$. We see that either there is another factorization opportunity along $L_j$ ($e_j$ is shared with some other terms), in which case no additional operations need be performed, or $\Lambda'$ is sub-optimal. Consequently, the hypothesis is generally contradicted.
 \end{enumerate} 
 \end{proof}
   
@@ -348,7 +348,7 @@ We expand on these points in Section~\ref{sec:optimal-synthesis}. In order to ad
 
 \begin{Def}[Optimality of a loop nest with bounded working set]
 \label{def:optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and a set of memory constraints is satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations that it performs to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and a set of memory constraints is satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (sums, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
 \section{Transformation Algorithm}

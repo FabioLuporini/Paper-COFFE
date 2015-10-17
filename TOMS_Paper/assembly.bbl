@@ -129,9 +129,10 @@
 \url{http://dx.doi.org/10.1145/2687415}}
 
 
-\bibitem[\protect\citeauthoryear{Olgaard and Wells}{Olgaard and Wells}{2010}]%
+\bibitem[\protect\citeauthoryear{{\O}lgaard and Wells}{{\O}lgaard and
+  Wells}{2010}]%
         {quadrature1}
-{Kristian~B. Olgaard} {and} {Garth~N. Wells}. 2010.
+{Kristian~B. {\O}lgaard} {and} {Garth~N. Wells}. 2010.
 \newblock \showarticletitle{Optimizations for quadrature representations of
   finite element tensors through automated code generation}.
 \newblock {\em ACM Trans. Math. Softw.\/} {37}, 1, Article 8 (Jan. 2010), 23
