@@ -441,20 +441,21 @@ For the moment, let us assume that we own a cost function $\theta : M \rightarro
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
 M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
 S = $\lbrace$m | $\theta(m)$ < 0$\rbrace$
-P = $\lbrace$m | $\theta(m)$ $\geq$ 0 and sharing(m, S) = $\emptyset \rbrace$
-maybe_P = M $\setminus$ (S $\cup$ P)
+maybe_P = M $\setminus$ S
 B = $\lbrace$b | b is a bipartite graph from complete graph G = (maybe_P, E)$\rbrace$
 for each $b \in B$:
   for each $(b_S, b_P) \in b$:
-     
+    if memory_required($b_P$) $\geq$ $T_H $:
+      continue
+    op_count[b] = \eta(S $\cup$ b_S) + $|\theta(b_P)|$
 for each expression:
-  remove sharing    
+  remove sharing
 \end{lstlisting}
 \caption{High level view of the transformation algorithm}
 \label{code:intuition}
 \end{figure}
 
-If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
+%If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
 
 Because of reuse of basis functions, pre-evaluation may produce identical tables, which will be mapped to the same temporary. The transformed sub-expression (monomial) can therefore be characterized by the presence of sharing. 
 
