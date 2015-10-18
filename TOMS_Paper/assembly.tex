@@ -50,7 +50,7 @@
 
 \usepackage{listings}
 \lstset{language=C, breaklines=true, mathescape,
-			 morekeywords={and, each}}
+			 morekeywords={each}}
 
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
@@ -221,7 +221,7 @@ Depending on form and discretization, the relative performance of the two modes,
 
 These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:optimal-synthesis}. For the moment, we just recall that one of the goals of this research is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
 
-\section{Problem Characterization}
+\section{Transformation Space}
 \label{sec:optimal-impl}
 
 In this section, we characterize optimality for finite element integration and the transformation space that we need to explore to achieve it. 
@@ -312,7 +312,7 @@ To synthesize optimal implementations as in Definition~\ref{def:mln-optimality} 
 \end{itemize}
 In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we construct the transformation space. We leave a few loose ends, which we progressively tie up in Section~\ref{sec:optimal-synthesis}.
 
-\subsection{Transformation Space - Sharing Elimination}
+\subsection{Sharing Elimination}
 \label{sec:sharing-elimination}
 We start with introducing the fundamental notion of sharing.
 
@@ -350,7 +350,7 @@ Assume, without loss of generality, that $L_i$ is the loop with smallest sharing
 \end{enumerate} 
 \end{proof}
 
-\subsection{Transformation Space - Pre-evaluation}
+\subsection{Pre-evaluation}
 \label{sec:pre-evaluation}
 For finite element integration loop nests, the presence of sharing is a \textit{sufficient but not necessary} condition for being in \textit{non-optimal} form. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
 
@@ -382,7 +382,7 @@ We address these points in Section~\ref{sec:optimal-synthesis}. In the perspecti
 Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and a set of memory constraints is satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (sums, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
-\subsection{Completeness of the Transformation Space}
+\subsection{Completeness}
 It is helpful to consider sharing elimination and pre-evaluation as high level operators defined on top of basic transformations such as code motion, expansion, and factorization. These two operators allow us to analyze all possible ways in which an expression can be factorized; that is, by grouping:
 \begin{itemize}
 \item Test or trial functions (sharing elimination in the outer product loop nest)
@@ -397,12 +397,12 @@ Sharing elimination and pre-evaluation also aim to remove \textit{temporal redun
 \item Evaluation of reduction loops (occurs in pre-evaluation). An example was provided in Figure~\ref{code:loopnest_rednored}.
  \end{itemize}
 
-Sharing elimination and pre-evaluation allow us to construct an algorithm to explore all ways in which spatial and temporal redundancy can be eliminated from loop nests and expressions as in Definition~\ref{def:fem-loopnest}.
+Sharing elimination and pre-evaluation allow us to construct an algorithm to minimize spatial and temporal redundancy in loop nests and expressions as in Definition~\ref{def:fem-loopnest}.
 
-\section{Transformation Algorithm}
+\section{Framework for Optimal Synthesis}
 \label{sec:optimal-synthesis}
 
-In this section, we build a transformation algorithm capable of reducing finite element integration loop nests to optimal form. A fundamental aspect is the definition of a suitable cost function to assess the profitability of pre-evaluation (for which a deeper explanation will be provided). The optimality of the transformation algorithm is discussed.
+In this section, we build a transformation algorithm capable of reducing finite element integration loop nests to optimal form. A fundamental aspect is the definition of a suitable cost function to assess the profitability of applying pre-evaluation to a monomial.
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
@@ -426,20 +426,27 @@ The total amount of memory occupied by the temporaries due to code motion must n
 
 Constraint~\ref{const:Le} reflects the policy decision that the compiler should not silently consume memory on ... data objects. Consequently, generalized code motion as performed by sharing elimination is not allowed to hoist expressions outside of $L_e$.
 
-\subsection{Reaching Optimality}
+\subsection{Transformation Algorithm}
 We here discuss how we can systematically reach the goal set by Definition~\ref{def:optimality} under Constraints~\ref{const:Le} and~\ref{const:TH} for the class of loop nests in Definition~\ref{def:fem-loopnest}.
 
-We reinforce the idea that eliminating sharing from the outer product loop nest does not suffice. As presaged in Section~\ref{sec:optimal-impl}, we consider whether, and under what conditions, the reduction imposed by $L_i$ could be pre-evaluated, thus reducing the operation count. 
+Two main issues should be addressed: 
+\begin{itemize}
+\item Understanding for which monomials pre-evaluation is profitable. In order to expose pre-evaluation opportunities, Algorithm~\ref{algo:pre-evaluation} transforms the input expression by expanding products. This increases the operation count. We therefore say that pre-evaluation is profitable if the gain due to pre-evaluating the reduction loop is larger than such increase.
+\item Consider a form comprising two monomials $m1$ and $m2$. Assume that pre-evaluation is profitable for $m1$ but not for $m2$, and that $m1$ and $m2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m1$, sharing between $m1$ and $m2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- provides the highest operation count reduction.
+\end{itemize}
 
-Two issues should be addressed: understanding for which monomials pre-evaluation is profitable; coordinating pre-evaluation with sharing elimination, since the latter inhibits the former. In this section, we tackle the second issue, while we deal with the first one in Section~\ref{sec:op_count}. For this, we start with explaining the transformation algorithm, for which pseudo-code is provided in Figure~\ref{code:intuition}.
+For the moment, let us assume that we own a cost function $\theta : M \rightarrow \mathbb{Z}$ that, given a monomial $m \in M$, returns the number of operations saved or introduced if pre-evaluation were applied to $m$. $\theta(m) < 0$ indicates that pre-evaluation is not profitable, because the operation count would actually increase by $|\theta(m)|$. Analogous considerations stand for $\theta(m) > 0$. We will show how to construct a proper $\theta$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can now elaborate on the transformation algorithm, for which pseudo-code is provided in Figure~\ref{code:intuition}.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
-dissect the input expression into monomials
-for each monomial $m$:
-  if $\theta(m)$ > 0 and memory constraints satisfied:
-    extract into a separate loop nest
-    apply pre-evaluation
+M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
+S = $\lbrace$m | $\theta(m)$ < 0$\rbrace$
+P = $\lbrace$m | $\theta(m)$ $\geq$ 0 and sharing(m, S) = $\emptyset \rbrace$
+maybe_P = M $\setminus$ (S $\cup$ P)
+B = $\lbrace$b | b is a bipartite graph from complete graph G = (maybe_P, E)$\rbrace$
+for each $b \in B$:
+  for each $(b_S, b_P) \in b$:
+     
 for each expression:
   remove sharing    
 \end{lstlisting}
@@ -447,7 +454,7 @@ for each expression:
 \label{code:intuition}
 \end{figure}
 
-Our choice is to evaluate the impact of pre-evaluation, as number of operations saved or introduced, ``locally''; that is, for each monomial, ``in isolation''. We then introduce the cost function $\theta : M \rightarrow \mathbb{Z}$, where $M$ is the set of monomials in the form. $\theta(m)$ represents the change in operation count if pre-evaluation were applied to monomial $m$: a negative value indicates an increase, whereas a positive value indicates a gain. If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
+If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
 
 Because of reuse of basis functions, pre-evaluation may produce identical tables, which will be mapped to the same temporary. The transformed sub-expression (monomial) can therefore be characterized by the presence of sharing. 
 
