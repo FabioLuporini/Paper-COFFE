@@ -267,7 +267,7 @@ Since our focus is on finite element integration, for simplicity we restrict our
 An outer product loop nest is a perfect multilinear loop nest of arity $n \leq 2$ in which all of the expressions appearing in the body of the innermost loop are summations, and every loop index occurs once in every summand.
 \end{Def}
 
-As shown later, outer product loop nests are important because they possess properties that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
+As shown later, outer product loop nests are important because they have a structure that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
 
 Two other classes of loops need be characterized. 
 
@@ -287,7 +287,7 @@ Altogether, these definitions allow us to formalize the class of loop nests for 
 
 \begin{Def}[Finite element integration loop nest]
 \label{def:fem-loopnest}
-A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and an outer product loop nest.
+A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and an outer product loop nest whose body is an independent basic block.
 \end{Def}
 
 To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over the elements in the mesh), a reduction loop $L_i$ (along which numerical integration is performed), and an outer product loop nest $[L_j, L_k]$ (over test and trial functions). The expression \texttt{F} implements the operator. 
@@ -321,7 +321,7 @@ A loop $L_i$ presents sharing if it contains at least one statement in which two
 \end{Def}
 
 \begin{Def}[Sharing factor]
-The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of the set of symbols depending on $i$ (i.e., arrays indexed by $i$). It provides an indication of the maximal number of symbols which can be factorized to the level of $L_i$.
+The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of the set of expressions depending on $i$ (e.g., number of unique arrays indexed by $i$ if the expressions are just symbols). It provides an indication of the maximal number of expressions that can be factorized to the level of $L_i$.
 \end{Def}
 
 \begin{figure}[h]\begin{CenteredBox}
@@ -330,24 +330,53 @@ The sharing factor of a loop $L_i$, $L^{sf}_i$, is given by the cardinality of t
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple outer product loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-Figure~\ref{code:multi_loopnest_a} shows an example of a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. Figure~\ref{code:multi_loopnest_b} shows an optimal synthesis for the loop nest in Figure~\ref{code:multi_loopnest_a}. More generally, arbitrarily complex outer product loop nests can systematically be reduced to optimal form using an algorithm that exploits the properties of linearity and perfectness. The algorithm and the proof that we provide below focus on outer product loop nests of arity $n=2$. For $n < 2$ the proof would be trivial, whereas for $n > 2$ a more general treatment would be required; fortunately, this case is never of interest in finite element integration.
+For example, Figure~\ref{code:multi_loopnest_a} shows a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. The optimal synthesis for this loop nest is provided in Figure~\ref{code:multi_loopnest_b}.
 
-\begin{Algo}[Optimal code motion for outer product loop nests]
+Our objective is a transformation capable of eliminating sharing from finite element integration loop nests. The transformation should find a factorization that maximizes code motion (as in the example) and common sub-expressions. In general, this would be a large combinatorial problem, but thanks to the specific structure of the loop nests considered, simpler approaches can be found. In particular, we describe two algorithms: the former leads to ``inner loop optimality'' by only performing an additional visit of the expression tree, whereas the latter allows reaching actual optimality at the price of a more costly worst-case analysis.
+
+By inner loop optimality we mean optimality at the level of the outer product loop nest; that is, factorization opportunities are sought only for terms depending on the inner loops. The cost of the outer loops may or may not be optimal. It is interesting to study this problem because of three reasons: 1) in many cases, especially for higher order methods, the bulk of the computation is carried out in the outer product loop nest; 2) it is easily solvable, so it can be implemented with minimum effort; 3) the analysis has negligible cost. This algorithm (and its proof) exploits the key properties of linearity and perfectness, as well as the structure inherent in the expressions.
+
+\begin{Algo}[Sharing elimination for inner-loop optimality]
 \label{algo:outer-product-optimal}
 \normalfont
-Consider an outer product loop nest $\Lambda = [L_i, L_j]$, with the body of $L_j$ being an independent basic block. The algorithm starts with ``flattening'' the expressions (e.g., by multiplication expansion) in the body of $L_j$; this exposes the space of all possible factorizations. Since $\Lambda$ is an outer product loop nest, the resulting expressions are summations of outer products. We traverse the expression tree and determine the sharing factor of the two linear loops. We take the symbols depending on the loop with smallest sharing factor, say $L_i$, and we incrementally factorize them. Due to linearity, each factored product $P$ only has one symbol depending on $L_i$, and this symbol is now unique in the expression. The other term in $P$, independent of $L_i$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. We repeat the same process for the symbols along the loop with higher sharing factor, $L_j$. The transformations are semantically correct: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting.
+Consider the finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$. The algorithm starts with ``flattening'' the expressions (e.g., by multiplication expansion) in the body of $L_k$ such that $L_j-$ and $L_k-$dependent terms lie on the same level of the expression tree. This exposes the space of all possible factorizations for (derivatives of) test and trial functions. 
+
+Since $[L_j, L_k]$ is an outer product loop nest, the resulting expressions are summations of outer products. We traverse the expression tree and determine the sharing factor of the two linear loops. We take the symbols depending on the loop with smallest sharing factor, say $L_j$, and we incrementally factorize them. Due to linearity, each factored product $P$ only has one symbol depending on $L_j$, and this symbol is now unique in the expression. The other term in $P$, independent of $L_j$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. We repeat the same process for the symbols along the loop with higher sharing factor, $L_k$. The transformations are semantically correct: multilinearity ensures deterministic factorization; perfectness ensures safeness of hoisting.
 \end{Algo}
 
 \begin{Prop}
 \label{prop:optimal-mln}
-Let $\Lambda = [L_i, L_j]$ be an outer product loop nest with the body of $L_j$ being an independent basic block. Then Algorithm~\ref{algo:outer-product-optimal} leads to an optimal synthesis $\Lambda'$. 
+Let $\Lambda=[L_e, L_i, L_j, L_k]$ be a finite element integration loop nest. Then Algorithm~\ref{algo:outer-product-optimal} leads to an optimal synthesis of $\Lambda'=[L_j', L_k']$.
 \end{Prop}
 \begin{proof}
-Assume, without loss of generality, that $L_i$ is the loop with smallest sharing factor. We reduce the proof to showing that the two following facts are true (we do it by contradiction).
+Assume, without loss of generality, that $L_j$ is the loop with smallest sharing factor. We reduce the proof to showing that the two following facts are true (we do it by contradiction).
 \begin{enumerate}
-\item Taking $L_j$, the loop with higher sharing factor, as point of departure would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). If we assumed this were false, there would be two possibilities to consider: A) both $L_i$ and $L_j$ present sharing over disjoint sets of outer products; B) at least one outer product induces sharing along both $L_i$ and $L_j$. Case A) is quite trivial since there are no side effects in swapping the order of factorizations, so $\Lambda'$ would actually be optimal (best case scenario). In case B), due to linearity, factorization produces a summation of $L^{sf}_{j}$ outer products, as opposed to $L^{sf}_{i}$ if we had started with $L_i$. However, note that factorization followed by hoisting is always a winning strategy: evaluation, at every iteration, of hoisted symbols requires one operation (a sum) instead of the two operations (a product and a sum) needed by an outer product. Since $L^{sf}_{j} > L^{sf}_{i}$, it is clear that $\Lambda'$ could not be optimal, which contradicts the hypothesis.
-\item Partial elimination of sharing would lead to a sub-optimal $\Lambda'$ (optimal only in the best case). Let us assume, for a moment, that this is false. In this scenario, at least one symbol is excluded from the factored product. Without loss of generality, consider, for instance, $a_i(b_j + c_j + ...) + a_i e_j + ...$. We see that either there is another factorization opportunity along $L_j$ ($e_j$ is shared with some other terms), in which case no additional operations need be performed, or $\Lambda'$ is sub-optimal. Consequently, the hypothesis is generally contradicted.
-\end{enumerate} 
+\item Taking $L_k$, the loop with higher sharing factor, as point of departure leads to a sub-optimal $\Lambda'$. If we assumed this were false, there would be two possibilities to consider: A) both $L_j$ and $L_k$ present sharing over disjoint sets of outer products; B) at least one outer product induces sharing along both $L_j$ and $L_k$. Case A) is quite trivial since there are no side effects in swapping the order of factorizations, so $\Lambda'$ would actually be optimal. In case B), due to linearity, factorization produces a summation of $L^{sf}_{k}$ outer products, as opposed to $L^{sf}_{j}$ if we had started with $L_j$. However, factorization followed by hoisting is always a winning strategy: evaluation, at every iteration, of hoisted symbols requires one operation (a sum) instead of the two operations (a product and a sum) needed by an outer product. Since $L^{sf}_{k} > L^{sf}_{j}$, it is clear that $\Lambda'$ cannot be optimal, which contradicts the hypothesis.
+\item Partial elimination of sharing can lead to a sub-optimal $\Lambda'$. Let us assume that this is false. In this scenario, at least one term is excluded from a factored outer product, for instance $a_j e_k$ in $a_j(b_k + c_k + ...) + a_j e_k + ...$. We see that either there is another factorization opportunity along $L_k$ ($e_k$ is shared with some other outer products), or $\Lambda'$ is sub-optimal. Consequently, the hypothesis is generally contradicted.
+\end{enumerate}
+\end{proof}
+
+\begin{Rem*}
+\normalfont
+The algorithm and the proof focus on outer product loop nests of arity $n=2$, although a similar (simpler) reasoning is possible for $n < 2$. If $n > 2$, a more general treatment is required; this is however a case that, in finite element integration, is never of interest.
+\end{Rem*}
+
+To reach a global optimum (i.e., such that the number of operations at each level of the loop nest is minimum), we need to consider all factorization opportunities. In practice, however, the structure inherent in our expressions often allows to significantly prune the search space. As we explain below, the key observation to make is that an expression can always be reduced to a summation of terms of the form $a_{ij} b_{ik} \sigma_{ei}$, in which $a_{ij}$ and $b_{ik}$ represent test and trial functions, while $\sigma_{ei}$ a sub-expression including geometry- ($L_e$) and integration- ($L_i$) dependent terms. The idea is that this form exposes all possible factorizations leading to code motion.
+
+\begin{Algo}[Sharing elimination]
+\label{algo:fem-optimal}
+\normalfont
+Consider the finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$. We start with restructuring the expressions within $L_k$ such that they are in the form $\sum_{a \in V, b \in U} a_{ij} b_{ik} \sigma_{ei}^{ab}$, where $V$ and $U$ represent sets of test and trial functions. 
+
+The loose end we have to tie up is the transformation of $\sigma_{ei}^{ab}$ terms. If $L_i$ is a linear loop, we can straightforwardly apply Algorithm~\ref{algo:outer-product-optimal} (with arity $n=1$) so that integration-dependent terms are grouped and geometry-dependent sub-expressions are hoisted. If, on the other hand, $L_i$ is non linear, we try all possible factorizations of $L_i$-dependent terms to maximize motion of geometry-dependent sub-expressions (although, we believe, a more refined approach, which avoids searching the whole space, can be found). 
+\end{Algo}
+
+\begin{Prop}
+\label{prop:optimal-mln}
+Let $\Lambda=[L_e, L_i, L_j, L_k]$ be a finite element integration loop nest. Then Algorithm~\ref{algo:fem-optimal} leads to an optimal synthesis of $\Lambda'=[L_e', L_i', L_j', L_k']$.
+\end{Prop}
+\begin{proof}
+... This should be interpreted as our initial ``guess solution'' ...
 \end{proof}
 
 \subsection{Pre-evaluation}
