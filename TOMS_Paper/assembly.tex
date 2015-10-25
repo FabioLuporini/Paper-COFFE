@@ -336,19 +336,26 @@ For instance, Figure~\ref{code:multi_loopnest_a} shows a trivial outer product l
 
 In this section, we study an optimal transformation to perform \textit{sharing elimination}; that is, a transformation that minimizes the operation count of a loop nest by applying factorization, code motion and (potentially) common sub-expression elimination. In general, transformations of this sort require solving large combinatorial problems; for instance, to evaluate the impact of all possible factorization strategies. However, we show that by restricting ourselves to the class of loops and expressions of Definition~\ref{def:fem-loopnest}, the search space can drastically be pruned. In the following, we assume outer product loop nest of arity $n=2$ (i.e., a bilinear form), although the same reasoning stands for the case $n < 2$ (which is actually just a special case).
 
-The first observation is that finite element expressions can always be reduced to the form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$, where $m$ depends on the specific form and discretization, $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix with test (trial) functions, and $\sigma_{ei}$ is a function of the coefficients. 
+From Definition~\ref{def:fem-loopnest} descends the fact that expressions can always be reduced to the form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$, where $m$ depends on the specific form and discretization, $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. This particular form has led us to the key observation that, in the space $S$ of all possible sharing elimination alternatives, the optimum $opt$ is almost always reached through a specific strategy. Our approach is therefore as follows: we define families of factorization strategies; we calculate a lower bound ($lb$) for their operation count; we calculate the upper bound ($ub$) of $opt$;  if, as expected, $ub(opt) < lb(S \setminus opt)$, then we know that $opt$ performs optimal sharing elimination. 
 
-Given the peculiar structure of our terms, the key idea is that, in the space $S$ of all possible factorizations, the optimum almost always lies in a tiny subspace (typically of size one). We refer to this space as the \textit{potential search space} ($PSS$). Our approach is therefore as follows: we calculate lower and upper bounds (respectively, $lb$ and $ub$) for families of factorizations and we compare them: if, as expected, $ub(PSS) < lb(\overline{PPS})$, we prune $\overline{PPS}$. Otherwise, we have to search in $\overline{PPS}$ too. 
+The potentially optimal factorization groups together test and trial functions in order to expose sub-expressions independent of at least one loop and, therefore, hoistable. The converse is not true: factorizing $\sigma_{ei}$ (or any of the terms in it) generally inhibits sub-expression hoisting due to dependencies on loop indices. Algorithm~\ref{algo:opt} describes how $opt$ is derived; Algorithm~\ref{algo:se-pick} discuss how we determine the actual optimality of $opt$.
 
-A potentially optimal factorization is one that groups together test and trial functions. Such a factorization exposes sub-expressions independent of at least one loop and, therefore, hoistable. The converse is not true: factorizing $\sigma_{ei}$ (or any of the terms in it) generally inhibits hoisting of sub-expressions including test and trial functions. Algorithm~\ref{algo:pps} provides a succinct description of how $PPS$ is built.
-
-\begin{Algo}[Construction of the potential search space]
-\label{algo:pps}
+\begin{Algo}[Construction of the potential optimum]
+\label{algo:opt}
 \normalfont
 Consider a finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$. The algorithm starts with reducing the input expression to the normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$. 
 
-The sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ are ``flattened'' (by multiplication expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms (it can easily be demonstrated, by contradiction, that one should start from the loop with the least number of unique terms in order to obtain the smallest possible operation count). Thanks to linearity, each factored product only has one symbol depending on $L_j$ ($L_k$), and this symbol is now unique in the expression. The other sub-expression, independent of $L_j$ ($L_k$), is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting.
+The sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ are ``flattened'' (by multiplication expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms (it can easily be demonstrated, by contradiction, that one should start from the loop with the least number of unique terms in order to obtain the smallest operation count). Thanks to linearity, each factored product only has one symbol depending on $L_j$ ($L_k$), and this symbol is now unique in the expression. The other sub-expression, independent of $L_j$ ($L_k$), is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting.
+
+If there exists $w_1$ and $w_2$ such that $\sigma_{ei}^{w_1} \neq \sigma_{ei}^{w_2}$, then we also need decide how to schedule operations in $L_i$. For the potential optimum, we factorize $L_i$-dependent terms, which promotes hoisting of $L_e$-dependent sub-expressions.
 \end{Algo}
+
+\begin{Algo}[Optimality check of $opt$]
+\label{algo:se-pick}
+\normalfont
+aaa
+\end{Algo}
+%There are two main possibilities: 1) factorization of $L_i$-dependent terms (i.e., coefficients and their derivatives) followed by code motion of $L_e$-dependent terms; 2) factorization of both $L_i$- and $L_e$-dependent terms, followed by common sub-expression elimination. 
 
 %A special case is when test and trial functions belong to the same function space: this induces common sub-expressions \textit{over different loops}, so a potentially winning strategy consists of hoisting both $\alpha_{eij}$ and $\beta_{eik}$ and exploiting the fact that $\alpha = \beta$. ---- If we note that, for some $w$, $\alpha = \beta$, we add the following strategy to $PPS$: hoist $\alpha_{eij}^{w}$ (or, equivalently, $\beta_{eik}^{w}$); replace common sub-expressions; minimize cost of $\sigma_{ei}$, which we discuss later. 
 
@@ -357,7 +364,7 @@ The sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ are ``flattened'' (by mul
 
 \subsection{Pre-evaluation}
 \label{sec:pre-evaluation}
-Sharing elimination aims to reduce the operation count by applying factorization, code motion and/or common sub-expression elimination. There is a fourth operator impacting the operation count: \textit{reduction pre-evaluation}. In this section, we discuss role and impact of this operator. We also show that there exists a single point ($\in \overline{PPS}$) in the whole transformation space for which reduction pre-evaluation is legal. 
+Sharing elimination aims to reduce the operation count by applying factorization, code motion and/or common sub-expression elimination. There is a fourth operator impacting the operation count: \textit{reduction pre-evaluation}. In this section, we discuss the role of this operator. We also show that there exists a single point ($\in \overline{PSS}$) in the whole transformation space for which reduction pre-evaluation is legal. 
 
 We start with an example. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
 
@@ -406,7 +413,7 @@ Sharing elimination and pre-evaluation also aim to remove \textit{temporal redun
 
 Sharing elimination and pre-evaluation allow us to construct an algorithm to minimize spatial and temporal redundancy in loop nests and expressions as in Definition~\ref{def:fem-loopnest}.
 
-\section{Framework for Optimal Synthesis}
+\section{Optimal Synthesis}
 \label{sec:optimal-synthesis}
 
 In this section, we build a transformation algorithm capable of reducing finite element integration loop nests to optimal form. A fundamental aspect is the definition of a suitable cost function to assess the profitability of applying pre-evaluation to a monomial.
