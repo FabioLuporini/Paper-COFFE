@@ -419,13 +419,13 @@ Constraint~\ref{const:Le} reflects the policy decision that the compiler should 
 We discuss how we can systematically reach the goal set by Definition~\ref{def:optimality} under Constraints~\ref{const:Le} and~\ref{const:TH} for the class of loop nests in Definition~\ref{def:fem-loopnest}.
 
 At this point, three main issues are still to be addressed: 
-\begin{itemize}
-\item 
+\begin{enumerate}
 \item Given a monomial, deciding whether to apply pre-evaluation (instead of sharing elimination). Recall from Section~\ref{sec:pre-evaluation} that pre-evaluation can actually increase the operation count because of product expansion. In the following, by saying that pre-evaluation is profitable, we simply mean that the resulting operation count is smaller than that produced through sharing elimination.
+\item 
 \item Consider a form comprising two monomials $m1$ and $m2$. Assume that pre-evaluation is profitable for $m1$ but not for $m2$, and that $m1$ and $m2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m1$, sharing between $m1$ and $m2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction. In other words, we seek a strategy for finding the global optimum. 
-\end{itemize}
+\end{enumerate}
 
-For the moment, let us assume that we own a cost function $\theta : M \rightarrow \mathbb{Z}$ that, given a monomial $m \in M$, returns the number of operations saved or introduced if pre-evaluation were applied to $m$. $\theta(m) < 0$ indicates that pre-evaluation is not profitable, because the operation count would actually increase by $|\theta(m)|$. Analogous considerations stand for $\theta(m) > 0$. We will show how to construct a proper $\theta$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can now elaborate on the transformation algorithm, for which pseudo-code is provided in Figure~\ref{code:intuition}.
+For the moment, let us assume that we own a cost function $\theta : M \rightarrow \mathbb{Z}$ that, given a monomial $m \in M$, returns the gain/loss of pre-evaluating $m$ in place of sharing elimination. $\theta(m) < 0$ indicates that pre-evaluation is not profitable, with the operation count increasing by $|\theta(m)|$. Similarly for $\theta(m) > 0$. We return to the issue of constructing $\theta$ in Section~\ref{sec:op_count}. Having defined $\theta$, we now show the algorithm driving the transformation process. The pseudo-code is provided in Figure~\ref{code:intuition}.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
@@ -446,7 +446,6 @@ for each expression:
 \end{figure}
 
 % apply memory constraints: reduction to knapsack problem ... not implemented, we use greedy
-
 
 %If pre-evaluation is found profitable (i.e., $\theta(m) > 0$), the sub-expression implementing $m$ is extracted; the surrounding loop nest is suitably ``cloned''; a sequence of transformation steps -- involving expansion, factorization, and code motion -- takes place (details in Section~\ref{sec:codegen}); and, finally, the hoisted code is pre-evaluated using symbolic execution. The result is a set of $n$-dimensional tables (these can be seen as ``slices'' of the reference tensor at the math level), $n$ being the arity of the multilinear form. 
 
@@ -493,6 +492,9 @@ It remains to tie up one loose end: the construction of cost functions to 1) est
 
 \subsubsection{Profitability of pre-evaluation}
 \label{sec:op_count}
+
+%TODO : say that avoiding useless pre-evaluation is extremely important !!!!!!!!!!! Performing sharing elimination is fast and easy, pre-evaluationi s not !
+
 We build the cost function $\theta$. According to what established in the previous section, we have $\theta(m) = \theta_{wo}(m) - \theta_{w}(m)$; we recall that $\theta_{wo}$ and $\theta_{w}$ represent the operation counts without and with pre-evaluation. In the following, we explain how to derive these two values.
 
 We can easily predict $\theta_{wo}$ thanks to our key property, linearity. This was explained in Proposition~\ref{prop:optimal-mln}. A simple expression tree traversal suffices to obtain the cost of a  sharing-free outer product loop nest, namely $\Lambda_{ops}^{ns}$. Assuming $I$ to be the size of $L_i$, we have that $\theta_{wo} = \Lambda_{ops}^{ns} \cdot I$.
