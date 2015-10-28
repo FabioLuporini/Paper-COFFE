@@ -71,10 +71,10 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{On Optimality of Finite Element Integration}
+\markboth{F. Luporini et al.}{Optimality and Heuristics for Finite Element Integration}
 
 % Title portion
-\title{On Optimality of Finite Element Integration}
+\title{Optimality and Heuristics for Finite Element Integration}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -95,7 +95,7 @@ We tackle the problem of automatically generating optimal finite element integra
 
 \keywords{Finite element integration, local assembly, compilers, performance optimization}
 
-\acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2015. On Optimality of Finite Element Integration.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul   H. J. Kelly, 2015. Optimality and Heuristics for Finite Element Integration.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -335,38 +335,28 @@ For instance, Figure~\ref{code:multi_loopnest_a} shows a trivial outer product l
 
 In this section, we study an optimal transformation to perform \textit{sharing elimination}; that is, a transformation that minimizes the operation count of a loop nest by applying factorization, code motion and (potentially) common sub-expression elimination. In general, transformations of this sort require solving large combinatorial problems; for instance, to evaluate the impact of all possible factorization strategies. However, we show that by restricting ourselves to the class of loops and expressions of Definition~\ref{def:fem-loopnest}, the search space can drastically be pruned. In the following, we assume outer product loop nests of arity $n=2$ (i.e., a bilinear form), although the same reasoning stands for the case $n < 2$.
 
-From Definition~\ref{def:fem-loopnest} descends the fact that expressions can always be reduced to the form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$, where $m$ depends on the specific form and discretization, $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We make the following considerations:
+From Definition~\ref{def:fem-loopnest} descends the fact that expressions can always be reduced to the form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$, where $m$ (the number of ``terms'') depends on the specific form and discretization, $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We make the following considerations:
 
 \begin{enumerate}
-\item Assume $\alpha \neq \beta$; that is, test and trial functions belong to different function spaces. By factorizing, in sequence, any $a_{ij} \in \alpha_{eij}$) and then any $b_ik \in \beta{eik}$) (or vice-versa), sub-expressions independent of one of the outer product loops are exposed. This systematically exposes all code motion opportunities to minimize the operation count in the innermost loop.
-\item In the special case $\alpha = \beta$, common sub-expressions arise over different iteration spaces ($ij$ and $ik$). Hoisting and capturing these sub-expressions can make the operation count of outer loops lower than in point 1), but the gain (if any) is, in practice, always negligible (note: the operation count in the innermost loop does not vary).
-\item Since loop trip counts are never lower than 3 (P1 Lagrange elements on triangles), it is never the case that applying points 1) or 2) increases the operation count (it might have been the case, otherwise, in pathological scenarios in which the loops degenerate, i.e. loops having an iteration space of size 1).
-\item Factorizing any of the terms in $\sigma_{ei}$ (e.g., a coefficient, or a coefficient derivative along a certain spatial dimension) can have different implications. We distinguish two cases:
-\begin{itemize}
-\item Performed before points 1) or 2). This either (i) inhibits (decrease) code motion by producing non-factorizable, non-hoistable sub-expressions or (ii) reduces to cases 1 or 2 (for example, in the case of simple forms with scalar coefficients).
-\item After points 1) or 2) are applied; for example, $a_{ij}(b_{ik}(\sigma'_{ei} + \sigma''_{ei} + ...))$ and $\sigma_{ei} = \sigma'_{ei} + \sigma''_{ei} + ...$. Here, geometry-dependent expressions can be split from integration-dependent ones through suitable factorization and code motion. This is generally fundamental to minimize the operation count in the reduction loop.
-\end{itemize}
+\item Assume $\alpha \neq \beta$; that is, test and trial functions belong to different function spaces. By factorizing, in sequence, any $a_{ij} \in \alpha_{eij}$ and then any $b_{ik} \in \beta_{eik}$ (or vice-versa), sub-expressions independent of one of the outer product loops are exposed. This systematically exposes all code motion opportunities to minimize the operation count in the innermost loop.
+\item In the special case $\alpha = \beta$, common sub-expressions arise over different iteration spaces ($ij$ and $ik$). Hoisting and capturing these sub-expressions may make the operation count of outer loops lower than in point 1), but the gain (if any) will be negligible (note: the operation count in the innermost loop does not vary).
+\item Since loop trip counts are never lower than 3 (P1 Lagrange elements on triangles), it is never the case that applying points 1) or 2) increases the operation count (it might have been the case, otherwise, in a scenario in which loops degenerate, i.e. with iteration spaces of size 1).
+\item Factorizing any of the terms in $\sigma_{ei}$ (e.g., a coefficient, or a coefficient derivative along a certain spatial dimension) can have multiple implications. We distinguish two cases:
+\begin{enumerate}
+\item The factorization occurs before points 1) or 2). This either (i) inhibits (decrease) code motion by producing non-factorizable, non-hoistable sub-expressions or (ii) simply reduces to cases 1) or 2) (for example, in the case of forms with scalar coefficients).
+\item The factorization occurs after points 1) or 2); for example, we have $a_{ij}(b_{ik}(\sigma'_{ei} + \sigma''_{ei}))$, with $\sigma_{ei} = \sigma'_{ei} + \sigma''_{ei}$. Splitting $L_e$-dependent from $L_i$-dependent sub-expressions (through suitable re-factorization) and applying code motion naturally tends to operation count minimization. If the loop trip count is extremely low, however, this strategy may be sub-optimal. For example, consider the following sub-expression, $(a v_i + b w_i) (c v_i + d w_i)$. It is true that factorizing $v_i$ and $w_i$ would expose $L_i$-independent sub-expressions, but this would actually result in increased operation count if, for instance, the size of $L_i$ were 1.
+\end{enumerate}
 \end{enumerate}
 
-Based on these observations, in Algorithm~\ref{algo:opt} we describe a sequence of transformations that, in most cases, lead to optimal sharing elimination. 
+Based on these observations, in Algorithm~\ref{algo:opt} we explain the sequence of transformations for potentially optimal sharing elimination. The algorithm does not take into account the concerns raised in points 2) and 4b). To address them, the simplest solution consists of comparing the operation counts by generating the corresponding code variants. We will further comment on this in Section~\ref{sec:obsheu}.
 
 \begin{Algo}[Construction of the potential optimum]
 \label{algo:opt}
 \normalfont
 Consider a finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$. The algorithm starts with reducing the input expression to the normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$. 
 
-The sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ are ``flattened'' (by multiplication expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms (it can easily be demonstrated, by contradiction, that one should start from the loop with the least number of unique terms in order to obtain the smallest operation count). Thanks to linearity, each factored product only has one symbol depending on $L_j$ ($L_k$), and this symbol is now unique in the expression. The other sub-expression, independent of $L_j$ ($L_k$), is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting.
-
-If there exists $w_1$ and $w_2$ such that $\sigma_{ei}^{w_1} \neq \sigma_{ei}^{w_2}$, then we also need decide how to schedule operations in $L_i$. For the potential optimum, we factorize $L_i$-dependent terms, which promotes hoisting of $L_e$-dependent sub-expressions.
+The sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ are ``flattened'' (by multiplication expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms (it can easily be demonstrated, by contradiction, that one should start from the loop with the least number of unique terms in order to obtain the smallest operation count). Thanks to linearity, each factored product only has one symbol depending on $L_j$ ($L_k$), and this symbol is now unique in the expression. The other sub-expression, independent of $L_j$ ($L_k$), is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting. Finally, we factorize $L_i$-dependent terms such that $L_e$-dependent sub-expressions are hoisted.
 \end{Algo}
-
-%Our approach is therefore as follows: we define families of sharing elimination strategies; we calculate a lower bound ($lb$) for their operation count; we calculate the actual cost of $opt$; if, as expected, $cost(opt) < lb(S \setminus \lbrace opt \rbrace)$, then we know $opt$ is actually optimal. 
-
-%We postpone to Section~\ref{sec:check-se} the discussion on how we assess the actual optimality of $opt$.
-
-%In the best and simplest case -- that is, in forms where $\alpha_{eij}$ and $\beta{eik}$ are multiplied by a single, scalar coefficient -- there is just one $\sigma_{ei}$ identical to all terms in the expression. Its factorization 
-
-%Code motion tends to break due to , no longer through factorization would not be hoistable due to dependencies on loop indices. For example, assuming $f_i \in \sigma_{ei}^{v}, \sigma_{ei}^{w}$ and $\upsilon_{ei} = \sigma_{ei} \setminus \lbrace f_i \rbrace$, we would have $f_i (\alpha_{eij}^{v} \beta_{eik}^{v} \upsilon_{ei}^{v} + \alpha_{eij}^{w} \beta_{eik}^{w} \upsilon_{ei}^{w})$
 
 \subsection{Pre-evaluation}
 \label{sec:pre-evaluation}
@@ -389,13 +379,13 @@ Consider a finite element integration loop nest $\Lambda = [L_e, L_i, L_j, L_k]$
 \end{Algo}
 
 The pre-evaluation of a monomial introduces some critical issues:
-\begin{itemize}
+\begin{enumerate}
 \item In contrast to what happens with hoisting in outer product loop nests, the temporary variable size is proportional to the number and trip counts of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual execution time.
 \item The transformations exposing $[L_i, L_j, L_k]$-dependent terms increase, in general, the arithmetic complexity (e.g., expansion may increase the operation count). This could outweigh the gain due to pre-evaluation.
-\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities: sharing elimination could inhibit pre-evaluation, while pre-evaluation might expose further sharing
-\end{itemize}
+\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities: sharing elimination inhibits pre-evaluation, whereas pre-evaluation generally expose further sharing elimination opportunities.
+\end{enumerate}
 
-We address these points in Section~\ref{sec:optimal-synthesis}. 
+We expand on point 1) in the next section. We address points 2) and 3) in Section~\ref{sec:optimal-synthesis}. 
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
