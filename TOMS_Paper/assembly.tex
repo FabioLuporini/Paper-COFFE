@@ -138,7 +138,7 @@ As demonstrated by the substantial body of research on the topic, automating the
 However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach to solve this problem. Summarizing, our contributions are as follows:
 
 \begin{itemize}
-\item We define optimality for finite element integration as number of flops given a memory bound; we build the space of legal transformations within which the optimal is sought.
+\item We formalize optimality for finite element integration and we build the space of legal transformations within which the optimal is sought.
 \item We provide an algorithm to select optimal points in the transformation space. The algorithm uses a cost model to: 1) understand whether a transformation reduces or increases the operation count; 2) choose between different (non-composable) transformations.
 \item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
@@ -192,6 +192,11 @@ The domain $\Omega$ of the equation is partitioned into a set of cells (elements
 A_{ij}^K = \int_K w \nabla \phi_i^K \cdot \nabla \phi_j^K\ \mathrm{d}x
 \end{equation}
 The local element vector $L$ can be determined in an analogous way. 
+
+\subsection{Monomials}
+\label{sec:monomials}
+In general, it has been shown (e.g., in~\citeN{Kirby:TC}) that local element tensors can be expressed as a sum of integrals over $K$, each integral being the product of derivatives of functions from sets of discrete spaces and, possibly, functions of some spatially varying coefficients. An integral of this form is called \textit{monomial}. 
+
 %From the computational perspective, its evaluation is however less expensive than that of $A$.
 
 \subsection{Quadrature mode}
@@ -221,7 +226,7 @@ in which the pre-evaluated ``reference tensor'' $A_{i_1 i_2 \alpha}$ and the cel
 \label{sec:qualitative}
 Depending on form and discretization, the relative performance of the two modes, in terms of the operation count, can vary quite dramatically. The presence of derivatives or coefficient functions in the input form tends to increase the size of the geometry tensor, making the traditional quadrature mode preferable for ``complex'' forms. On the other hand, speed-ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains ``sufficiently small''. The discretization, particularly the relative polynomial order of trial, test, and coefficient functions, also plays a key role in the resulting operation count. 
 
-These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:optimal-synthesis}. For the moment, we just recall that one of the goals of this research is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
+These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:perf-results}). For the moment, we just recall that one of the goals of this research is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
 
 \section{Transformation Space}
 \label{sec:optimal-impl}
@@ -229,6 +234,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 In this section, we characterize optimality for finite element integration and the transformation space that we need to explore to achieve it. 
 
 \subsection{Loop nests and optimality}
+\label{sec:lnopt}
 In order to make the article self-contained, we start with reviewing basic compiler terminology.
 
 \begin{Def}[Perfect and imperfect loop nests]
@@ -263,16 +269,9 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 A perfect multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
-Since our focus is on finite element integration, for simplicity we restrict ourselves to the following, notable subclass of perfect multilinear loop nests.
+As shown later, multilinear loop nests are important because they have a structure that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
 
-\begin{Def}[Outer product loop nest]
-\label{def:jk-loop}
-An outer product loop nest is a perfect multilinear loop nest of arity $n \leq 2$ in which all of the expressions appearing in the body of the innermost loop are summations, and every loop index occurs once in every summand.
-\end{Def}
-
-As shown later, outer product loop nests are important because they have a structure that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
-
-Two other classes of loops need be characterized. 
+Two other classes of loops need be defined. 
 
 \begin{Def}[Reduction loop]
 \label{def:i-loop}
@@ -288,20 +287,20 @@ A loop $L_i$ is said to be a reduction loop if in its body
 A loop $L_i$ is said to be a free order loop if its iterations can be executed in any arbitrary order; that is, there are no loop-carried dependencies across different iterations. 
 \end{Def}
 
-We use these definitions to formalize the class of loop nests for which we seek optimality.
+We build on these definitions to formalize the class of loop nests for which we seek optimality.
 
 \begin{Def}[Finite element integration loop nest]
 \label{def:fem-loopnest}
-A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and an outer product loop nest whose body is an independent basic block.
+A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and a multilinear loop nest whose body is an independent basic block.
 \end{Def}
 
-To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over the elements in the mesh), a reduction loop $L_i$ (along which numerical integration is performed), and an outer product loop nest $[L_j, L_k]$ (over test and trial functions). The expression \texttt{F} implements the operator. 
+To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$ we have one statement evaluating the local tensor for element $e$; more statements may be present if an element is a facet (instead of a cell, as we are assuming here). An expression implements a set of monomials. The expression we are showing is in \textit{normal form}: $m$ is the (problem-dependent) number of ``terms'', $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. Given the rigid structure of monomials (summarized in Section~\ref{sec:monomials}), we observe that any expression from any problem can be reduced to this form. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
-\end{CenteredBox}\caption{The typical loop nest implementing a bilinear form.}\label{code:loopnest}\end{figure}
+\end{CenteredBox}\caption{The loop nest implementing a generic bilinear form.}\label{code:loopnest}\end{figure}
 
-We emphasize that our aim is a strategy to synthesize optimal loop nests of this specific form. In particular, we characterize optimality as follows.
+We emphasize that our aim is a strategy to synthesize optimal implementations of loop nests and expressions of this particular form. In particular, we characterize optimality as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
@@ -315,7 +314,7 @@ To synthesize optimal implementations as in Definition~\ref{def:mln-optimality} 
 \item a characterization of the space of legal transformations impacting the operation count
 \item a cost model to select the optimal point in the transformation space
 \end{itemize}
-In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we focus on the construction of such transformation space. We consider outer product loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
+In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we focus on the construction of such transformation space. We consider multilinear loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
 
 \subsection{Sharing elimination}
 \label{sec:sharing-elimination}
@@ -329,22 +328,19 @@ A loop $L_i$ presents sharing if it contains at least one statement in which two
 {\subfigcapskip = 7pt \subfigure[With sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
 ~~~~~~~~~~~~~~
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
-\end{CenteredBox}\caption{Reducing a simple outer product loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
+\end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-For instance, Figure~\ref{code:multi_loopnest_a} shows a trivial outer product loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. The optimal synthesis for this loop nest is provided in Figure~\ref{code:multi_loopnest_b}. This example illustrates how factorization, besides reducing the number of multiplications required at a given point in the loop nest, can expose code motion opportunities. 
+For instance, Figure~\ref{code:multi_loopnest_a} shows a trivial multilinear loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. The optimal synthesis for this loop nest is provided in Figure~\ref{code:multi_loopnest_b}. This example illustrates how factorization, besides reducing the number of multiplications required at a given point in the loop nest, can expose code motion opportunities. 
 
-In this section, we study optimal \textit{sharing elimination}; that is, a transformation that minimizes a loop nest operation count by applying factorization, code motion and (if necessary) common sub-expression elimination. In general, transformations of this sort require solving large combinatorial problems; for instance, to evaluate the impact of all possible factorization strategies. However, we show that by restricting ourselves to the class of loops and expressions in Definition~\ref{def:fem-loopnest}, the search space is actually very small.
+In this section, we study optimal \textit{sharing elimination}; that is, a transformation that minimizes the operation count of a loop nest by applying factorization, code motion and (if necessary) common sub-expression elimination. In general, transformations of this sort require solving large combinatorial problems; for instance, to evaluate the impact of all possible factorization strategies. However, we show that by restricting ourselves to the class of loops and expressions constructed in Section~\ref{sec:lnopt}, the search space is actually very small. 
 
-\subsubsection{Normal form}
-Finite element integration expressions can be reduced to the normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$, where $m$ (the number of ``terms'') depends on the problem, $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry depending on the differential operators employed. Note how the normal form respects Definition~\ref{def:fem-loopnest}. The following sections exploit the normal form to explain how we perform sharing elimination in finite element integration loop nests.
-
-\subsubsection{Outer product loop nest}
+\subsubsection{Multilinear loop nest}
 \label{sec:se-opln}
 In the special case in which test and trial functions are in the same function space, there exists $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$. That is, common sub-expressions arise over different iteration spaces ($L_j$ and $L_k$). Both $\alpha$ and $\beta$ can be hoisted at the level of the closest common loop ($L_i$) and the common sub-expressions be replaced with suitable temporaries. This has been detailed in~\citeN{Luporini}. 
 
-In the general case, instead, test and trial functions belong to different function spaces. By factorizing, in sequence, any test function $a_{ij} \in \alpha_{eij}$ and then any trial function $b_{ik} \in \beta_{eik}$ (or vice-versa), sub-expressions independent of one of the outer product loops can be hoisted (a simplistic example is showed in Figure~\ref{code:multi_loopnest}). 
+In the general case, instead, test and trial functions belong to different function spaces. By factorizing, in sequence, any test function $a_{ij} \in \alpha_{eij}$ and then any trial function $b_{ik} \in \beta_{eik}$ (or vice-versa), sub-expressions independent of one of the linear loops can be hoisted (a simplistic example is showed in Figure~\ref{code:multi_loopnest}). 
 
-These transformations minimize the operation count \textit{within} the outer product loop nest. However, when both of them are applicable, there is no simple way of predicting which one provides the largest decrease in operation count. The difference in operation count tends however to be negligible, since only the outer loops are affected.
+These transformations minimize the operation count \textit{within} the multilinear loop nest. However, when both of them are applicable, there is no simple way of predicting which one provides the largest decrease in operation count. The difference in operation count tends however to be negligible, since only the outer loops are affected.
 
 \subsubsection{Reduction and free order loop}
 \label{sec:se-rln}
@@ -401,7 +397,7 @@ Consider a finite element integration loop nest $\Lambda = [L_e, L_i, L_j, L_k]$
 
 The pre-evaluation of a monomial introduces some critical issues:
 \begin{enumerate}
-\item In contrast to what happens with hoisting in outer product loop nests, the temporary variable size is proportional to the number and trip counts of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual execution time.
+\item In contrast to what happens with hoisting in multilinear loop nests, the temporary variable size is proportional to the number and trip counts of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual execution time.
 \item The transformations exposing $[L_i, L_j, L_k]$-dependent terms increase, in general, the arithmetic complexity (e.g., expansion may increase the operation count). This could outweigh the gain due to pre-evaluation.
 \item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities: sharing elimination inhibits pre-evaluation, whereas pre-evaluation generally expose further sharing elimination opportunities.
 \end{enumerate}
@@ -498,17 +494,17 @@ We recall that $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, with $\theta_{se}
 
 The most trivial way of evaluating $\theta_{se}$ and $\theta_{pre}$ is to apply the actual transformations and count the number of operations. If, on one hand, this is definitely possible for $\theta_{se}$ (performing Algorithm~\ref{algo:opt} tends to have negligible cost), the overhead becomes unacceptable when applying pre-evaluation to all possible bipartitions (Algorithm~\ref{algo:pre-evaluation}, due to the symbolic evaluation of $L_i$). We then seek an analytic way of determining $\theta_{pre}$.
 
-The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{f[0]*B[i,0]+f[1]*B[i,1]+f[2]*B[i,2]} represents the field $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
+The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the field $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
 
 \begin{figure}\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Simplified loop nest for a pre-multiplied mass matrix.}\label{code:increase_factor}\end{figure}
 
-Despite determining $\iota$ is straightforward in simple scenarios (e.g., when the form has a single coefficient, as we just saw), in general we must account for repeated sub-expressions that, once pre-evaluated, would result in identical tables. This is the case, for example, of a monomial having more than one coefficient in the same function space. One can verify this by taking the example in Figure~\ref{code:increase_factor} and adding a second coefficient $g$ over the same basis functions $B$. We then use combinatorics to evaluate $\iota$. We calculate the $k$-combinations with repetitions of $n$ elements, where: (i) $k$ is the number of (derivatives of) coefficients appearing in a product (in the example, there is only $f$, so $k=1$); (ii) $n$ is the number of unique basis functions involved in the expansion (in the example, \texttt{B[i,0]}, \texttt{B[i,1]}, and \texttt{B[i,2]}, so $n=3$). 
+Despite determining $\iota$ is straightforward in simple scenarios (e.g., when the form has a single coefficient, as we just saw), in general we must account for repeated sub-expressions that, once pre-evaluated, would result in identical tables. This is the case, for example, of a monomial having more than one coefficient in the same function space. One can verify this by taking the example in Figure~\ref{code:increase_factor} and adding a second coefficient $g$ over the same basis functions $b$. We then use combinatorics to evaluate $\iota$. We calculate the $k$-combinations with repetitions of $n$ elements, where: (i) $k$ is the number of (derivatives of) coefficients appearing in a product (in the example, there is only $f$, so $k=1$); (ii) $n$ is the number of unique basis functions involved in the expansion (in the example, $b_{i0}$, $b_{i1}$, and $b_{i2}$, so $n=3$). 
 
 If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. The condition $\iota < I$ is necessary to obtain a reduction in operation count. Intuitively, if this were not true, it would mean that we would be introducing more operations than we would save from pre-evaluating $L_i$. This observation can speed up the analysis cost.
 
-With $\iota$ in place, it remains to find the total number of terms, $\rho$, that will be affected by the increase factor. Then we have $\theta_{pre} = \rho \cdot \iota$. Consider again the integration for the mass matrix in Figure~\ref{code:increase_factor}. This form is characterized by the dot product of test and trial functions (\texttt{B[j]*B[k]}), so here, trivially, $\rho = 1$. In general, $\rho$ depends on both form and discretization. As another example, take a standard Poisson equation using P1 Lagrange elements in 2D: we have $\rho = 3$ since there are in total four spatial derivatives and factorizing the expression as explained in Algorithm~\ref{algo:pre-evaluation} leads to 3 integration-dependent terms. We determine $\rho$ by executing parts of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes the reduction pre-evaluation.
+With $\iota$ in place, it remains to find the total number of terms, $\rho$, that will be affected by the increase factor. Then we have $\theta_{pre} = \rho \cdot \iota$. Consider again the integration for the mass matrix in Figure~\ref{code:increase_factor}. This form is characterized by the dot product of test and trial functions (\texttt{$b_{ij}$*$b_{ik}$}), so here, trivially, $\rho = 1$. In general, $\rho$ depends on both form and discretization. As another example, take a standard Poisson equation using P1 Lagrange elements over triangles: we have $\rho = 3$ since there are in total four spatial derivatives and factorizing the expression as explained in Algorithm~\ref{algo:pre-evaluation} leads to 3 integration-dependent terms. We determine $\rho$ by executing parts of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes the reduction pre-evaluation.
 
 
 \subsection{Trading optimality for analysis cost}
@@ -641,7 +637,7 @@ We also note that:
 \end{itemize}
 
 \paragraph{Hyperelasticity}
-In the experiments on the hyperelastic model, shown in Figure~\ref{fig:hyperelasticity}, \texttt{cfO2} exhibits the largest gains out of all problem instances considered in this paper. This is a positive aspect: it means that our transformation algorithm scales with form complexity. The fact that all code transformation systems (apart from \texttt{tens}) show quite significant speed-ups suggests several points. Firstly, the baseline is highly inefficient: with forms as complex as in this hyperelastic model, a trivial translation of integration routines into code should always be avoided since even one of the best general-purpose compilers available (Intel's on an Intel platform at maximum optimization level) is not capable of exploiting the structure inherent in the mathematical expressions generated. Secondly, the code motion strategy really makes a considerable impact. The sharing elimination performed by \texttt{cfO2} in each level of the loop nest ensures a critical reduction in operation count, which results is better execution times. In particular, at higher order, the main difference between \texttt{ufls} and \texttt{cfO2} is due to the application of this transformation to the outer product loop nest. Clearly, the operation count increases with $q$, and so do the speed-ups. 
+In the experiments on the hyperelastic model, shown in Figure~\ref{fig:hyperelasticity}, \texttt{cfO2} exhibits the largest gains out of all problem instances considered in this paper. This is a positive aspect: it means that our transformation algorithm scales with form complexity. The fact that all code transformation systems (apart from \texttt{tens}) show quite significant speed-ups suggests several points. Firstly, the baseline is highly inefficient: with forms as complex as in this hyperelastic model, a trivial translation of integration routines into code should always be avoided since even one of the best general-purpose compilers available (Intel's on an Intel platform at maximum optimization level) is not capable of exploiting the structure inherent in the mathematical expressions generated. Secondly, the code motion strategy really makes a considerable impact. The sharing elimination performed by \texttt{cfO2} in each level of the loop nest ensures a critical reduction in operation count, which results is better execution times. In particular, at higher order, the main difference between \texttt{ufls} and \texttt{cfO2} is due to the application of this transformation to the multilinear loop nest. Clearly, the operation count increases with $q$, and so do the speed-ups. 
 
 
 
