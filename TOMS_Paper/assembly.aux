@@ -54,9 +54,9 @@
 \newlabel{sec:se-opln}{{3.2.1}{7}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Multilinear loop nest}{7}}
 \newlabel{sec:se-rln}{{3.2.2}{7}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Reduction and free order loop}{7}}
-\newlabel{sec:se-assumptions}{{3.2.3}{8}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}Observations and underlying assumption}{8}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Reduction and free order loops}{7}}
+\newlabel{sec:se-assumptions}{{3.2.3}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}Observations and underlying assumption}{7}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.4}Algorithm}{8}}
 \newlabel{algo:opt}{{1}{8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Pre-evaluation}{8}}
@@ -73,25 +73,25 @@
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With reduction}}}{9}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Pre-evaluated reduction}}}{9}}
 \newlabel{algo:pre-evaluation}{{2}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Memory constraints}{10}}
-\newlabel{sec:mem-const}{{3.4}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Memory constraints}{9}}
+\newlabel{sec:mem-const}{{3.4}{9}}
 \newlabel{const:Le}{{1}{10}}
 \newlabel{const:TH}{{2}{10}}
 \newlabel{def:optimality}{{10}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Completeness}{10}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Optimal Synthesis}{11}}
-\newlabel{sec:optimal-synthesis}{{4}{11}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Optimal Synthesis}{10}}
+\newlabel{sec:optimal-synthesis}{{4}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Transformation algorithm}{11}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces High level view of the transformation algorithm\relax }}{11}}
 \newlabel{code:intuition}{{4}{11}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore opt.code}{12}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces The loop nest produced by the algorithm for an input as in Figure\nobreakspace  {}1\hbox {}.\relax }}{12}}
 \newlabel{code:loopnest-opt}{{5}{12}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Simplified loop nest for a pre-multiplied mass matrix.\relax }}{12}}
+\newlabel{code:increase_factor}{{6}{12}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The cost function $\theta $}{12}}
 \newlabel{sec:op_count}{{4.2}{12}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{13}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Simplified loop nest for a pre-multiplied mass matrix.\relax }}{13}}
-\newlabel{code:increase_factor}{{6}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trading optimality for analysis cost}{13}}
 \newlabel{sec:obsheu}{{4.3}{13}}
 \citation{quadrature1}
@@ -109,13 +109,13 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental setup}{15}}
 \citation{quadrature1}
 \citation{quadrature1}
+\citation{SLP-vect}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance results}{16}}
 \newlabel{sec:perf-results-forms}{{6.2}{16}}
 \@writefile{toc}{\contentsline {paragraph}{High level view}{16}}
-\citation{SLP-vect}
+\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{16}}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Performance evaluation for the \textit  {mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{17}}
 \newlabel{fig:mass}{{7}{17}}
-\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{17}}
 \@writefile{toc}{\contentsline {paragraph}{Mass}{17}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the bilinear form of a \textit  {Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{18}}
 \newlabel{fig:helmholtz}{{8}{18}}
@@ -125,6 +125,7 @@
 \@writefile{toc}{\contentsline {paragraph}{Elasticity}{19}}
 \@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in a \textit  {hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{20}}
 \newlabel{fig:hyperelasticity}{{10}{20}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{20}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{Uflacs}{\citeauthoryear {Aln{\ae }s}{Aln{\ae }s}{2015}}
@@ -137,7 +138,6 @@
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
 \bibcite{quadrature1}{\citeauthoryear {{\O }lgaard and Wells}{{\O }lgaard and Wells}{2010}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{21}}
+\lastpage{21}
 \@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{21}}
 \newlabel{sec:conclusions}{{7}{21}}
-\lastpage{22}

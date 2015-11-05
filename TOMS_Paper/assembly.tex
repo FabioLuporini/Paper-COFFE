@@ -265,8 +265,8 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 \end{enumerate}
 \end{Def}
 
-\begin{Def}[Perfect multilinear loop nest]
-A perfect multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
+\begin{Def}[Multilinear loop nest]
+A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
 As shown later, multilinear loop nests are important because they have a structure that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
@@ -294,13 +294,13 @@ We build on these definitions to formalize the class of loop nests for which we 
 A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and a multilinear loop nest whose body is an independent basic block.
 \end{Def}
 
-To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$ we have one statement evaluating the local tensor for element $e$; more statements may be present if an element is a facet (instead of a cell, as we are assuming here). An expression implements a set of monomials. The expression we are showing is in \textit{normal form}: $m$ is the (problem-dependent) number of ``terms'', $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. Given the rigid structure of monomials (summarized in Section~\ref{sec:monomials}), we observe that any expression from any problem can be reduced to this form. 
+To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. An expression implements a set of monomials. The expression shown is in \textit{normal form}: $m$ is the (problem-dependent) number of ``terms'', $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. Given the rigid structure of monomials (summarized in Section~\ref{sec:monomials}), we observe that expressions from any problem can be reduced to this form. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The loop nest implementing a generic bilinear form.}\label{code:loopnest}\end{figure}
 
-We emphasize that our aim is a strategy to synthesize optimal implementations of loop nests and expressions of this particular form. In particular, we characterize optimality as follows.
+We recall that our aim is a strategy to synthesize optimal implementations of loop nests and expressions of this particular form. In particular, we characterize optimality as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
@@ -340,9 +340,9 @@ In the special case in which test and trial functions are in the same function s
 
 In the general case, instead, test and trial functions belong to different function spaces. By factorizing, in sequence, any test function $a_{ij} \in \alpha_{eij}$ and then any trial function $b_{ik} \in \beta_{eik}$ (or vice-versa), sub-expressions independent of one of the linear loops can be hoisted (a simplistic example is showed in Figure~\ref{code:multi_loopnest}). 
 
-These transformations minimize the operation count \textit{within} the multilinear loop nest. However, when both of them are applicable, there is no simple way of predicting which one provides the largest decrease in operation count. The difference in operation count tends however to be negligible, since only the outer loops are affected.
+These transformations minimize the operation count \textit{within} the multilinear loop nest. When both of them are applicable, there is no simple way of predicting which one provides the largest decrease in operation count. The difference in operation count, however, tends to be negligible, since only the outer loops are affected.
 
-\subsubsection{Reduction and free order loop}
+\subsubsection{Reduction and free order loops}
 \label{sec:se-rln}
 Integration- and geometry-dependent expressions should logically be placed, respectively, within the reduction and free order loops. The factorization of $\sigma_{ei}$, therefore, also plays a key role for optimal sharing elimination. This is particularly important in complex forms, characterized by several coefficients, derivatives of coefficients, and extensive use of differential operators. We distinguish two cases:
 \begin{itemize}
