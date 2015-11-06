@@ -269,9 +269,9 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
-As shown later, multilinear loop nests are important because they have a structure that we can take advantage of to synthesize optimal code. We will see that they arise naturally when translating bilinear or linear forms into code. 
+We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to synthesize optimal code.
 
-Two other classes of loops need be defined. 
+We define two other classes of loops. 
 
 \begin{Def}[Reduction loop]
 \label{def:i-loop}
@@ -304,7 +304,7 @@ We recall that our aim is a strategy to synthesize optimal implementations of lo
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (sums, products) that it performs to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
 Note that Definition~\ref{def:mln-optimality} does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements.
@@ -314,7 +314,7 @@ To synthesize optimal implementations as in Definition~\ref{def:mln-optimality} 
 \item a characterization of the space of legal transformations impacting the operation count
 \item a cost model to select the optimal point in the transformation space
 \end{itemize}
-In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we focus on the construction of such transformation space. We consider multilinear loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
+In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we focus on the construction of such a transformation space. We consider multilinear loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
 
 \subsection{Sharing elimination}
 \label{sec:sharing-elimination}
@@ -346,13 +346,13 @@ These transformations minimize the operation count \textit{within} the multiline
 \label{sec:se-rln}
 Integration- and geometry-dependent expressions should logically be placed, respectively, within the reduction and free order loops. The factorization of $\sigma_{ei}$, therefore, also plays a key role for optimal sharing elimination. This is particularly important in complex forms, characterized by several coefficients, derivatives of coefficients, and extensive use of differential operators. We distinguish two cases:
 \begin{itemize}
-\item For all terms $w$, there exists a common symbol $f_i \in \sigma_{ei}$ (e.g., a scalar coefficient) such that the normal form reduces to $f_i \sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \eta_{ei}^{w}$ and $\eta_{ei} = \sigma_{ei} \setminus f_i$. 
+\item For all terms $w$, there exists a common symbol $f_i \in \sigma_{ei}$ (e.g., a scalar coefficient) such that the normal form reduces to $f_i \sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \eta_{ei}^{w}$ and $\eta_{ei} = \sigma_{ei} \setminus \lbrace f_i \rbrace$. 
 \item There is no common symbol among all terms. There still can be two terms $w_1$ and $w_2$ such that $f_i \in \sigma_{ei}^{w1}, \sigma_{ei}^{w2}$, but factorizing $f_i$ would only increase the operation count since sharing elimination opportunities across test and trial functions would be lost. On the other hand, sharing elimination must occur \textit{within} each term $\sigma_{ei}^{w}$: factorization of (derivatives of) coefficients promotes reduction-loop invariant code motion. 
 \end{itemize}
 
 \subsubsection{Observations and underlying assumptions}
 \label{sec:se-assumptions}
-We observe that there almost never are two ore more conflicting factorizations among which to choose for minimizing the operation count. The idea is that, by choosing a factorization that places a sub-expression within the loop that it logically belongs to, a reduction in operation count is generally obtained. There only are two pathological circumstances in which such a reduction may not be obtained: 
+We observe that there are almost never two ore more conflicting factorizations among which to choose for minimizing the operation count. The idea is that, by choosing a factorization that places a sub-expression within the loop that it logically belongs to, a reduction in operation count is generally obtained. There only are two pathological circumstances in which such a reduction may not be obtained: 
 \begin{itemize}
 \item As explained in Section~\ref{sec:se-opln}, having both test and trial functions in the same function space exposes sub-expressions over different loops, which introduces a choice between two alternative transformations.
 \item The trip count of a loop is extremely small (typically it needs be 1 for the following to happen). This decreases or nullifies the impact of code motion -- exposed through factorization, as described in Sections~\ref{sec:se-opln} and~\ref{sec:se-rln}. For instance, the reader can verify that expanding the expression $(a f_i + b g_i) (c f_i + d g_i)$ within a loop $L_i$\footnote{The example was excerpted from the multiplication of the Jacobian matrix for the change of coordinates with the derivative of a coefficient} and factorizing $L_i$-dependent symbols leads to optimality if and only if the size of $L_i$ is strictly greater than 1.
@@ -430,7 +430,7 @@ We conclude providing a more refined definition of optimality.
 
 \begin{Def}[Optimality of a loop nest with bounded working set]
 \label{def:optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and Constraints~\ref{const:Le} and~\ref{const:TH} are satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (sums, products) that it performs to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and Constraints~\ref{const:Le} and~\ref{const:TH} are satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
 \subsection{Completeness}
