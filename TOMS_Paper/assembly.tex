@@ -138,7 +138,7 @@ However, in spite of such a considerable research effort, still there is no answ
 \begin{itemize}
 \item We formalize optimality for finite element integration and we build the space of legal transformations within which the optimal is sought.
 \item We provide an algorithm to select points in the transformation space. The algorithm uses a cost model to: (i) understand whether a transformation reduces or increases the operation count; (ii) choose between different (non-composable) transformations.
-\item We explain under what conditions our algorithm leads to optimality. In particular, we show that (i) for a particular class of problems, optimality is reached; (ii) in general, quasi-optimality is at least achieved (i.e., operation count optimal for innermost loops, close-to-optimal for outer loops).
+\item We explain under what conditions our algorithm leads to optimality. In particular, we show that (i) for a particular class of problems, optimality is reached; (ii) quasi-optimality is, at least, always achieved (i.e., the operation count is at least optimal in innermost loops).
 \item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
@@ -305,16 +305,19 @@ For this class of loop nests and expressions, we characterize optimality as foll
 Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
-Note that Definition~\ref{def:mln-optimality} does not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements.
+\begin{Def}[Quasi-optimality of a loop nest]
+\label{def:mln-quasi-optimality}
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is at least minimal in the innermost loop.
+\end{Def}
 
-Now that we have established the concepts of optimality and finite element integration loop nest, we can elaborate on goals and results of this article. The main objective is a strategy to systematically achieve optimality -- as formalized in Definition~\ref{def:mln-optimality} -- in classes of finite element integration loop nests -- as formalized in Definition~\ref{def:fem-loopnest}. For instance, a class of loop nests may be characterized by the use of only certain differential or tensor operators, or by certain properties in the resulting expressions. What our approach manages to achieve is: (i) optimality whenever the $\sigma_{ei}$  expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. With quasi-optimality we mean that the operation count is minimal in the innermost loop and close to the ideal one in all outer loops.
+Note that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements. We also note that quasi-optimality approximates optimality very well whenever the inner loop trip counts are ``sufficiently large''.
 
-Our approach needs:
+Achieving optimality in polynomial time is clearly not always possible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily complex. Multilinearity, on the other hand, ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions. In the following sections, we build an approach that achieves: (i) optimality whenever the $\sigma_{ei}$  expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. In particular, we need:
 \begin{itemize}
-\item a characterization of the space of legal transformations impacting the operation count
+\item the space of legal transformations impacting the operation count
 \item an algorithm to select points in the transformation space
 \end{itemize}
-In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we focus on the construction of the transformation space and on understanding the conditions for optimality. We will show that whenever an expression (i.e., its monomials) is ``too unstructured'', optimality may not be reached (unless, obviously, using brute-force based approaches). We will consider multilinear loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
+In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluation}, we construct the transformation space and we explain the conditions for optimality. We show that whenever an expression (i.e., its monomials) is ``too unstructured'', optimality may not be reached. We will consider multilinear loop nests of arity $n=2$ (i.e., bilinear forms), although a similar (simpler) reasoning straightforwardly applies to the case $n < 2$.
 
 \subsection{Sharing elimination}
 \label{sec:sharing-elimination}
@@ -370,7 +373,7 @@ In all this process, whenever a sub-expression is hoisted, we search and replace
 
 \subsection{Pre-evaluation}
 \label{sec:pre-evaluation}
-Sharing elimination reduces the operation count by applying three operators: factorization, code motion and common sub-expression elimination. A fourth operator impacting the operation count is \textit{reduction pre-evaluation}. In this section, we discuss its role and explain that there exists a single point in the whole transformation space (i.e., a specific factorization) making applying this operator legal.
+Sharing elimination explores the transformation space and applies three operators: factorization, code motion and common sub-expression elimination. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in a monomial transformation space (i.e., specific factorization and code motion) preserving the correctness of the transformation.
 
 We start with an example. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
 
@@ -428,10 +431,12 @@ We conclude providing a more refined definition of optimality.
 Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$) and Constraints~\ref{const:Le} and~\ref{const:TH} are satisfied. We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal.
 \end{Def}
 
-\subsection{Completeness}
+An analogous definition can be provided for quasi-optimality.
+
+\subsection{Completeness under factorization, code motion, and reduction pre-evaluation}
 We defined sharing elimination and pre-evaluation as high level transformations on top of basic operators such as code motion and factorization. Factorization addresses \textit{spatial redundancy}. The presence of spatial redundancy means that some operations are needlessly executed at two points in an expression. Code motion and reduction pre-evaluation, on the other hand, target \textit{temporal redundancy}; that is, the needless execution of the same operation with the same operands at two points in the loop nest.
 
-Sharing elimination and reduction pre-evaluation tackle the problem of minimizing spatial and temporal redundancy in the loop nests and expressions of Definition~\ref{def:fem-loopnest}. The space of all possible factorizations is explored, and for each point in this space, code motion (restricted by Constraint~\ref{const:Le}), common sub-expression elimination, and reduction pre-evaluation opportunities (restricted by Constraint~\ref{const:TH}) are analyzed. 
+Sharing elimination and pre-evaluation tackle the problem of minimizing spatial and temporal redundancy with a bounded working set in the loop nests and expressions defined in Section~\ref{sec:lnopt} \textit{using a very specific set of operators}. This must be kept in mind: obviously, the operation count might even be lower if we considered operators exploiting domain properties that we are here neglecting, such as redundancies in basis functions.
 
 \section{Optimal Synthesis}
 \label{sec:optimal-synthesis}
@@ -455,7 +460,7 @@ M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
 S = $\lbrace$m | $\theta(m)$ < 0$\rbrace$
 P = M $\setminus$ S
 
-// Find optimum such that memory constraints are honored
+// Find potential optimum such that memory constraints are honored
 B = $\lbrace$b | b is a bipartite graph from complete graph G = (P, E)$\rbrace$
 for each b $\in$ B:
   for each (b$_S$, b$_P$) $\in$ b:
@@ -487,17 +492,17 @@ We recall that $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, with $\theta_{se}
 
 The most trivial way of evaluating $\theta_{se}$ and $\theta_{pre}$ is to apply the actual transformations and count the number of operations. If, on one hand, this is definitely possible for $\theta_{se}$ (performing Algorithm~\ref{algo:opt} tends to have negligible cost), the overhead becomes unacceptable when applying pre-evaluation to all possible bipartitions (Algorithm~\ref{algo:pre-evaluation}, due to the symbolic evaluation of $L_i$). We then seek an analytic way of determining $\theta_{pre}$.
 
-The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the field $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
+The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the coefficient $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
 
 \begin{figure}\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Simplified loop nest for a pre-multiplied mass matrix.}\label{code:increase_factor}\end{figure}
 
-Despite determining $\iota$ is straightforward in simple scenarios (e.g., when the form has a single coefficient, as we just saw), in general we must account for repeated sub-expressions that, once pre-evaluated, would result in identical tables. This is the case, for example, of a monomial having more than one coefficient in the same function space. One can verify this by taking the example in Figure~\ref{code:increase_factor} and adding a second coefficient $g$ over the same basis functions $b$. We then use combinatorics to evaluate $\iota$. We calculate the $k$-combinations with repetitions of $n$ elements, where: (i) $k$ is the number of (derivatives of) coefficients appearing in a product (in the example, there is only $f$, so $k=1$); (ii) $n$ is the number of unique basis functions involved in the expansion (in the example, $b_{i0}$, $b_{i1}$, and $b_{i2}$, so $n=3$). 
+Despite determining $\iota$ is straightforward in simple scenarios (e.g., when the form has a single coefficient, as we just saw), in general we must account for repeated sub-expressions that, once pre-evaluated, would result in identical tables. This is the case, for example, of a monomial having more than one coefficient in the same function space. One can verify this by taking the example in Figure~\ref{code:increase_factor}, adding a second coefficient $g$ over the same basis functions $b$, and expanding the products. To evaluate $\iota$, we then use combinatorics. We calculate the $k$-combinations with repetitions of $n$ elements, where: (i) $k$ is the number of (derivatives of) coefficients appearing in a product (in the example, there is only $f$, so $k=1$); (ii) $n$ is the number of unique basis functions involved in the expansion (in the example, $b_{i0}$, $b_{i1}$, and $b_{i2}$, so $n=3$). 
 
-If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. The condition $\iota < I$ is necessary to obtain a reduction in operation count. Intuitively, if this were not true, it would mean that we would be introducing more operations than we would save from pre-evaluating $L_i$. This observation can speed up the analysis cost.
+If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. Intuitively, this means that we are introducing more operations than we are saving from pre-evaluating $L_i$. 
 
-It remains to find the total number of terms, $\rho$, that will be affected by the increase factor; that is, $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix in Figure~\ref{code:increase_factor}. This monomial is characterized by the dot product of test and trial functions (\texttt{$b_{ij}$*$b_{ik}$}), so here, trivially, $\rho = 1$. In general, $\rho$ depends on both form and discretization. As another example, take a standard Poisson equation using P1 Lagrange elements over triangles: we have $\rho = 3$ since there are in total four spatial derivatives and factorizing the expression as explained in Algorithm~\ref{algo:pre-evaluation} leads to 3 integration-dependent terms. We determine $\rho$ by executing parts of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes the reduction pre-evaluation.
+If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix in Figure~\ref{code:increase_factor}. This monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$. However, in general, $\rho$ depends on both form and discretization. If we instead take a standard Poisson equation using P1 Lagrange elements over triangles we have, for example, $\rho = 3$ (this can be verified by factorizing derivatives of basis functions as explained in Algorithm~\ref{algo:pre-evaluation}). To determine $\rho$ we execute the initial phase of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes reduction pre-evaluation.
 
 
 \subsection{Trading optimality for analysis cost}
