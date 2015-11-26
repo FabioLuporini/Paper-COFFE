@@ -221,7 +221,7 @@ A_{ij}^K = \sum_{\alpha} A_{i_1 i_2 \alpha}^0 G_{K}^\alpha
 \end{equation}
 in which the pre-evaluated ``reference tensor'' $A_{i_1 i_2 \alpha}$ and the cell-dependent ``geometry tensor'' $G_{K}^\alpha$ are exposed. 
 
-\subsection{Qualitative Comparison}
+\subsection{Qualitative comparison}
 \label{sec:qualitative}
 Depending on form and discretization, the relative performance of the two modes, in terms of the operation count, can vary quite dramatically. The presence of derivatives or coefficient functions in the input form tends to increase the size of the geometry tensor, making the traditional quadrature mode preferable for ``complex'' forms. On the other hand, speed-ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains ``sufficiently small''. The discretization, particularly the relative polynomial order of trial, test, and coefficient functions, also plays a key role in the resulting operation count. 
 
@@ -231,7 +231,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 \label{sec:optimal-impl}
 In this section, we characterize optimality for finite element integration and the transformation space that we need to explore to achieve it. 
 
-\subsection{Loop nests and optimality}
+\subsection{Loop nests, expressions and optimality}
 \label{sec:lnopt}
 In order to make the article self-contained, we start with reviewing basic compiler terminology.
 
@@ -324,50 +324,59 @@ In the following Sections~\ref{sec:sharing-elimination} and~\ref{sec:pre-evaluat
 We start with introducing the fundamental notion of sharing.
 
 \begin{Def}[Sharing]
-A loop $L_i$ presents sharing if it contains at least one statement in which two (sub-)expressions depending on $i$ are symbolically identical.
+A statement within a loop nest $\Lambda$ presents sharing if at least one of the following conditions hold:
+\begin{enumerate}
+\item two expressions are symbolically identical (spatial sharing)
+\item a non-trivial expression (at least an addition or a product) depending on $\lbrace L_{i_0}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$ is present (temporal sharing)
+\end{enumerate}
 \end{Def}
 
+To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sharing evolves as factorization and code motion are applied to a trivial multilinear loop nest. In the original loop nest (Figure~\ref{code:multi_loopnest_a}), spatial sharing is induced by $b_j$. Factorization eliminates spatial sharing and promotes temporal sharing (Figure~\ref{code:multi_loopnest_b}). Finally, generalized code motion (\cite{Luporini}) leads to optimality (Figure~\ref{code:multi_loopnest_c}). 
+
 \begin{figure}[h]\begin{CenteredBox}
-{\subfigcapskip = 7pt \subfigure[With sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
-~~~~~~~~~~~~~~
-{\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
+{\subfigcapskip = 7pt \subfigure[With spatial sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
+~~~~~
+{\subfigcapskip = 7pt \subfigure[With temporal sharing]{\label{code:multi_loopnest_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_int.code}}}
+~~~~~
+{\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_c}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-For instance, Figure~\ref{code:multi_loopnest_a} shows a trivial multilinear loop nest of arity $n=2$ with sharing along dimension $j$ induced by $b_j$. The optimal synthesis for this loop nest is provided in Figure~\ref{code:multi_loopnest_b}. This example illustrates how factorization, besides reducing the number of multiplications required at a given point in the loop nest, can expose code motion opportunities. 
+In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, code motion and (if necessary) common sub-expression elimination. If the objective is reaching optimality and expressions are generally unstructured, transformations of this sort require solving large combinatorial problems, for instance to evaluate the impact of all possible factorization strategies. In our domain, however, expressions may be characterized by certain properties. These properties hold either in general -- as inherent in finite element integration -- or in forms making ``special use'' of most common differential and tensor operators. We exploit them to build an algorithm that results in optimal or quasi-optimal sharing elimination depending on the problem to which it is applied. In Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} we discuss these properties, while in Section~\ref{sec:sec:se-algo} we present the algorithm. We assume the usual finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in the canonical form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$.
 
-In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by applying factorization, code motion and (if necessary) common sub-expression elimination to remove sharing. If optimality is the target and expressions are generally unstructured, transformations of this sort require solving large combinatorial problems, for instance to evaluate the impact of all possible factorization strategies. In our domain, however, expressions may be characterized by some properties. These properties hold either in general -- as inherent in finite element integration -- or in forms making ``special use'' of most common differential and tensor operators. We exploit them to build an algorithm that results in optimal or quasi-optimal sharing elimination depending on the problem to which it is applied. In Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} we discuss these properties, while in Section~\ref{sec:sec:se-algo} we present the algorithm.
-
-\subsubsection{Multilinear loop nest}
+\subsubsection{Common sub-expressions}
 \label{sec:se-mln}
-In the special case in which test and trial functions are in the same function space, there exists $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$. That is, common sub-expressions arise over different iteration spaces ($L_j$ and $L_k$). Both $\alpha$ and $\beta$ can be hoisted at the level of the closest common loop ($L_i$) and the common sub-expressions be replaced with suitable temporaries. This has been detailed in~\citeN{Luporini}. 
+A typical optimization to reduce the arithmetic complexity of a code is common sub-expression elimination (CSE). This often revolves around searching, possibly across different statements, and replacing with temporaries, sub-expressions that (i) are symbolically identical and (ii) reduce to the same value.  
 
-In the general case, instead, test and trial functions belong to different function spaces. By factorizing, in sequence, any test function $a_{ij} \in \alpha_{eij}$ and then any trial function $b_{ik} \in \beta_{eik}$ (or vice-versa), sub-expressions independent of one of the linear loops can be hoisted (a simplistic example is showed in Figure~\ref{code:multi_loopnest}). 
+We observe that ``classic CSE'' (CCSE) can straightforwardly be applied without the need for data dependence analysis, since the body of a finite element integration loop nest is an independent basic block. More interestingly, we observe that in the ``special case'' (SCSE) in which test and trial functions are in the same function space, there may exist $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$, in which case common sub-expressions will arise along different loops ($L_j$ and $L_k$). General-purpose compilers cannot detect this (very domain-specific) property. Our algorithm for sharing elimination will exploit this extra information.
 
-These transformations minimize the operation count \textit{within} the multilinear loop nest. When both of them are applicable, there is no simple way of predicting which one provides the largest decrease in operation count. The difference in operation count, however, tends to be negligible, since only the outer loops are affected.
+Both CSE and factorization target spatial sharing. We will see that in the cases in which factorization is found to increase the operation count (due to the need for preliminary transformations), CCSE will instead be employed to remove spatial sharing.
 
-\subsubsection{Reduction and free order loops}
+%TODO : if also the Ri loop is linear, then optimality full stop.
+
+\subsubsection{Structured inner products}
 \label{sec:se-rln}
-The arithmetic complexity of $\sigma_{ei}$ varies with the differential and vector operators employed in a monomial, becoming critical in complicated formulations (characterized, for instance, by several, possibly non-linear coefficients). We distinguish the following cases.
-\begin{enumerate}
-\item For all terms $w$, there exists a common symbol $f_i \in \sigma_{ei}$ (e.g., a scalar coefficient) such that the canonical form reduces to $f_i \sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \eta_{ei}^{w}$ and $\eta_{ei} = \sigma_{ei} \setminus \lbrace f_i \rbrace$. This is the simplest scenario since factorizing $f_i$ has no side effects.
-\item There is no common symbol among all terms, although there still can be two terms $w_1$ and $w_2$ such that $f_i \in \sigma_{ei}^{w1}, \sigma_{ei}^{w2}$. Factorizing $f_i$ would only increase the operation count since sharing elimination opportunities across test and trial functions would be lost (i.e., code motion opportunities are destroyed).
-\item Within a term $\sigma_{ei}^{w}$, sharing elimination could still be performed by (i) factorizing integration-dependent symbols and (ii) hoisting geometry-dependent sub-expressions. This is tempting, but not necessarily the optimal choice depending on two factors: the trip count of $L_i$ and the arithmetic complexity of $\sigma_{ei}^{w}$. We provide an example. Consider the sub-expression $(a f_i + b g_i) (c f_i + d g_i)$ in $\sigma_{ei}^{w}$\footnote{The example was excerpted from the multiplication of the Jacobian matrix for the change of coordinates with the derivative of a coefficient}. We note that the form $f_i (a + c) + g_i (b + d)$ (followed by hoisting) reduces the operation count if and only if the trip count of $L_i$ is strictly greater than 1. We see that product expansion, which is essential to expose the whole space of factorizations, increases the operation count (we will see that this concept reiterates throughout the article), so a mechanism to assess the profitability of sharing elimination is required. As we detail in Algorithm~\ref{algo:opt}, the solution will consist of using combinatorics.
-\end{enumerate}
+%Expressions depending on the linear loops $L_j$ and $L_k$ result from inner products involving test and trial functions (possibly, derivatives or vector-valued). The problem of reaching optimality (at least) at the level of the multilinear loop nest reduces, therefore, to understand how to optimally schedule these inner products. 
+...
+...
+%The arithmetic complexity of $\sigma_{ei}$ varies with the differential and vector operators employed in a monomial, becoming critical in complicated formulations (characterized, for instance, by several, possibly non-linear coefficients). We distinguish the following cases.
+%\begin{enumerate}
+%\item For all terms $w$, there exists a common symbol $f_i \in \sigma_{ei}$ (e.g., a scalar coefficient) such that the canonical form reduces to $f_i \sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \eta_{ei}^{w}$ and $\eta_{ei} = \sigma_{ei} \setminus \lbrace f_i \rbrace$. This is the simplest scenario since factorizing $f_i$ has no side effects.
+%\item There is no common symbol among all terms, although there still can be two terms $w_1$ and $w_2$ such that $f_i \in \sigma_{ei}^{w1}, \sigma_{ei}^{w2}$. Factorizing $f_i$ would only increase the operation count since sharing elimination opportunities across test and trial functions would be lost (i.e., code motion opportunities are destroyed).
+%\item Within a term $\sigma_{ei}^{w}$, sharing elimination could still be performed by (i) factorizing integration-dependent symbols and (ii) hoisting geometry-dependent sub-expressions. This is tempting, but not necessarily the optimal choice depending on two factors: the trip count of $L_i$ and the arithmetic complexity of $\sigma_{ei}^{w}$. We provide an example. Consider the sub-expression $(a f_i + b g_i) (c f_i + d g_i)$ in $\sigma_{ei}^{w}$\footnote{The example was excerpted from the multiplication of the Jacobian matrix for the change of coordinates with the derivative of a coefficient}. We note that the form $f_i (a + c) + g_i (b + d)$ (followed by hoisting) reduces the operation count if and only if the trip count of $L_i$ is strictly greater than 1. We see that product expansion, which is essential to expose the whole space of factorizations, increases the operation count (we will see that this concept reiterates throughout the article), so a mechanism to assess the profitability of sharing elimination is required. As we detail in Algorithm~\ref{algo:opt}, the solution will consist of using combinatorics.
+%\end{enumerate}
 
 \subsubsection{Algorithm}
 \label{sec:sec:se-algo}
-Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on an abstract syntax tree representation of the loop nest. For simplicity, the algorithm neglects the pathological scenario described in Section~\ref{sec:se-mln}, in which the resulting operation count could only be very close to optimality when both test and trial functions are in the same function space. A constructive proof of optimality can be derived taking into account both the algorithm itself and the observations in Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} (in which we have explored the entire factorization space).
+Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on an abstract syntax tree representation of the loop nest. 
 
 \begin{Algo}[Sharing elimination]
 \label{algo:opt}
 \normalfont
-Consider a finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in the canonical form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$. 
-
-The algorithm starts with ``flattening'' the sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ (by product expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms. The choice of starting with $L_j$ or $L_k$ depends on two parameters: the number of unique terms, $n_{L}$, and the trip count, $tc_{L}$, of a loop $L$. It is fairly simple to see (and easily demonstrable by contradiction) that taking first $L$ such that $n_L \cdot tc_L$ is smallest leads to the largest operation count reduction. Assume, without loss of generality, that we start with $L_j$. Thanks to linearity, each factored product only has one symbol depending on $L_j$, and this symbol is now unique in the expression tree. The other sub-expression, independent of $L_j$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting. We repeat the same process with $L_k$.
-
-For each of the expressions $\eta_{ei} = \sum_w \sigma_{ei}^{w}$ lifted at the level of $L_i$, we need understand whether applying a similar process -- that is, factorizing $L_i$-dependent symbols such that $L_e$-dependent sub-expressions can be hoisted -- actually results in reduced operation count (the problem described in Section~\ref{sec:se-rln}, point 3). Consider two sub-expressions $a_{ei}$ and $b_{ei}$ in $\eta_{ei}$, with $n$ and $m$ being the respective number of summands, and with $c$ being the number of summands in common. Given a product $a_{ei} b_{ei}$, the increase in operation count after product expansion is $n \cdot m - \binom c2$. Given a sum $a_{ei} + b_{ei}$, the operation count after factorization of common terms is $n + m - c$. We use these simple formulae, together with the trip count of $L_i$, to predict the impact -- and then decide on the application -- of sharing elimination at the level of $L_i$.
-
-In all this process, whenever a sub-expression is hoisted, we search and replace all common sub-expressions. This is probably useless for the actual operation count, since we expect any general-purpose compiler to be able to perform aggressive common sub-expression elimination\footnote{By inspection of assembly code, we have verified that this is actually the case with the Intel compiler v15.2.}, but it helps making the generated code much more readable.
+%The algorithm starts with ``flattening'' the sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ (by product expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms. The choice of starting with $L_j$ or $L_k$ depends on two parameters: the number of unique terms, $n_{L}$, and the trip count, $tc_{L}$, of a loop $L$. It is fairly simple to see (and easily demonstrable by contradiction) that taking first $L$ such that $n_L \cdot tc_L$ is smallest leads to the largest operation count reduction. Assume, without loss of generality, that we start with $L_j$. Thanks to linearity, each factored product only has one symbol depending on $L_j$, and this symbol is now unique in the expression tree. The other sub-expression, independent of $L_j$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting. We repeat the same process with $L_k$.
+%
+%For each of the expressions $\eta_{ei} = \sum_w \sigma_{ei}^{w}$ lifted at the level of $L_i$, we need understand whether applying a similar process -- that is, factorizing $L_i$-dependent symbols such that $L_e$-dependent sub-expressions can be hoisted -- actually results in reduced operation count (the problem described in Section~\ref{sec:se-rln}, point 3). Consider two sub-expressions $a_{ei}$ and $b_{ei}$ in $\eta_{ei}$, with $n$ and $m$ being the respective number of summands, and with $c$ being the number of summands in common. Given a product $a_{ei} b_{ei}$, the increase in operation count after product expansion is $n \cdot m - \binom c2$. Given a sum $a_{ei} + b_{ei}$, the operation count after factorization of common terms is $n + m - c$. We use these simple formulae, together with the trip count of $L_i$, to predict the impact -- and then decide on the application -- of sharing elimination at the level of $L_i$.
+%
+%In all this process, whenever a sub-expression is hoisted, we search and replace all common sub-expressions. This is probably useless for the actual operation count, since we expect any general-purpose compiler to be able to perform aggressive common sub-expression elimination\footnote{By inspection of assembly code, we have verified that this is actually the case with the Intel compiler v15.2.}, but it helps making the generated code much more readable.
 
 % matrix notation, fixed canonical form, so no need for fancy algors to do CSE
 \end{Algo}
