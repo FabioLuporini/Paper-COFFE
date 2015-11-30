@@ -325,8 +325,8 @@ We start with introducing the fundamental notion of sharing.
 \begin{Def}[Sharing]
 A statement within a loop nest $\Lambda$ presents sharing if at least one of the following conditions hold:
 \begin{enumerate}
-\item two expressions are symbolically identical (spatial sharing)
-\item a non-trivial expression (at least an addition or a product) depending on $\lbrace L_{i_0}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$ is present (temporal sharing)
+\item there are at least two symbolically identical sub-expressions (spatial sharing)
+\item there is at least a non-trivial sub-expression (an addition or a product) depending on $\lbrace L_{i_0}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$ (temporal sharing)
 \end{enumerate}
 \end{Def}
 
@@ -340,7 +340,7 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_c}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, transformations of this sort would require solving large combinatorial problems -- for instance to evaluate the impact of all possible factorization strategies. Our sharing elimination strategy, however, attempts to exploit the structure that often characterizes finite element integration expressions to achieve quasi-optimality (after coordination with other transformations, as discussed in the following sections); optimality is achieved if stronger properties hold.
+In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, transformations of this sort would require solving large combinatorial problems -- for instance to evaluate the impact of all possible factorization strategies. Our sharing elimination strategy, however, attempts to exploit the structure that often characterizes finite element integration expressions to achieve quasi-optimality (after coordination with other transformations, as discussed in the following sections); optimality is achieved if stronger conditions hold.
 
 In Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} we discuss structural (i.e., inherent in finite element integration) and potential (i.e., due to the particular use of differential and vector operators) properties of our expressions, while in Section~\ref{sec:sec:se-algo} we present the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in canonical form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$\footnote{A similar reasoning applies to forms and loops that are not bilinear}. 
 
@@ -350,35 +350,37 @@ A typical optimization to reduce the arithmetic complexity of a code is common s
 
 \subsubsection{Structured tensor operations}
 \label{sec:se-rln}
-Finite element expressions can be seen as sums of nested operations between tensors. A tensor (i.e., its entries) always depends on a specific subset of loops, and the set of loops is, obviously, always well-defined. A recurring scenario when multiplying two vectors together is that the optimal operation scheduling is to be found in a space of size 2. 
+Finite element expressions can be seen as composition of operations between tensors. When multiplying two tensors it often happens that the optimal scheduling strategy is to be searched in a space of size 2. 
 
-Consider a generic matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Let us assume that $y_{\Psi \Delta}$ itself is just an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. As an example, assume that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions. An entry in $y_{\Psi \Delta}$, therefore, is of the form $(a_{\Psi} f_{\Delta} + b_{\Psi} g_{\Delta}) (c_{\Psi} f_{\Delta} + d_{\Psi} g_{\Delta})$. To illustrate the concept, consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$, in which we have  $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression within $L_i$ we basically have two choices: 
+To illustrate the concept, we take a matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Forms are typically rich of operations of this kind, or equivalent. Let us assume that $y_{\Psi \Delta}$ itself is an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. For simplicity, assume that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions, and consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$. Thus an entry in $y_{L_i}$ is of the form $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression, we basically have two options:
+\begin{enumerate}
+\item We leave the expression unmodified in the body of $L_i$; we only assign it to a temporary in the case it is a common sub-expression
+\item We notice the presence of spatial sharing. We can re-factorize the expression as $f_i (a + c) + g_i (b + d)$, which promotes temporal sharing and, therefore, code motion. 
+\end{enumerate}
+The reader can verify that option 2) reduces the operation count with respect to 1) if and only if the size of $L_i$ is strictly greater than $c=1$. One can find this dichotomy in a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}, obviously with values of $c$ varying with the operational cost inherent in removing spatial sharing. 
 
-Many analogous examples can easily be found.  
-
-the expression $\dot(J^{-T} \nabla v, J^{-T} \nabla u)$ resulting from a Laplacian operator. 
-
-the sub-expression $(a f_i + b g_i) (c f_i + d g_i)$ in $\sigma_{ei}^{w}$\footnote{The example was excerpted from the multiplication of the coordinates field Jacobian matrix with the derivative of a coefficient}. We note that the form $f_i (a + c) + g_i (b + d)$ (followed by hoisting) reduces the operation count if and only if the trip count of $L_i$ is strictly greater than 1. We see that product expansion, which is essential to expose the whole space of factorizations, increases the operation count (we will see that this concept reiterates throughout the article), so a mechanism to assess the profitability of sharing elimination is required. As we detail in Algorithm~\ref{algo:opt}, the solution will consist of using combinatorics
-
-One can find this pattern in a wide range of variational forms. In fact, all of the forms used for experimentation (Section~\ref{sec:perf-results}) -- and many others that we have tried beyond these -- are characterized by this property.
+In general, given a product of two sub-expressions in a finite element integration loop nest, we observe that whenever there is no ambiguity in the elimination of spatial sharing, the problem of finding an optimal scheduling reduces to the comparison of two alternatives. We note that this condition simply holds if a loop is guaranteed to be linear; in the next section, we will show how take advantage of this property to ensure quasi-optimal sharing elimination. Further, if the $\sigma_{ei}$ expressions are sufficiently regular, then the same approach can be applied to all expressions logically belonging to $L_i$. The regularity of $\sigma_{ei}$ is not as uncommon as it may seem at first glance: for instance, this property holds for many of the tensors that need be evaluated in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
 
 
-In the base case, clearly, there is only one inner product between test and trial functions. In general, there may be multiple inner products, whose vectors  The problem of reaching optimality reduces to understand how to schedule these inner products in the most effective way
+%
+%can make the factorization space explode 
+%
+%On the other hand, the possibly unstructured nature of the 
+%
+%In absence of further coefficient functions or if their use is such that  So optimal 
+%Due to the possibly unstructured nature of the $\sigma_{ei}$ expressions, Clearly, in general, the problem is much more complex 
 
-multilinearity -> avoids ambiguity
+%the expression $\dot(J^{-T} \nabla v, J^{-T} \nabla u)$ resulting from a Laplacian operator. 
+
+
+
+%multilinearity -> avoids ambiguity
 %TODO : if also the Ri loop is linear, then optimality full stop.
-we can relax linearity by talking of structured inner products which avoids ambiguity in collection
+%we can relax linearity by talking of structured inner products which avoids ambiguity in collection
 
 
 %Expressions depending on the linear loops $L_j$ and $L_k$ result from inner products involving test and trial functions (possibly, derivatives or vector-valued). The problem of reaching optimality (at least) at the level of the multilinear loop nest reduces, therefore, to understand how to optimally schedule these inner products. 
-...
-...
-%The arithmetic complexity of $\sigma_{ei}$ varies with the differential and vector operators employed in a monomial, becoming critical in complicated formulations (characterized, for instance, by several, possibly non-linear coefficients). We distinguish the following cases.
-%\begin{enumerate}
-%\item For all terms $w$, there exists a common symbol $f_i \in \sigma_{ei}$ (e.g., a scalar coefficient) such that the canonical form reduces to $f_i \sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \eta_{ei}^{w}$ and $\eta_{ei} = \sigma_{ei} \setminus \lbrace f_i \rbrace$. This is the simplest scenario since factorizing $f_i$ has no side effects.
-%\item There is no common symbol among all terms, although there still can be two terms $w_1$ and $w_2$ such that $f_i \in \sigma_{ei}^{w1}, \sigma_{ei}^{w2}$. Factorizing $f_i$ would only increase the operation count since sharing elimination opportunities across test and trial functions would be lost (i.e., code motion opportunities are destroyed).
-%\item Within a term $\sigma_{ei}^{w}$, sharing elimination could still be performed by (i) factorizing integration-dependent symbols and (ii) hoisting geometry-dependent sub-expressions. This is tempting, but not necessarily the optimal choice depending on two factors: the trip count of $L_i$ and the arithmetic complexity of $\sigma_{ei}^{w}$. We provide an example. Consider the sub-expression $(a f_i + b g_i) (c f_i + d g_i)$ in $\sigma_{ei}^{w}$\footnote{The example was excerpted from the multiplication of the Jacobian matrix for the change of coordinates with the derivative of a coefficient}. We note that the form $f_i (a + c) + g_i (b + d)$ (followed by hoisting) reduces the operation count if and only if the trip count of $L_i$ is strictly greater than 1. We see that product expansion, which is essential to expose the whole space of factorizations, increases the operation count (we will see that this concept reiterates throughout the article), so a mechanism to assess the profitability of sharing elimination is required. As we detail in Algorithm~\ref{algo:opt}, the solution will consist of using combinatorics.
-%\end{enumerate}
+
 
 \subsubsection{Algorithm}
 \label{sec:sec:se-algo}
