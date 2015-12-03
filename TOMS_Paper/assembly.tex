@@ -81,7 +81,7 @@ Paul H. J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Optimality is defined in terms of floating point operations given a memory bound. We provide an approach to explore the transformation space of a generic integration routine and discuss the conditions for optimality. A theoretical analysis and extensive experimentation, which shows systematic performance improvements over a number of alternative code generation systems, validate the approach.
+We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Optimality and quasi-optimality are defined in terms of floating point operations given a memory bound. We provide an approach to explore the space of legal transformations and discuss under what conditions optimality or quasi-optimality hold. A theoretical analysis and extensive experimentation, which shows systematic performance improvements over several state-of-the-art code generation systems, validate the approach.
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
@@ -229,7 +229,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 
 \section{Transformation Space}
 \label{sec:optimal-impl}
-In this section, we characterize optimality for finite element integration and the transformation space that we need to explore to achieve it. 
+In this section, we characterize optimality and quasi-optimality for finite element integration as well as the space of legal transformations that we need to explore to achieve it. How the exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
 
 \subsection{Loop nests, expressions and optimality}
 \label{sec:lnopt}
@@ -285,20 +285,20 @@ A loop $L_i$ is said to be a reduction loop if in its body
 A loop $L_i$ is said to be a free order loop if its iterations can be executed in any arbitrary order; that is, there are no loop-carried dependencies across different iterations. 
 \end{Def}
 
-We build on these definitions to formalize the class of loop nests for which we seek optimality.
-
-\begin{Def}[Finite element integration loop nest]
-\label{def:fem-loopnest}
-A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and a multilinear loop nest whose body is an independent basic block.
-\end{Def}
-
-To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. An expression (right hand side of a statement) implements a set of monomials. The expression shown is in \textit{canonical form}: $m$ is the (problem-dependent) number of ``terms'', $\alpha_{eij}$ ($\beta_{eik}$) represents the product of the inverse Jacobian matrix for the change of coordinates with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose particular restrictions on function spaces (e.g., scalar- or vector-valued), coefficients (e.g., linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We observe that translating a monomial in matrix notation into code naturally leads to the canonical form. This applies to any problem, given the rigid structure of a monomial (summarized in Section~\ref{sec:monomials}). Henceforth, without loss of generality and for ease of treatise, we assume finite element integration loop nests with expressions in canonical form.
-
 \begin{figure}\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The loop nest implementing a generic bilinear form.}\label{code:loopnest}\end{figure}
 
-For this class of loop nests and expressions, we characterize optimality as follows.
+To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises a free order loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. Expressions (right hand side of a statement) result from the translation of a form in high level matrix notation into code. In particular, $m$ is the number of ``terms'' (a monomial can be implemented by one or more terms), $\alpha_{eij}$ ($\beta_{eik}$) represents the product of a coefficient function (e.g., the inverse Jacobian matrix for the change of coordinates) with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose particular restrictions on function spaces (e.g., scalar- or vector-valued), coefficients (e.g., linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We say that such an expression is in \textit{normal form}, because the algebraic structure of a variational form is intact (e.g., products have not been expanded yet, distinct monomials can still be identified, etc.). This bring us to formalize the class of loop nests for which we seek optimality.
+
+%TODO is "not expanded yet == still contracted" ?
+
+\begin{Def}[Finite element integration loop nest]
+\label{def:fem-loopnest}
+A finite element integration loop nest is a loop nest in which we identify, in order, an imperfect free order loop, a (generally) imperfect, linear or non-linear reduction loop, and a multilinear loop nest whose body is an independent basic block in which each statement has expressions in normal form.
+\end{Def}
+
+For a finite element integration loop nest, we characterize optimality and quasi-optimality as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
@@ -312,10 +312,10 @@ Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimalit
 
 Note that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements. We also note that quasi-optimality approximates optimality very well whenever the inner loop trip counts are ``sufficiently large''.
 
-Achieving optimality in polynomial time is not generally possible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. Multilinearity, on the other hand, ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions. In the following, we formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. In particular, we build:
+Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions, which is reflected in the innermost loop. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
 \begin{itemize}
 \item the space of legal transformations impacting the operation count (Sections~\ref{sec:sharing-elimination} -- \ref{sec:completeness})
-\item an algorithm to select points in the transformation space (Sectionm~\ref{sec:optimal-synthesis})
+\item an algorithm to select points in the transformation space (Section~\ref{sec:optimal-synthesis})
 \end{itemize}
 
 \subsection{Sharing elimination}
@@ -326,7 +326,7 @@ We start with introducing the fundamental notion of sharing.
 A statement within a loop nest $\Lambda$ presents sharing if at least one of the following conditions hold:
 \begin{enumerate}
 \item there are at least two symbolically identical sub-expressions (spatial sharing)
-\item there is at least a non-trivial sub-expression (an addition or a product) depending on $\lbrace L_{i_0}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$ (temporal sharing)
+\item there is at least one non-trivial sub-expression (an addition or a product) that is redundantly executed as independent of $\lbrace L_{i_0}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$ (temporal sharing)
 \end{enumerate}
 \end{Def}
 
@@ -340,13 +340,13 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 {\subfigcapskip = 2pt \subfigure[Optimal form]{\label{code:multi_loopnest_c}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, transformations of this sort would require solving large combinatorial problems -- for instance to evaluate the impact of all possible factorization strategies. Our sharing elimination strategy, however, attempts to exploit the structure that often characterizes finite element integration expressions to achieve quasi-optimality (after coordination with other transformations, as discussed in the following sections); optimality is achieved if stronger conditions hold.
+In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, generalized code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorization strategies. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved whenever stronger conditions hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- which, as such, can be integrated with a compiler. 
 
-In Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} we discuss structural (i.e., inherent in finite element integration) and potential (i.e., due to the particular use of differential and vector operators) properties of our expressions, while in Section~\ref{sec:sec:se-algo} we present the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in canonical form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$\footnote{A similar reasoning applies to forms and loops that are not bilinear}. 
+In Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} we discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties of our expressions, while in Section~\ref{sec:sec:se-algo} we present the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$.
 
 \subsubsection{Common sub-expressions}
 \label{sec:se-mln}
-A typical optimization to reduce the arithmetic complexity of a code is common sub-expression elimination (CSE). This often revolves around searching, possibly across different statements, and replacing with temporaries, sub-expressions that (i) are symbolically identical and (ii) reduce to the same value.  We observe that ``classic CSE'' (CCSE) can straightforwardly be applied without the need for data dependence analysis, since the body of a finite element integration loop nest is an independent basic block. More interestingly, we observe that in the ``special case'' (SCSE) in which test and trial functions are in the same function space, there may exist $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$, in which case common sub-expressions will arise along different loops ($L_j$ and $L_k$). General-purpose compilers cannot detect this (very domain-specific) property. Our algorithm for sharing elimination will exploit this extra information. Although both CSE and factorization target spatial sharing, the latter may actually increase the operation count if preliminary transformations (e.g., expansion) are required. In such a case, CCSE should be preferred.
+A typical optimization to reduce the arithmetic complexity of a code is common sub-expression elimination (CSE). This often revolves around searching, possibly across different statements, and replacing with temporaries, sub-expressions that (i) are symbolically identical and (ii) reduce to the same value.  We observe that ``classic CSE'' (CCSE) can straightforwardly be applied without the need for data dependence analysis, since the body of a finite element integration loop nest is an independent basic block. More interestingly, we observe that in the ``special case'' (SCSE) in which test and trial functions are in the same function space, there may exist $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$, in which case common sub-expressions will arise along different loops ($L_j$ and $L_k$). General-purpose compilers cannot detect this (very domain-specific) property. Our algorithm for sharing elimination will exploit this extra information. Although both CSE and factorization target spatial sharing, the latter may actually increase the operation count if preliminary transformations (e.g., expansion) are required. In such a case, CCSE will be preferred.
 
 \subsubsection{Structured tensor operations}
 \label{sec:se-rln}
@@ -395,7 +395,7 @@ Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on
 %
 %In all this process, whenever a sub-expression is hoisted, we search and replace all common sub-expressions. This is probably useless for the actual operation count, since we expect any general-purpose compiler to be able to perform aggressive common sub-expression elimination\footnote{By inspection of assembly code, we have verified that this is actually the case with the Intel compiler v15.2.}, but it helps making the generated code much more readable.
 
-% matrix notation, fixed canonical form, so no need for fancy algors to do CSE
+% matrix notation, fixed normal form, so no need for fancy algors to do CSE
 \end{Algo}
 
 \subsection{Pre-evaluation}
@@ -466,9 +466,9 @@ We defined sharing elimination and pre-evaluation as high level transformations 
 
 Sharing elimination and pre-evaluation tackle the problem of minimizing spatial and temporal redundancy with a bounded working set in the loop nests and expressions defined in Section~\ref{sec:lnopt} \textit{using a very specific set of operators}. This must be kept in mind: obviously, the operation count might even be lower if we considered operators exploiting domain properties that we are here neglecting, such as redundancies in basis functions.
 
-\section{Implementation Synthesis}
+\section{Selection and composition of transformations}
 \label{sec:optimal-synthesis}
-In this section, we build a transformation algorithm capable of reaching optimality (Definition~\ref{def:optimality}) in a class of finite element integration loop nests (Definition~\ref{def:fem-loopnest}) and quasi-optimality in any other finite element integration loop nest. In the perspective of integrating the transformation algorithm with a code generation system, we also discuss an approach that trades optimality for compilation time.
+In this section, we build a transformation algorithm that produces optimal or quasi-optimal finite element integration loop nests. In the perspective of integrating the transformation algorithm with a code generation system, we also discuss an approach that trades optimality for compilation time.
 
 \subsection{Transformation algorithm}
 
