@@ -350,45 +350,40 @@ A typical optimization to reduce the arithmetic complexity of a code is common s
 
 \subsubsection{Structured tensor operations}
 \label{sec:se-rln}
-Finite element expressions can be seen as composition of operations between tensors. When multiplying two tensors it often happens that the optimal scheduling strategy is to be searched in a space of size 2. 
-
-To illustrate the concept, we take a matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Forms are typically rich of operations of this kind, or equivalent. Let us assume that $y_{\Psi \Delta}$ itself is an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. For simplicity, assume that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions, and consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$. Thus an entry in $y_{L_i}$ is of the form $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression, we basically have two options:
+Finite element expressions can be seen as composition of operations between tensors. We observe that, when multiplying two tensors, it often happens that the optimal scheduling strategy is to be searched in a space of size 2. To illustrate the concept, we take a matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Let us assume that $y_{\Psi \Delta}$ itself is an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. For simplicity, assume that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions, and consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$. Thus an entry in $y_{L_i}$ is of the form $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression, we basically have two options:
 \begin{enumerate}
-\item We leave the expression unmodified in the body of $L_i$; we only assign it to a temporary in the case it is a common sub-expression
+\item We leave the expression unmodified in the body of $L_i$; we may want to assign it to a temporary in the case it is a common sub-expression
 \item We notice the presence of spatial sharing. We can re-factorize the expression as $f_i (a + c) + g_i (b + d)$, which promotes temporal sharing and, therefore, code motion. 
 \end{enumerate}
 The reader can verify that option 2) reduces the operation count with respect to 1) if and only if the size of $L_i$ is strictly greater than $c=1$. One can find this dichotomy in a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}, obviously with values of $c$ varying with the operational cost inherent in removing spatial sharing. 
 
 In general, given a product of two sub-expressions in a finite element integration loop nest, we observe that whenever there is no ambiguity in the elimination of spatial sharing, the problem of finding an optimal scheduling reduces to the comparison of two alternatives. We note that this condition simply holds if a loop is guaranteed to be linear; in the next section, we will show how take advantage of this property to ensure quasi-optimal sharing elimination. Further, if the $\sigma_{ei}$ expressions are sufficiently regular, then the same approach can be applied to all expressions logically belonging to $L_i$. The regularity of $\sigma_{ei}$ is not as uncommon as it may seem at first glance: for instance, this property holds for many of the tensors that need be evaluated in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
 
-
-%
-%can make the factorization space explode 
-%
-%On the other hand, the possibly unstructured nature of the 
-%
-%In absence of further coefficient functions or if their use is such that  So optimal 
-%Due to the possibly unstructured nature of the $\sigma_{ei}$ expressions, Clearly, in general, the problem is much more complex 
-
-%the expression $\dot(J^{-T} \nabla v, J^{-T} \nabla u)$ resulting from a Laplacian operator. 
-
-
-
-%multilinearity -> avoids ambiguity
-%TODO : if also the Ri loop is linear, then optimality full stop.
-%we can relax linearity by talking of structured inner products which avoids ambiguity in collection
-
-
-%Expressions depending on the linear loops $L_j$ and $L_k$ result from inner products involving test and trial functions (possibly, derivatives or vector-valued). The problem of reaching optimality (at least) at the level of the multilinear loop nest reduces, therefore, to understand how to optimally schedule these inner products. 
+%It is beyond the scope of this paper, but one could think of formalizing the conditions for which sigma_ei is structured...
 
 
 \subsubsection{Algorithm}
 \label{sec:sec:se-algo}
-Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on an abstract syntax tree representation of the loop nest. 
+Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on a tree representation of the loop nest. The algorithm is meant to be applied to each statement appearing in the independent basic block of the input finite element integration loop nest.
 
 \begin{Algo}[Sharing elimination]
 \label{algo:opt}
 \normalfont
+The first step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions. This is to ensure that the operands of a generic operation are unique. For example, the expression $(a + a + b + c + a)$, in which we have a single n-ary operator \texttt{+}, is transformed into $(3a + b + c)$. 
+
+We then perform a second depth-first visit of the expression tree and we recursively label each node $n$ with a couple ${<}I_{jk},\ cost{>}$, where: $I_{jk}$ represents the intersection of the symbols depending on the multilinear loop nest (i.e., depending on test and trial functions) within $n$, whereas $cost$ denotes the operation count if generalized code motion were applied to all sub-expressions rooted in $n$ (i.e., if they were placed sufficiently far in the loop nest such that redundant computation were avoided). A crucial observation is that $I_{jk}$ is, in practice, always very small (a few units), even if the form is complex and includes several monomials. In addition, its computation can be made extremely efficient by also tracking the union of the symbols rooted in $n$.
+
+On a final depth-first visit, we examine the label of each operator \texttt{+}. If $I_{jk} = \emptyset$ -- that is, there is no spatial sharing -- we just proceed to the parent node. Otherwise, we speculatively assume that structured tensor operations are performed in the sub-tree rooted in \texttt{+}, and compare the operational cost of the two alternatives described in Section~\ref{sec:se-rln} (see points (1) and (2)). Alternative (1) has an operation count equal to $cost$. Alternative (2) requires collecting the shared symbols and estimating the impact of generalized code motion on the new factorization. For this, we need decide the collection order; that is, whether to start with symbols in $I_j$ or $I_k$. It can easily be demonstrated by contradiction that starting with $I_o$ such that $|L_o| |I_o|$ is minimum ($o \in {\lbrace} j, k{\rbrace}, |.|$ represents a generic size operator) leads to the lowest operation count. If found to be the most favorable, alternative (2) is straightforwardly applied; alternative (1) is instead applied only after all operands rooted in \texttt{+} have been examined. 
+
+
+
+%If alternative (1) results better, the node \texttt{+} is marked as no longer expandable, which makes the recursion more efficient. Conversely, 
+
+
+
+
+%We then perform a second depth-first visit of the expression tree and we recursively label each node $n$ with a triple ${<}I_{jk},\ U_{jk},\ cost{>}$, where: $I_{jk}$ and $U_{jk}$ represent, respectively, the intersection and the union of the symbols depending on the multilinear loop nest (i.e., depending on test and trial functions) within $n$, whereas $cost$ denotes the operation count if generalized code motion were applied to all sub-expressions rooted in $n$ (i.e., if they were placed sufficiently far in the loop nest such that redundant computation were avoided). A crucial observation is that $I_{jk}$ and $U_{jk}$ are, in practice, always very small (a few units), even if the form is complex and includes several monomials. In addition, we note that $U_{jk}$ is tracked for the sole purpose of making the calculation of the parent $I_{jk}$ sets even faster.
+
 %The algorithm starts with ``flattening'' the sub-expressions $\alpha_{eij}^{w} \beta_{eik}^{w}$ (by product expansion) such that all $L_j$- and $L_k$-dependent terms lie on the same level of the expression tree. We factorize, in sequence, $L_j$- ($L_k$-) and $L_k$- ($L_j$-) dependent terms. The choice of starting with $L_j$ or $L_k$ depends on two parameters: the number of unique terms, $n_{L}$, and the trip count, $tc_{L}$, of a loop $L$. It is fairly simple to see (and easily demonstrable by contradiction) that taking first $L$ such that $n_L \cdot tc_L$ is smallest leads to the largest operation count reduction. Assume, without loss of generality, that we start with $L_j$. Thanks to linearity, each factored product only has one symbol depending on $L_j$, and this symbol is now unique in the expression tree. The other sub-expression, independent of $L_j$, is, by definition, loop-invariant, and therefore hoisted such that redundant computation is avoided. Note that multilinearity ensures deterministic factorization, while perfectness ensures correctness of hoisting. We repeat the same process with $L_k$.
 %
 %For each of the expressions $\eta_{ei} = \sum_w \sigma_{ei}^{w}$ lifted at the level of $L_i$, we need understand whether applying a similar process -- that is, factorizing $L_i$-dependent symbols such that $L_e$-dependent sub-expressions can be hoisted -- actually results in reduced operation count (the problem described in Section~\ref{sec:se-rln}, point 3). Consider two sub-expressions $a_{ei}$ and $b_{ei}$ in $\eta_{ei}$, with $n$ and $m$ being the respective number of summands, and with $c$ being the number of summands in common. Given a product $a_{ei} b_{ei}$, the increase in operation count after product expansion is $n \cdot m - \binom c2$. Given a sum $a_{ei} + b_{ei}$, the operation count after factorization of common terms is $n + m - c$. We use these simple formulae, together with the trip count of $L_i$, to predict the impact -- and then decide on the application -- of sharing elimination at the level of $L_i$.
@@ -422,7 +417,7 @@ The pre-evaluation of a monomial introduces some critical issues:
 \begin{enumerate}
 \item In contrast to what happens with hoisting in multilinear loop nests, the temporary variable size is proportional to the number and trip counts of non-reduction loops crossed (for the bilinear form implementation in Figure~\ref{code:loopnest}, $N O$ for sub-expressions depending on $[L_i, L_j, L_k]$ and $L N O$ for those depending on $[L_e, L_i, L_j, L_k] $). This might shift the loop nest from a CPU-bound to a memory-bound regime, which might be counter-productive for actual execution time.
 \item The transformations exposing $[L_i, L_j, L_k]$-dependent terms increase, in general, the arithmetic complexity (e.g., expansion may increase the operation count). This could outweigh the gain due to pre-evaluation.
-\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities: sharing elimination inhibits pre-evaluation, whereas pre-evaluation generally expose further sharing elimination opportunities.
+\item The need for a strategy to coordinate sharing elimination and pre-evaluation opportunities: sharing elimination inhibits pre-evaluation, whereas pre-evaluation generally exposes further sharing elimination opportunities.
 \end{enumerate}
 
 We expand on point 1) in the next section. We address points 2) and 3) in Section~\ref{sec:optimal-synthesis}. 
@@ -540,6 +535,8 @@ We can relax the constraints on (quasi-)optimality to relieve the analysis phase
 \item \textit{Transformation algorithm.} The transformation algorithm (Figure~\ref{code:intuition}) evaluates all possible combinations in which pre-evaluation candidates can be scheduled to determine the optimal configuration honoring memory constraints. Despite the fact that we have never observed any tangible increase in analysis cost, one could expect slow-downs in complex forms with many monomials. This matter is yet to be properly investigated. However, a possibility is to avoid or constrain the search; in the worst case scenario, this would be equal to reaching local optimums.
 \item \textit{Construction of $\theta$.} Instead of determining exact values for $\theta_{se}$ and $\rho$ (for $\theta_{pre}$) by (partly) executing Algorithms~\ref{algo:opt} and~\ref{algo:pre-evaluation}, approximations can be found by exploiting loop linearity. The number of unique terms in a multilinear loop nest can be used to calculate a lower bound on the innermost loop operation count (where, for higher order methods, the bulk of the computation is performed). For example, in Figure~\ref{code:multi_loopnest_a}, only one term depends on $L_j$ ($b_j$), so at most one multiplication is expected in the innermost loop once sharing is eliminated. An approximation for $\theta_{se}$ is then $\theta_{se} = n_{iters} \cdot n_{unique}$, where $n_{iters}$ is the total number of loop iterations, and $n_{unique}$ is the smallest number of unique terms depending on one the linear loops.
 \end{itemize}
+
+%TODO forget about the special case alpha=beta (ie test and trial from same fs)
 
 These heuristics have been implemented in the code generation system described in Section~\ref{sec:codegen}.
 
