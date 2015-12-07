@@ -355,11 +355,9 @@ Finite element expressions can be seen as composition of operations between tens
 \item We leave the expression unmodified in the body of $L_i$ (in general, one may consider applying generalized code motion or creating a temporary for CCSE -- but it is not the case of this simple example).
 \item We notice the presence of spatial sharing. We can recast the expression as $f_i (a + c) + g_i (b + d)$, which promotes temporal sharing and, therefore, code motion. 
 \end{enumerate}
-The reader can verify that option 2) improves the operation count over 1) if and only if the size of $L_i$ is strictly greater than $c=1$. One can appreciate this dichotomy in a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}, obviously with varying values of $c$. 
+The reader can verify that option 2) improves the operation count over 1) if and only if the size of $L_i$ is strictly greater than $c=1$. One can appreciate the dichotomy between 1) and 2) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}, obviously with different values of $c$. 
 
-In general, given a product of two sub-expressions in a finite element integration loop nest, we observe that whenever there is no ambiguity in the elimination of spatial sharing, the problem of finding an optimal scheduling reduces to the comparison of two alternatives. We note that this condition simply holds if a loop is guaranteed to be linear; in the next section, we will show how to take advantage of this property to ensure quasi-optimal sharing elimination. Further, if the $\sigma_{ei}$ expressions are sufficiently regular, the same approach can be applied to all of the $L_i$-dependent expressions. Structured tensor operations within $\sigma_{ei}$ are not as uncommon as one may think in the first place: for instance, they systematically arise in the weak variational form of the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
-
-%It is beyond the scope of this paper, but one could think of formalizing the conditions for which sigma_ei is structured...
+We then regard as \textit{structured tensor operation} any operation between two tensors that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. Of notable importance, in the perspective of achieving quasi-optimality, is the fact that sub-expressions depending on the multilinear loop nest always result from structured tensor operations. Often, structured tensor operations characterize the $\sigma_{ei}$ sub-expressions too. For instance, they systematically arise in the weak variational form of the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
 
 
 \subsubsection{Algorithm}
@@ -369,23 +367,20 @@ Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on
 \begin{Algo}[Sharing elimination]
 \label{algo:opt}
 \normalfont
-The initialization step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions, to ensure the uniqueness of operands. For example, the expression $(a + a + b + c + a)$ is transformed into $(3a + b + c)$. 
+The initialization step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions, to ensure the uniqueness of operands. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$. 
 
-We perform a second depth-first visit of the expression tree to collect information about multilinear ``symbols'' and ``operands''. For example, any sub-expression $\alpha_{eij}$ ($\beta_{eik}$) is regarded as an operand, while a symbol could be any test (trial) function (or derivatives of) $a_{ij} \in \alpha_{eij}$. In particular, for each symbol $s$, we store a 2-tuple ${<}n,\ \lbrace ops \rbrace{>}$, where $n$ is the number of occurrences of $s$ in the input expression, while $\lbrace ops \rbrace$ represents the set of operands in which $s$ appears. 
+We perform a second depth-first visit of the expression tree to track all occurrences of multilinear operands (i.e., any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression in normal form).  We create disjoint partitions of multilinear operands such that no spatial sharing is present among them. For each partition, we have two alternatives: (i) applying generalized code motion, SCSE (if possible), and CCSE (if necessary); (ii) expanding the expression to expose spatial sharing and enable a subsequent factorization. These two alternatives basically correspond to points 1) and 2) in Section~\ref{sec:se-rln}. 
 
-Let $\mathbb{O}$ be the set of all $\lbrace ops \rbrace$s. 
+Given a partition $P$, to decide between (i) and (ii) we adopt the two following criteria:
+\begin{enumerate}
+\item We compare the cardinality of $P$ to that of the set of multilinear symbols (e.g., test functions) in $P$. If the former is lower, we use (i); if the latter is lower, we use (ii); if they are identical, we check the next criterion, which attempts to optimize for the outer loops.
+\item We know how many times a multilinear symbol $s$ appears in the input expression. Let $n_{s}$ denote this quantity. Let $c_{op}$ be the cost of (i.e., number of operations in) $op$. Also, recall from Figure~\ref{code:loopnest} that $L_i$ and $L_k$ have size $M$ and $O$. Assume, for example, that $P$ depends on $[L_i, L_k]$. We observe that the increase in operation count at the level of the outer loops would be: $M O \sum_{w \in P} c_{op}^{w}$ if (i) were applied; $M n_{s}$ if (ii) were applied. Therefore, we take (i) or (ii) depending on which quantity is minimum.
+\end{enumerate}
 
-
-%ops\ =\ \lbrace \alpha_{eij}^{1}, ..., \alpha_{eij}^{N}\rbrace$
-
-%and we recursively label each node $n$ with a 2-tuple ${<}I_{jk},\ op_{gcm}{>}$, where: $I_{jk}$ represents the intersection of the operands depending on the multilinear loop nest within $n$, while $op_{gcm}$ denotes the gain in operation count if generalized code motion were applied to all sub-expressions rooted in $n$ (i.e., if they were placed sufficiently far in the loop nest such that redundant computation were avoided). A crucial observation is that $I_{jk}$ is, in practice, always very small (a few units), even if the form is complex and includes several monomials. In addition, its computation can be made extremely efficient by also tracking the union of the symbols rooted in $n$.
-%
-%On a subsequent depth-first visit, we examine the label of each operator \texttt{+}. If $I_{jk} = \emptyset$ -- that is, no spatial sharing -- we just proceed to the parent node. Otherwise, we speculatively assume that structured tensor operations are being performed in the sub-tree rooted in \texttt{+}, and compare the operational cost of the two alternatives described in Section~\ref{sec:se-rln} (see points (1) and (2)). Alternative (1) has an operation count equal to $op_{gcm}$. Alternative (2) requires collecting the shared symbols and estimating the impact of generalized code motion on the new factorization (similarly to Figure~\ref{code:multi_loopnest}). For this, we need decide the collection order; that is, whether to start with symbols in $I_j$ or $I_k$. It can easily be demonstrated by contradiction that starting with $I_o$ such that $|L_o| |I_o|$ is minimum ($o \in {\lbrace} j, k{\rbrace}$, with $|.|$ representing a generic ``\texttt{sizeof}'' operator) leads to the lowest operation count. Once all of the operands rooted in Alternative (2) is immediately applied if determined to be ; alternative (1) is instead applied only after all operands rooted in \texttt{+} have been examined. 
-
-%TODO sharing elimination of Li dependent stuff
-
-%TODO CSE / CCSE /  SCSE In all this process, whenever a sub-expression is hoisted, we search and replace all common sub-expressions. This is probably useless for the actual operation count, since we expect any general-purpose compiler to be able to perform aggressive common sub-expression elimination\footnote{By inspection of assembly code, we have verified that this is actually the case with the Intel compiler v15.2.}, but it helps making the generated code much more readable.
+On a last depth-first visit of the expression tree, we apply point (2) above to all of the $L_i$-dependent expressions. 
 \end{Algo}
+
+Section~\ref{sec:proof} elucidates the claims of quasi-optimality and optimality. 
 
 \subsection{Pre-evaluation}
 \label{sec:pre-evaluation}
@@ -521,6 +516,8 @@ If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-e
 
 If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix in Figure~\ref{code:increase_factor}. This monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$. However, in general, $\rho$ depends on both form and discretization. If we instead take a standard Poisson equation using P1 Lagrange elements over triangles we have, for example, $\rho = 3$ (this can be verified by factorizing derivatives of basis functions as explained in Algorithm~\ref{algo:pre-evaluation}). To determine $\rho$ we execute the initial phase of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes reduction pre-evaluation.
 
+\subsection{Again on optimality}
+\label{sec:proof}
 
 \subsection{Trading operation count for analysis cost}
 We can relax the constraints on (quasi-)optimality to relieve the analysis phase. In this section, we discuss ways of achieving this.
