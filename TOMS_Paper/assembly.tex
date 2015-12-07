@@ -362,7 +362,7 @@ We then regard as \textit{structured tensor operation} any operation between two
 
 \subsubsection{Algorithm}
 \label{sec:sec:se-algo}
-Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on a tree representation of the loop nest. The algorithm is meant to be applied to each statement appearing in the independent basic block of the input finite element integration loop nest. It exploits the observation that test and trial functions are always part of structured tensor operations, due to the nature of finite element integration expressions.
+Algorithm~\ref{algo:opt} details the steps for performing sharing elimination on a tree representation of the loop nest. The algorithm is meant to be applied to each statement appearing in the independent basic block of the input finite element integration loop nest. It exploits the observation that test and trial functions are always part of structured tensor operations, due to the nature of finite element integration expressions. Section~\ref{sec:proof} will elucidate the claims of quasi-optimality and optimality. 
 
 \begin{Algo}[Sharing elimination]
 \label{algo:opt}
@@ -374,19 +374,19 @@ We perform a second depth-first visit of the expression tree to track all occurr
 Given a partition $P$, to decide between (i) and (ii) we adopt the two following criteria:
 \begin{enumerate}
 \item We compare the cardinality of $P$ to that of the set of multilinear symbols (e.g., test functions) in $P$. If the former is lower, we use (i); if the latter is lower, we use (ii); if they are identical, we check the next criterion, which attempts to optimize for the outer loops.
-\item We know how many times a multilinear symbol $s$ appears in the input expression. Let $n_{s}$ denote this quantity. Let $c_{op}$ be the cost of (i.e., number of operations in) $op$. Also, recall from Figure~\ref{code:loopnest} that $L_i$ and $L_k$ have size $M$ and $O$. Assume, for example, that $P$ depends on $[L_i, L_k]$. We observe that the increase in operation count at the level of the outer loops would be: $M O \sum_{w \in P} c_{op}^{w}$ if (i) were applied; $M n_{s}$ if (ii) were applied. Therefore, we take (i) or (ii) depending on which quantity is minimum.
+\item We know how many times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. Let $n_{o}$ and $n_{s}$ denote these quantities. Let $X$ be the set of multilinear operands, and let $Y$ be the set of multilinear symbols. Let $c_{o}$ be the cost of $o$ (i.e., the number of operations). Assume, for this example, that $P$ depends on $[L_i, L_k]$ (which we know, from Figure~\ref{code:loopnest}, to have extent $M$ and $O$, respectively). We observe that the increase in operation count at the level of the outer loops would be: $M (O \sum_{o \in X} c_{o} + \sum_{o \in X} (n_{o} - 1))$ if (i) were applied; $M \sum_{s \in Y} (n_{s} - 1)$ if (ii) were applied. We then take (i) or (ii) depending on which quantity is minimum.
 \end{enumerate}
 
 On a last depth-first visit of the expression tree, we apply point (2) above to all of the $L_i$-dependent expressions. 
+
+%TODO what partition do we take first ? we need a partial ordering here
 \end{Algo}
 
-Section~\ref{sec:proof} elucidates the claims of quasi-optimality and optimality. 
-
-\subsection{Pre-evaluation}
+\subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
-Sharing elimination explores the transformation space and applies three operators: factorization, code motion and common sub-expression elimination. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in a monomial transformation space (i.e., specific factorization and code motion) preserving the correctness of the transformation.
+Sharing elimination explores the transformation space and applies three operators: factorization, code motion and common sub-expression elimination. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., specific factorization and code motion) preserving the correctness of the transformation.
 
-We start with an example. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction imposed by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
+We start with an example. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $M$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 19pt \subfigure[With reduction]{\label{code:loopnest_red}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_red.code}}}
@@ -433,7 +433,7 @@ The size of a temporary due to code motion must not be proportional to the size 
 The total amount of memory occupied by the temporaries due to code motion must not exceed a certain threshold, \texttt{$T_H$}.
 \end{Const}
 
-Constraint~\ref{const:Le} reflects the policy decision that the compiler should not silently consume memory on ... data objects. Consequently, generalized code motion as performed by sharing elimination is not allowed to hoist expressions outside of $L_e$. 
+Constraint~\ref{const:Le} reflects the policy decision that the compiler should not silently consume memory on global data objects. Consequently, generalized code motion as performed by sharing elimination is not allowed to hoist expressions outside of $L_e$. 
 
 We conclude providing a more refined definition of optimality.
 
@@ -455,8 +455,7 @@ Sharing elimination and pre-evaluation tackle the problem of minimizing spatial 
 In this section, we build a transformation algorithm that produces optimal or quasi-optimal finite element integration loop nests. In the perspective of integrating the transformation algorithm with a code generation system, we also discuss an approach that trades optimality for compilation time.
 
 \subsection{Transformation algorithm}
-
-At this point, two main issues are to be addressed: 
+At this point, two main issues still need be addressed: 
 \begin{enumerate}
 \item \textit{Coordinating the application of pre-evaluation and sharing elimination.} Recall from Section~\ref{sec:pre-evaluation} that pre-evaluation could either increase or decrease the operation count with respect to sharing elimination.
 \item \textit{Finding the global optimum.} Consider a form comprising two monomials $m1$ and $m2$. Assume that pre-evaluation is profitable for $m1$ but not for $m2$, and that $m1$ and $m2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m1$, sharing between $m1$ and $m2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction when considering the whole set of monomials (i.e., the expression as a whole).
@@ -518,6 +517,26 @@ If $\iota < I$, we still need to find the number of terms $\rho$ such that $\the
 
 \subsection{Again on optimality}
 \label{sec:proof}
+
+\begin{Prop}
+\label{prop:optimal-approach}
+Consider a multilinear form and the corresponding loop nest $\Lambda$ implementing it. The form comprises a set of monomials, $M$. Let $P$ be the set of pre-evaluated monomials, and let $Z$ be the set of non pre-evaluated monomials (i.e., $Z = M \setminus P$). Assume that:
+\begin{enumerate}
+\item pre-evaluating different monomials does not result in identical tables;
+\item ...
+\end{enumerate} 
+Then, the transformation algorithm produces a quasi-optimal $\Lambda'$ as established by Definition ?. In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
+\end{Prop}
+\begin{proof}
+....
+%We first comment on the assumptions. 1) Inherently a pathological case, so we simply neglect it. 2) Might occur in forms with several monomials, although this was never the case in the problems that we have so far investigated (which are obviously more than those presented in Section~\ref{sec:perf-results}). These assumptions allow us to avoid a ``global analysis'' of $M$.
+%
+%We prove our claim by demonstrating the following: A) pre-evaluating any $Z_P: Z_P \subseteq Z$ would result in $\Lambda''_{ops}$ such that $\Lambda''_{ops} > \Lambda'_{ops}$; B) not pre-evaluating any $P_Z: P_Z \subseteq P$ would result in $\Lambda''_{ops}$ such that $\Lambda''_{ops} > \Lambda'_{ops}$.
+%
+%A) The only corner situation in which this might occur is whenever some of the pre-evaluated monomials in $Z_P$ result in tables identical to those already deriving from $P$. If that were the case, more sharing elimination opportunities would be exposed, which in turn could break the optimality claim. Assumption 1) prevents this situation, so the statement is true. 
+%
+%B) Let $\theta_{wo}(m)$ and $\theta_{w}(m)$ represent, respectively, the operation count for a monomial $m$ without and with pre-evaluation and let us consider the non-trivial case in which two monomials $p \in P_Z$ and $z \in Z$ share at least one term. We have to contemplate the fact that despite $\theta_{wo}(z) < \theta_w(z)$ and $\theta_{w}(p) < \theta_{wo}(p)$, we could have $\theta^G_{wo}(z, p)  < \theta_w(p) + \theta_{wo}(z)$, where $\theta^G_{wo}$ is a hypothetical global oracle. That is, there could be a larger potential gain in sharing elimination that goes lost if monomials are inspected in isolation. Potential examples are forms in which multiple monomials differ only for the number and/or the space of coefficient functions. The previously discussed assumption 2) allows us to neglect this possibility. 
+\end{proof}
 
 \subsection{Trading operation count for analysis cost}
 We can relax the constraints on (quasi-)optimality to relieve the analysis phase. In this section, we discuss ways of achieving this.
