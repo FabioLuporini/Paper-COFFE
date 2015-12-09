@@ -342,7 +342,7 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 
 In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, generalized code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved if stronger hypotheses hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
 
-Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties that can characterize our expressions. Section~\ref{sec:sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$.
+Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties that can characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$.
 
 \subsubsection{Common sub-expressions}
 \label{sec:se-mln}
@@ -512,30 +512,28 @@ The following proposition states that our approach guarantees quasi-optimality. 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form and the corresponding finite element integration loop nest $\Lambda$ implementing it. The form comprises a set of monomials, $M$. Let $P$ be the set of pre-evaluated monomials, and let $Z = M \setminus P$. Assume that pre-evaluating different monomials does not result in identical tables. Then, given the memory Constraints~\ref{const:Le} and~\ref{const:TH}, the transformation algorithm produces a $\Lambda'$ which is quasi-optimal (as in Definition~\ref{def:mln-quasi-optimality}). 
+Consider a multilinear form and the corresponding finite element integration loop nest $\Lambda$ implementing it. The form comprises a set of monomials, $M$. Let $P$ be the set of pre-evaluated monomials, and let $Z = M \setminus P$. Assume that pre-evaluating different monomials does not result in identical tables. Then, given the memory Constraints~\ref{const:Le} and~\ref{const:TH}, the transformation algorithm produces a $\Lambda'$ which is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
 \end{Prop}
 \begin{proof}
-Given a monomial $m$, $\theta(m)$ provides the cost/gain due to pre-evaluating $m$. $\theta(m)$ is \textit{not} an estimate\footnote{An estimate is used, instead, in~\citeN{Kirby:TC}. The estimate is actually for the whole form, rather than for its monomials.}, so $P$ (and $Z$) are constructed correctly. 
+The function $\theta$ provides cost or gain of pre-evaluation. $\theta$ retrieves exact values, rather than estimates\footnote{An estimate is used, instead, in~\citeN{Kirby:TC}. The estimate is actually for the whole form, rather than for its monomials.}, so $P$ and $Z$ are constructed correctly. 
 
-Let $\Lambda_{ops}$ denote the operation count (additions, products) in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the set of all innermost loops produced by the transformation algorithm (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $\Lambda''_{I_{ops}} < \Lambda'_{I_{ops}}$. For this, we need to show that:
+Let $\Lambda_{ops}$ denote the operation count (number of additions and products) in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the set of all innermost loops produced by the transformation algorithm (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $\Lambda''_{I_{ops}} < \Lambda'_{I_{ops}}$, which holds if and only if
 \begin{enumerate}
-\item the coordination of pre-evaluation with sharing elimination is optimal. This boils down to show that
+\item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
-\item pre-evaluating any $Z_P: Z_P \subseteq Z$ would result $\Lambda''_{ops} > \Lambda'_{ops}$
-\item not pre-evaluating any $P_Z: P_Z \subseteq P$ would result in $\Lambda''_{ops} > \Lambda'_{ops}$
+\item \textit{pre-evaluating any $Z_P: Z_P \subseteq Z$ would result $\Lambda''_{ops} > \Lambda'_{ops}$}
+\item \textit{not pre-evaluating any $P_Z: P_Z \subseteq P$ would result in $\Lambda''_{ops} > \Lambda'_{ops}$}
 \end{enumerate}
-\item sharing elimination (Algorithm~\ref{algo:sharing-elimination}) produces loop nests that are at least quasi-optimal (again, in the sense of Definition~\ref{def:mln-quasi-optimality})
-\end{enumerate}
-
-We discuss each of these points individually
-
-\begin{enumerate}
+~
 \begin{enumerate}
 \item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two generic monomials $m_1, m_2 \in M$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. In a scenario in which $m_{T_{1}} \cap m_{T_{2}}$, we would have that at least one table would be assigned to the same temporary, with the transformation algorithm skipping a potential global optimum. By assumption, we neglect this possibility. The assumption is sustained by (i) the pathological nature of the scenario, (ii) the complexity inherent in handling it, and (iii) the fact that such a potential global optimum would probably be very close to the retrieved solution.
 \item ...
 \end{enumerate}
-\item ...
+
+\item \textit{Sharing elimination (Algorithm~\ref{algo:sharing-elimination}) produces loop nests that are at least quasi-optimal.}\\
+...
 \end{enumerate}
+
 %
 %A) The only corner situation in which this might occur is whenever some of the pre-evaluated monomials in $Z_P$ result in tables identical to those already deriving from $P$. If that were the case, more sharing elimination opportunities would be exposed, which in turn could break the optimality claim. Assumption 1) prevents this situation, so the statement is true. 
 %
