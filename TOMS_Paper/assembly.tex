@@ -367,24 +367,27 @@ Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming 
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
-In the following, we assume $|.|$ to be a generic ``sizeof'' operator, denoting the cardinality of a set or the extent of a loop. The cost, in number of operations, of a sub-expression $o$ is represented by $c_o$.
+We introduce the following notation and terminology
+\begin{itemize}
+\item $|.|$: a generic ``sizeof'' operator, denoting the cardinality of a set or the extent of a loop
+\item $c_o$: the cost (i.e., number of operations) of an expression $o$
+\item A \textit{multilinear operand} is any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression; a \textit{multilinear symbol} is any symbol appearing in a multilinear operand (e.g., test functions)
+\end{itemize}
 
 The initialization step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions. This ensures the uniqueness of operands. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$. 
 
-We perform a second depth-first visit of the expression tree to build a partitioning of multilinear operands; that is, any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression in normal form. We partition the multilinear operands into $p$ disjoint sets -- that is $\mathbb{P} = \lbrace P_0, P_1, ..., P_{p-1}\rbrace$ such that $\cup_{i=1}^p P_i = \mathbb{P}$ and $\forall i, j = 0,..., p-1$, $i \neq j$, $P_i \cap P_j = \emptyset$. The multilinear operands in a partition $P_i$ share the same set of symbols (e.g., all operands in which the first order derivatives of test functions appear), while there is no sharing across different partitions. We have to establish:
+We perform a second depth-first visit of the expression tree to collect all multilinear operands and partition them into $p$ disjoint sets -- that is $\mathbb{P} = \lbrace P_0, P_1, ..., P_{p-1}\rbrace$ such that $\cup_{i=1}^p P_i = \mathbb{P}$ and $\forall i, j = 0,..., p-1$, $i \neq j$, $P_i \cap P_j = \emptyset$. The multilinear operands in a partition $P_i$ share a set of symbols (e.g., all operands in which first order derivatives of test functions appear), whereas there is no sharing across different partitions. We have to establish:
 \begin{enumerate}
-\item the order in which sharing elimination will be applied to the partitions in $\mathbb{P}$ (this has a relevant impact on the outcome of the transformation process).
-\item a scheduling strategy for each $P \in \mathbb{P}$.
+\item an ordering for $\mathbb{P}$, such that if $P_i \prec P_j$, $P_i$ is transformed before $P_j$, and
+\item a scheduling strategy for each $P_i$
 \end{enumerate}
 
-We start with point 1). We further partition $\mathbb{P}$ into two disjoint sets $\mathbb{P}^{L_j}$ and $\mathbb{P}^{L_k}$, which logically separates partitions based on the loop they depend on. We then order the partitions lexicographically, with the position of partition $P^{L_l} \in \mathbb{P}^{L_l}$ given by ${<}|\mathbb{P}^{L_l}|,\ |L_l| \sum_{o \in P^{L_l}} c_o{>}$. 
+We start with point 1). We further partition $\mathbb{P}$ into two disjoint sets $\mathbb{P}^{j}$ and $\mathbb{P}^{k}$, which logically separates partitions based on loop dependency. We then order $\mathbb{P}$ lexicographically, with the position of $P^{l}$ given by ${<}|\mathbb{P}^{l}|,\ |L_l| \sum_{o \in P^{l}} c_o{>}$. Intuitively, this simply means that operands appearing more often in the expression will be factorized first, which is essential to minimize the operation count within a loop.
 
-%TODO need intuition here!
-
-We now tackle point 2). For each partition $P \in \mathbb{P}$, we have to decide between two options, as already explained in Section~\ref{sec:se-rln}. We recall them briefly: (i) applying generalized code motion, SCSE (if possible), and CCSE (if necessary); (ii) expanding products to expose spatial sharing, which enables factorization and, in turn, generalized code motion. For this choice, we adopt the following criteria:
+We now tackle point 2). For each partition, we have to decide between two options, as already explained in Section~\ref{sec:se-rln}. We recall them briefly: (i) applying generalized code motion, SCSE (if possible), and CCSE (if necessary); (ii) expanding products to expose spatial sharing, which enables factorization and, in turn, generalized code motion. For this choice, we adopt the following criteria:
 \begin{enumerate}
-\item Let $S_P$ be set of multilinear symbols in $P$ (e.g., test functions). If $|P| < |S_P|$, (i) is applied; if $|P| > |S_P|$, (ii) is applied; if $|P| = |S_P|$, we rely on criterion 2), which attempts to optimize for the outer loops
-\item We know how many times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. Let $n_{o}$ and $n_{s}$ denote these quantities. Let $X$ be the set of multilinear operands, and let $Y$ be the set of multilinear symbols. Assume, for this example, that $P$ depends on $[L_i, L_k]$ (which we know, from Figure~\ref{code:loopnest}, to have extent $M$ and $O$, respectively). We observe that the increase in operation count at the level of the outer loops would be: $M (O \sum_{o \in X} c_{o} + \sum_{o \in X} (n_{o} - 1))$ if (i) were applied; $M \sum_{s \in Y} (n_{s} - 1)$ if (ii) were applied. We then take (i) or (ii) depending on which quantity is minimum.
+\item Let $S_P$ be set of multilinear symbols in $P$. If $|P| < |S_P|$, (i) is applied; if $|P| > |S_P|$, (ii) is applied; if $|P| = |S_P|$, we rely on criterion 2), which attempts to optimize for the outer loops
+\item Let $n_{o}$ and $n_{s}$ denote, respectively, the number of times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. Let $X$ be the set of multilinear operands, and let $Y$ be the set of multilinear symbols. Assume, for this example, that $P$ depends on $[L_i, L_k]$ (which we know, from Figure~\ref{code:loopnest}, to have extent $M$ and $O$, respectively). We observe that the increase in operation count at the level of the outer loops would be: $M (O \sum_{o \in X} c_{o} + \sum_{o \in X} (n_{o} - 1))$ if (i) were applied; $M \sum_{s \in Y} (n_{s} - 1)$ if (ii) were applied. We then take (i) or (ii) depending on which quantity is minimum.
 \end{enumerate}
 
 %TODO need intuition here!
