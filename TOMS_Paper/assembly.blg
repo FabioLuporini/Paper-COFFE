@@ -13,46 +13,47 @@ Warning--page numbers missing in both pages and numpages fields in Kirby:TC
 Warning--require pages or numpages fields with articleno field in Kirby:TC
 Warning--require articleno with numpages field in SLP-vect
 Warning--empty address in Fenics
+Warning--page numbers missing in both pages and numpages fields in firedrake-paper
 Warning--page numbers missing in both pages and numpages fields in Francis
 You've used 10 entries,
             5290 wiz_defined-function locations,
-            1311 strings with 16332 characters,
-and the built_in function-call counts, 9523 in all, are:
-= -- 1254
-> -- 419
+            1312 strings with 16555 characters,
+and the built_in function-call counts, 10660 in all, are:
+= -- 1427
+> -- 506
 < -- 2
-+ -- 132
-- -- 156
-* -- 649
-:= -- 1106
++ -- 164
+- -- 215
+* -- 777
+:= -- 1226
 add.period$ -- 51
 call.type$ -- 10
-change.case$ -- 66
+change.case$ -- 74
 chr.to.int$ -- 10
-cite$ -- 18
-duplicate$ -- 728
-empty$ -- 529
-format.name$ -- 188
-if$ -- 2238
+cite$ -- 19
+duplicate$ -- 742
+empty$ -- 539
+format.name$ -- 220
+if$ -- 2491
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 29
-newline$ -- 133
+missing$ -- 33
+newline$ -- 135
 num.names$ -- 80
-pop$ -- 237
+pop$ -- 254
 preamble$ -- 1
-purify$ -- 116
+purify$ -- 124
 quote$ -- 0
-skip$ -- 209
+skip$ -- 210
 stack$ -- 0
-substring$ -- 652
+substring$ -- 779
 swap$ -- 60
-text.length$ -- 2
+text.length$ -- 65
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 134
-warning$ -- 8
-while$ -- 77
+warning$ -- 9
+while$ -- 74
 width$ -- 0
 write$ -- 228
-(There were 8 warnings)
+(There were 9 warnings)

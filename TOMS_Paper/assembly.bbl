@@ -55,15 +55,6 @@
 \url{http://dx.doi.org/10.1145/1375581.1375595}}
 
 
-\bibitem[\protect\citeauthoryear{{Firedrake contributors}}{{Firedrake
-  contributors}}{2014}]%
-        {firedrake-code}
-{{Firedrake contributors}}. 2014.
-\newblock {The Firedrake Project}.
-\newblock \url{http://www.firedrakeproject.org}.   (2014).
-\newblock
-
-
 \bibitem[\protect\citeauthoryear{Kirby and Logg}{Kirby and Logg}{2006}]%
         {FFC-TC}
 {Robert~C. Kirby} {and} {Anders Logg}. 2006.
@@ -141,6 +132,20 @@
 \showISSN{0098-3500}
 \showDOI{%
 \url{http://dx.doi.org/10.1145/1644001.1644009}}
+
+
+\bibitem[\protect\citeauthoryear{Rathgeber, Ham, Mitchell, Lange, Luporini,
+  McRae, Bercea, Markall, and Kelly}{Rathgeber et~al\mbox{.}}{2015}]%
+        {firedrake-paper}
+{Florian Rathgeber}, {David~A. Ham}, {Lawrence Mitchell}, {Michael Lange},
+  {Fabio Luporini}, {Andrew T.~T. McRae}, {Gheorghe{-}Teodor Bercea},
+  {Graham~R. Markall}, {and} {Paul H.~J. Kelly}. 2015.
+\newblock \showarticletitle{Firedrake: automating the finite element method by
+  composing abstractions}.
+\newblock {\em CoRR\/}  {abs/1501.01809} (2015).
+\newblock
+\showURL{%
+\url{http://arxiv.org/abs/1501.01809}}
 
 
 \bibitem[\protect\citeauthoryear{Russell and Kelly}{Russell and Kelly}{2013}]%
