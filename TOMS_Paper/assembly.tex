@@ -342,7 +342,7 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 
 In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, generalized code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved if stronger hypotheses hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
 
-Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties that characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
+Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural and algebraic properties that characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
 
 \subsubsection{Common sub-expressions}
 \label{sec:se-mln}
@@ -370,31 +370,31 @@ Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming 
 We introduce the following notation and terminology
 \begin{itemize}
 \item $|.|$: a generic ``sizeof'' operator, denoting the cardinality of a set or the extent of a loop
-\item $c_o$: the cost (i.e., number of operations) of an expression $o$
+\item $c_o^l$: the cost of an expression $o$ within a loop $L_l$; that is, the number of operations in $o$ times $|L_l|$.
 \item A \textit{multilinear operand} is any $\alpha_{eij}$ or $\beta_{eik}$ in the expression; a \textit{multilinear symbol} is a symbol appearing in a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, trial functions, first order derivatives of test functions, etc.)
 \end{itemize}
 
 The initialization step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$. 
 
-We perform a second depth-first visit of the expression tree to collect all multilinear operands and partition them into $p$ disjoint sets -- that is $\mathbb{P} = \lbrace P_0, P_1, ..., P_{p-1}\rbrace$ such that $\cup_{i=1}^p P_i = \mathbb{P}$ and $\forall i, j = 0,..., p-1$, $i \neq j$, $P_i \cap P_j = \emptyset$. The multilinear operands in a partition $P_i$ share a set of multilinear symbols, whereas there is no sharing across different partitions. We have to establish:
+We perform a second depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, with $\mathbb{P} = \lbrace P^0, P^1, ..., P^{p-1}\rbrace$. The multilinear operands within a partition share the same set of multilinear symbols, whereas there is no sharing across different partitions. We have to establish:
 \begin{enumerate}
-\item an ordering for $\mathbb{P}$, such that if $P_i \prec P_j$, then $P_i$ is scheduled before $P_j$, and
-\item a scheduling strategy for each $P_i$
+\item an ordering for $\mathbb{P}$, such that if $P^i \prec P^j$, then $P^i$ is handled before $P^j$, and
+\item a scheduling strategy for each $P^i$
 \end{enumerate}
 
-We start with point 1). We further partition $\mathbb{P}$ into two disjoint sets $\mathbb{P}^{j}$ and $\mathbb{P}^{k}$, which logically separates partitions based on loop dependency. We then order $\mathbb{P}$ lexicographically, with the position of $P \in \mathbb{P}^j$ given by ${<}|\mathbb{P}^{j}|,\ |L_j| \sum_{o \in P} c_o{>}$ (and analogously for $P \in \mathbb{P}^k$). Intuitively, this simply means that operands appearing more often in the expression are handled first. We will later elaborate on this.
+We start with point 1). We further partition $\mathbb{P}$ into two disjoint sets $\mathbb{P}_{j}$ and $\mathbb{P}_{k}$, which logically separates partitions based on loop dependency. We then build a reverse lexicographic ordering for $\mathbb{P}$, with the position of $P \in \mathbb{P}_l$, $l \in \lbrace j, k \rbrace$, given by ${<}|\mathbb{P}_{l}|,\ \sum_{o \in P} c_o^l{>}$. Intuitively, this simply means that operands appearing more often in the expression are handled first. We will later elaborate on this.
 
 We now tackle point 2). For each partition, we have two options, as already explained in Section~\ref{sec:se-rln}. We recall them briefly: (i) applying generalized code motion, SCSE (if possible), and CCSE; (ii) expanding products to expose spatial sharing, which enables factorization and, in turn, generalized code motion. We adopt the following criteria:
 \begin{enumerate}
 \item Let $S_P$ be the set of multilinear symbols in $P$. If $|P| < |S_P|$, (i) is applied; if $|P| > |S_P|$, (ii) is applied; if $|P| = |S_P|$, we rely on criterion 2), which attempts to optimize for the outer loops.
-\item Let $n_{o}$ and $n_{s}$ denote, respectively, the number of times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. Assume that $P$ depends on $[L_i, L_k]$. The increase in operation count at the level of the outer loops is: if (i) were applied, $|L_i| (|L_k| \sum_{o \in P} c_{o} + \sum_{o \in P} (n_{o} - 1))$; if (ii) were applied, $|L_i| \sum_{s \in P_S} (n_{s} - 1)$. We pick (i) or (ii) such that the increase is minimum. Intuitively, this is a way of estimating how two different factorizations affect the operation count, given the fact (criterion 1) that they both minimize the cost of the innermost loop.
+\item Let $n_{o}$ and $n_{s}$ denote, respectively, the number of times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. The increase in operation count at the level of the outer loops is: if (i) were applied, $\sum_{o \in P_l} (c_{o}^{l} + n_{o} - 1)$; if (ii) were applied, $\sum_{s \in S_P} (n_{s} - 1)$. We pick (i) or (ii) such that the increase is minimum. Intuitively, this is a way of estimating how two different factorizations affect the operation count, given the fact (criterion 1) that both will eventually minimize the innermost loop cost.
 \end{enumerate}
 
 It remains to schedule $L_i$-dependent expressions. We perform a last depth-first visit of the expression tree and, for each of such expressions, we apply sharing elimination following a strategy which is very close to point (2) above. In doing this, we speculatively assume that all expressions result from structured tensor operations. If this were not the case, factorization would be applied greedily (i.e., eventually, some code motion opportunities will be exposed, but this may lead to a local optimum).
 \end{Algo}
 
 \subsubsection{Examples}
-Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. Clearly, $\mathbb{P} = \lbrace P_0, P_1 \rbrace$, with $\mathbb{P}^k = \lbrace P_0 \rbrace$ and $\mathbb{P}^j = \lbrace P_1 \rbrace$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
+Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_k^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_j^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
 \begin{figure}\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
 ~~~~~~~~~~
@@ -470,7 +470,7 @@ We address the two following issues:
 \item \textit{Search for a global optimum.} Consider a form comprising two monomials $m1$ and $m2$. Assume that pre-evaluation is profitable for $m1$ but not for $m2$, and that $m1$ and $m2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m1$, sharing between $m1$ and $m2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction when considering the whole set of monomials (i.e., the expression as a whole).
 \end{enumerate}
 
-Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can focus on the transformation algorithm, whose pseudo-code is provided in Figure~\ref{code:intuition}.
+Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can focus on the transformation algorithm, whose pseudo-code is provided in Figure~\ref{algo:gamma}.
 
 %numbers=left
 \begin{figure}
@@ -480,7 +480,7 @@ M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
 S = $\lbrace$m | $\theta(m)$ < 0$\rbrace$
 P = M $\setminus$ S
 
-// Find potential optimum such that memory constraints are honored
+// Find global quasi-optimum honoring memory constraints
 B = $\lbrace$b | b is a bipartite graph from complete graph G = (P, E)$\rbrace$
 for each b $\in$ B:
   for each (b$_S$, b$_P$) $\in$ b:
@@ -494,12 +494,12 @@ pre_evaluate(P $\cup$ b$_P$)
 eliminate_sharing(S $\cup$ b$_S$ $\cup$ P $\cup$ b$_P$)
 \end{lstlisting}
 \caption{High level view of the transformation algorithm}
-\label{code:intuition}
+\label{algo:gamma}
 \end{figure}
 
 The algorithm starts with splitting the monomials into two disjoint sets: the monomials that surely do not take advantage of pre-evaluation ($S$) and those that instead potentially benefit from it ($P$). Some subsets of monomials in $P$: 1) might share terms with $S$, in which case sharing elimination could globally outperform pre-evaluation; 2) might break Constraint~\ref{const:TH}. The algorithm then finds the optimal bipartition $b = (b_S, b_p)$ of $P$ such that $b_P$ represents the subset of monomials for which pre-evaluation is globally optimal and Constraint~\ref{const:TH} is honored. Since the number of monomials in a form tends to be very small (a few units in most complex forms), evaluating all possible bipartitions is not a significant issue as long as the cost of calculating $\theta_{se}$ and $\theta_{pre}$ is negligible. This aspect is elaborated in Section~\ref{sec:op_count}. In addition, observe that because of reuse of basis functions, pre-evaluation may result in identical tables, which will be mapped to the same temporary. Therefore, sharing elimination is transparently applied to all monomials (i.e., to all sub-expressions, even those produced by pre-evaluation). The output of the transformation algorithm is as in Figure~\ref{code:loopnest-opt}, assuming as input the loop nest in Figure~\ref{code:loopnest}. 
 
-\begin{figure}\begin{CenteredBox}
+\begin{figure}[b]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
 \end{CenteredBox}\caption{The loop nest produced by the algorithm for an input as in Figure~\ref{code:loopnest}.}\label{code:loopnest-opt}\end{figure}
 
@@ -514,7 +514,7 @@ The most trivial way of evaluating $\theta_{se}$ and $\theta_{pre}$ is to apply 
 
 The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the coefficient $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
 
-\begin{figure}[b]\begin{CenteredBox}
+\begin{figure}[t]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Simplified loop nest for a pre-multiplied mass matrix.}\label{code:increase_factor}\end{figure}
 
@@ -526,31 +526,36 @@ If $\iota < I$, we still need to find the number of terms $\rho$ such that $\the
 
 \subsection{Formalization}
 \label{sec:proof}
-The following proposition states that our approach guarantees quasi-optimality. The proof re-uses most of the concepts and explanations provided throughout the paper.
+The following proposition states that our approach guarantees quasi-optimality. The proof re-uses some of the concepts and explanations provided throughout the paper.
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form and the corresponding finite element integration loop nest $\Lambda$ implementing it. The form comprises a set of monomials, $M$. Let $P$ be the set of pre-evaluated monomials, and let $Z = M \setminus P$. Assume that pre-evaluating different monomials does not result in identical tables. Then, given the memory Constraints~\ref{const:Le} and~\ref{const:TH}, the transformation algorithm produces a $\Lambda'$ which is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $P$ be the set of pre-evaluated monomials, and let $Z = M \setminus P$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
 \end{Prop}
 \begin{proof}
-The function $\theta$ provides cost or gain of pre-evaluation. $\theta$ retrieves exact values, rather than estimates\footnote{An estimate is used, instead, in~\citeN{Kirby:TC}. The estimate is actually for the whole form, rather than for its monomials.}, so $P$ and $Z$ are constructed correctly. 
+We first observe that the cost function $\theta$ predicts the exact gain/loss in monomial pre-evaluation, so $P$ is always correct by construction. 
 
-Let $\Lambda_{ops}$ denote the operation count (number of additions and products) in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the set of all innermost loops produced by the transformation algorithm (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $\Lambda''_{I_{ops}} < \Lambda'_{I_{ops}}$, which holds if and only if
+Let $c_\Lambda$ denote the operation count in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the subset of all innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
 \begin{enumerate}
 \item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
-\item \textit{pre-evaluating any $Z_P: Z_P \subseteq Z$ would result $\Lambda''_{ops} > \Lambda'_{ops}$}
-\item \textit{not pre-evaluating any $P_Z: P_Z \subseteq P$ would result in $\Lambda''_{ops} > \Lambda'_{ops}$}
+\item \textit{pre-evaluating any $Z_P \subseteq Z$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
+\item \textit{not pre-evaluating any $P_Z \subseteq P$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \end{enumerate}
-~
+\item \textit{Sharing elimination (Algorithm~\ref{algo:sharing-elimination}) produces (at least) quasi-optimal loop nests.}\\
+\end{enumerate}
+
+We discuss these points separately
+
 \begin{enumerate}
-\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two generic monomials $m_1, m_2 \in M$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. In a scenario in which $m_{T_{1}} \cap m_{T_{2}}$, we would have that at least one table would be assigned to the same temporary, with the transformation algorithm skipping a potential global optimum. By assumption, we neglect this possibility. The assumption is sustained by (i) the pathological nature of the scenario, (ii) the complexity inherent in handling it, and (iii) the fact that such a potential global optimum would probably be very close to the retrieved solution.
+\item 
+\begin{enumerate}
+\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two generic monomials $m_1, m_2 \in Z$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
+\item Let $p \in P$ and $z \in Z$ two monomials that share some subsets of multilinear symbols. If, as by assumption $\theta(p)$ suggests, $p$ will be pre-evaluated, there may be a potential gain in sharing elimination going lost, which potentially leads to a locally optimal solution -- instead of a global one. We avoid this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
+\end{enumerate}
 \item ...
 \end{enumerate}
 
-\item \textit{Sharing elimination (Algorithm~\ref{algo:sharing-elimination}) produces loop nests that are at least quasi-optimal.}\\
-...
-\end{enumerate}
 
 %
 %A) The only corner situation in which this might occur is whenever some of the pre-evaluated monomials in $Z_P$ result in tables identical to those already deriving from $P$. If that were the case, more sharing elimination opportunities would be exposed, which in turn could break the optimality claim. Assumption 1) prevents this situation, so the statement is true. 
