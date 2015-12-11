@@ -56,14 +56,15 @@
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With spatial sharing}}}{7}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {With temporal sharing}}}{7}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(c)}{\ignorespaces {Optimal form}}}{7}}
-\newlabel{sec:se-mln}{{3.2.1}{8}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Common sub-expressions}{8}}
+\newlabel{sec:se-mln}{{3.2.1}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Common sub-expressions}{7}}
 \newlabel{sec:se-rln}{{3.2.2}{8}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Structured tensor operations}{8}}
 \newlabel{sec:se-algo}{{3.2.3}{8}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}Algorithm}{8}}
-\newlabel{algo:sharing-elimination}{{1}{9}}
+\newlabel{algo:sharing-elimination}{{1}{8}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.4}Examples}{9}}
+\citation{Kirby:TC}
 \newlabel{code:poisson_a}{{3(a)}{10}}
 \newlabel{sub@code:poisson_a}{{(a)}{10}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/poisson\textunderscore pre\textunderscore se.code}{10}}
@@ -73,7 +74,7 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Applying sharing elimination to the bilinear form $J^{-T} \nabla u \cdot J^{-T} \nabla v$ arising from a Poisson equation in 2D.\relax }}{10}}
 \newlabel{code:poisson}{{3}{10}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {Normal form}}}{10}}
-\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Optimal form}}}{10}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {After sharing elimination}}}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Monomial pre-evaluation}{10}}
 \newlabel{sec:pre-evaluation}{{3.3}{10}}
 \newlabel{code:loopnest_red}{{4(a)}{10}}
@@ -86,14 +87,13 @@
 \newlabel{code:loopnest_rednored}{{4}{10}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {With reduction}}}{10}}
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {Pre-evaluated reduction}}}{10}}
-\citation{Kirby:TC}
-\newlabel{algo:pre-evaluation}{{2}{11}}
+\newlabel{algo:pre-evaluation}{{2}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Memory constraints}{11}}
 \newlabel{sec:mem-const}{{3.4}{11}}
 \newlabel{const:Le}{{1}{11}}
 \newlabel{const:TH}{{2}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Completeness under factorization, code motion, and reduction pre-evaluation}{12}}
-\newlabel{sec:completeness}{{3.5}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Completeness under factorization, code motion, and reduction pre-evaluation}{11}}
+\newlabel{sec:completeness}{{3.5}{11}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Selection and composition of transformations}{12}}
 \newlabel{sec:optimal-synthesis}{{4}{12}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Transformation algorithm}{12}}
@@ -104,46 +104,45 @@
 \newlabel{code:loopnest-opt}{{6}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The cost function $\theta $}{13}}
 \newlabel{sec:op_count}{{4.2}{13}}
+\citation{Kirby:TC}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Formalization}{14}}
 \newlabel{sec:proof}{{4.3}{14}}
 \newlabel{prop:optimal-approach}{{1}{14}}
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{14}}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Simplified loop nest for a pre-multiplied mass matrix.\relax }}{14}}
 \newlabel{code:increase_factor}{{7}{14}}
-\citation{Kirby:TC}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Trading operation count for analysis cost}{15}}
-\newlabel{sec:obsheu}{{4.4}{15}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Code Generation}{15}}
+\newlabel{sec:codegen}{{5}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE language}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Independence from form compilers}{15}}
 \citation{quadrature1}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Code Generation}{16}}
-\newlabel{sec:codegen}{{5}{16}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE language}{16}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Independence from form compilers}{16}}
-\newlabel{sec:zeros}{{5.2}{16}}
 \citation{quadrature1}
 \citation{FFC-TC}
 \citation{Fenics}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Handling block-sparse tables}{16}}
+\newlabel{sec:zeros}{{5.3}{16}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{16}}
+\newlabel{sec:perf-results}{{6}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental setup}{16}}
 \citation{Luporini}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Performance Evaluation}{17}}
-\newlabel{sec:perf-results}{{6}{17}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental setup}{17}}
 \citation{quadrature1}
 \citation{quadrature1}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance results}{18}}
-\newlabel{sec:perf-results-forms}{{6.2}{18}}
-\@writefile{toc}{\contentsline {paragraph}{High level view}{18}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance results}{17}}
+\newlabel{sec:perf-results-forms}{{6.2}{17}}
 \citation{SLP-vect}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the \textit  {mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{19}}
-\newlabel{fig:mass}{{8}{19}}
-\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the \textit  {mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{18}}
+\newlabel{fig:mass}{{8}{18}}
+\@writefile{toc}{\contentsline {paragraph}{High level view}{18}}
+\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form of a \textit  {Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{19}}
+\newlabel{fig:helmholtz}{{9}{19}}
 \@writefile{toc}{\contentsline {paragraph}{Mass}{19}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form of a \textit  {Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{20}}
-\newlabel{fig:helmholtz}{{9}{20}}
-\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{20}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in an \textit  {elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{21}}
-\newlabel{fig:elasticity}{{10}{21}}
+\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in an \textit  {elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{20}}
+\newlabel{fig:elasticity}{{10}{20}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Performance evaluation for the bilinear form arising in a \textit  {hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{21}}
+\newlabel{fig:hyperelasticity}{{11}{21}}
 \@writefile{toc}{\contentsline {paragraph}{Elasticity}{21}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Performance evaluation for the bilinear form arising in a \textit  {hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{22}}
-\newlabel{fig:hyperelasticity}{{11}{22}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{Uflacs}{\citeauthoryear {Aln{\ae }s}{Aln{\ae }s}{2015}}
@@ -153,10 +152,10 @@
 \bibcite{SLP-vect}{\citeauthoryear {Larsen and Amarasinghe}{Larsen and Amarasinghe}{2000}}
 \bibcite{Fenics}{\citeauthoryear {Logg, Mardal, Wells, et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{Logg et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2012}}
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{22}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{22}}
+\newlabel{sec:conclusions}{{7}{22}}
 \bibcite{quadrature1}{\citeauthoryear {{\O }lgaard and Wells}{{\O }lgaard and Wells}{2010}}
 \bibcite{firedrake-paper}{\citeauthoryear {Rathgeber, Ham, Mitchell, Lange, Luporini, McRae, Bercea, Markall, and Kelly}{Rathgeber et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{23}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{23}}
-\newlabel{sec:conclusions}{{7}{23}}
 \bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\lastpage{24}
+\lastpage{23}

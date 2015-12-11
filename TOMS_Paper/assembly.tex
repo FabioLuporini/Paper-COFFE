@@ -307,12 +307,12 @@ Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformati
 
 \begin{Def}[Quasi-optimality of a loop nest]
 \label{def:mln-quasi-optimality}
-Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is at least minimal in all innermost loops.
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal in all innermost loops.
 \end{Def}
 
 Note that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements. We also note that quasi-optimality approximates optimality very well whenever the inner loop trip counts are ``sufficiently large''.
 
-Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions, which is reflected in the innermost loop. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
+Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
 \begin{itemize}
 \item the space of legal transformations impacting the operation count (Sections~\ref{sec:sharing-elimination} -- \ref{sec:completeness})
 \item an algorithm to select points in the transformation space (Section~\ref{sec:optimal-synthesis})
@@ -342,7 +342,7 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 
 In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, generalized code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved if stronger hypotheses hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
 
-Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties that characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form $\sum_{w=1}^m \alpha_{eij}^{w} \beta_{eik}^{w} \sigma_{ei}^{w}$.
+Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural (i.e., inherent in finite element integration) and algebraic (i.e., related to the use of differential and vector operators) properties that characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
 
 \subsubsection{Common sub-expressions}
 \label{sec:se-mln}
@@ -398,14 +398,14 @@ Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to th
 \begin{figure}\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
 ~~~~~~~~~~
-{\subfigcapskip = 7pt \subfigure[Optimal form]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
+{\subfigcapskip = 7pt \subfigure[After sharing elimination]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
 \end{CenteredBox}\caption{Applying sharing elimination to the bilinear form $J^{-T} \nabla u \cdot J^{-T} \nabla v$ arising from a Poisson equation in 2D.}\label{code:poisson}\end{figure}
 
 \subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
 Sharing elimination explores the transformation space and applies three operators: factorization, code motion and common sub-expression elimination. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., specific factorization and code motion) preserving the correctness of the transformation.
 
-We start with an example. Consider again the bilinear form implementation in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions within $F$ for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $I$? The transformation we look for is exemplified in Figures~\ref{code:loopnest_red} and~\ref{code:loopnest_nored}; Figure~\ref{code:loopnest_red}, which represents the input, can be seen as a simple instance of the abstract loop nest in Figure~\ref{code:loopnest}.
+We start with an example. Consider again the loop nest and the expression in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $I$? The transformation we look for is exemplified in Figure~\ref{code:loopnest_rednored} with a simple loop nest. The reader can easily verify that a similar transformation is applicable to the example in Figure~\ref{code:poisson_a}.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 19pt \subfigure[With reduction]{\label{code:loopnest_red}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_red.code}}}
@@ -413,7 +413,7 @@ We start with an example. Consider again the bilinear form implementation in Fig
 {\subfigcapskip = 5pt \subfigure[Pre-evaluated reduction]{\label{code:loopnest_nored}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_nored.code}}}
 \end{CenteredBox}\caption{Exposing (through factorization) and pre-evaluating a reduction.}\label{code:loopnest_rednored}\end{figure}
 
-Pre-evaluation opportunities can be exposed through exploration of the expression tree transformation space. This would be challenging if we were to deal with arbitrary loop nests and expressions. However, we make use of a result -- the foundation of tensor contraction mode -- to simplify our task. As summarized in Section~\ref{sec:tc}, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors. This result can be turned into a transformation algorithm for loops and expressions, for which we provide a succinct description below. 
+Pre-evaluation opportunities can be exposed through exploration of the expression tree transformation space. This would be challenging if we were to deal with arbitrary loop nests and expressions. We make use of a result -- the foundation of tensor contraction mode -- to simplify our task. As summarized in Section~\ref{sec:tc}, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces; such monomials can always be reduced to a product of two tensors. This result can be turned into a transformation algorithm for loops and expressions, for which we provide a succinct description below. 
 
 \begin{Algo}[Pre-evaluation]
 \label{algo:pre-evaluation}
@@ -432,15 +432,14 @@ We expand on point 1) in the next section. We address points 2) and 3) in Sectio
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-
-In the previous section, we provided an insight into the potentially negative effects of code motion. In this section, we expand on this matter. The two following observations, in particular, lead to the definition of \textit{memory constraints}.
+In the previous section, we provided an insight into the potentially negative effects of code motion. We now expand on this matter, starting with the following observations.
 
 \begin{itemize}
 \item The fact that $E \gg I, J, K$ suggests we should be cautious about hoisting mesh-dependent (i.e., $L_e$-dependent) expressions. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting any time-invariant sub-expressions to minimize redundant computation at every time step. The working set size could then increase by a factor $E$. The gain in number of operations executed could therefore be outweighed, from a runtime viewpoint, by a much larger memory pressure.
 \item For certain forms and discretizations, aggressive hoisting can make the working set exceed the size of some level of local memory (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU). For example, as explained in Section~\ref{sec:pre-evaluation}, pre-evaluating geometry-independent expressions outside of $\Lambda$ requires temporary arrays of size $J K$ for bilinear forms and of size $J$ (or $K$) for linear forms. This can sometimes break such a ``local memory threshold''. In our experiments (Section~\ref{sec:perf-results-forms}) we will carefully study this aspect.
 \end{itemize}
 
-Based on these considerations, we establish the following memory constraints.
+Based on these considerations, we establish two \textit{memory constraints}.
 
 \begin{Const}
 \label{const:Le}
@@ -462,7 +461,7 @@ Sharing elimination and pre-evaluation tackle the problem of minimizing spatial 
 
 \section{Selection and composition of transformations}
 \label{sec:optimal-synthesis}
-In this section, we build a transformation algorithm that, given a memory bound, produces optimal or quasi-optimal finite element integration loop nests. In the perspective of integrating the transformation algorithm with a code generation system, we also discuss an approach that trades optimality for compilation time.
+In this section, we build a transformation algorithm that, given a memory bound, produces optimal or quasi-optimal finite element integration loop nests. 
 
 \subsection{Transformation algorithm}
 We address the two following issues: 
@@ -474,7 +473,7 @@ We address the two following issues:
 Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can focus on the transformation algorithm, whose pseudo-code is provided in Figure~\ref{code:intuition}.
 
 %numbers=left
-\begin{figure}[h]
+\begin{figure}
 \begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
 // Initialization
 M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
@@ -523,7 +522,7 @@ Despite determining $\iota$ is straightforward in simple scenarios (e.g., when t
 
 If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. Intuitively, this means that we are introducing more operations than we are saving from pre-evaluating $L_i$. 
 
-If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix in Figure~\ref{code:increase_factor}. This monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$. However, in general, $\rho$ depends on both form and discretization. If we instead take a standard Poisson equation using P1 Lagrange elements over triangles we have, for example, $\rho = 3$ (this can be verified by factorizing derivatives of basis functions as explained in Algorithm~\ref{algo:pre-evaluation}). To determine $\rho$ we execute the initial phase of Algorithm~\ref{algo:pre-evaluation}, which obviously excludes reduction pre-evaluation.
+If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix operator in Figure~\ref{code:increase_factor}. The corresponding monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$.  If we instead take the Poisson example in Figure~\ref{code:poisson}, we have that $\rho = 3$ after suitable factorization of basis functions. In general, therefore, $\rho$ depends on both form and discretization employed. To determine this parameter, we re-factorize the expression as per Algorithm~\ref{algo:pre-evaluation} and count the terms amenable to pre-evaluation.
 
 \subsection{Formalization}
 \label{sec:proof}
@@ -561,39 +560,28 @@ Let $\Lambda_{ops}$ denote the operation count (number of additions and products
 
 %TODO : In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
 
-\subsection{Trading operation count for analysis cost}
-We can relax the constraints on (quasi-)optimality to relieve the analysis phase. In this section, we discuss ways of achieving this.
-\label{sec:obsheu}
-\begin{itemize}
-\item \textit{Transformation algorithm.} The transformation algorithm (Figure~\ref{code:intuition}) evaluates all possible combinations in which pre-evaluation candidates can be scheduled to determine the optimal configuration honoring memory constraints. Despite the fact that we have never observed any tangible increase in analysis cost, one could expect slow-downs in complex forms with many monomials. This matter is yet to be properly investigated. However, a possibility is to avoid or constrain the search; in the worst case scenario, this would be equal to reaching local optimums.
-\item \textit{Construction of $\theta$.} Instead of determining exact values for $\theta_{se}$ and $\rho$ (for $\theta_{pre}$) by (partly) executing Algorithms~\ref{algo:sharing-elimination} and~\ref{algo:pre-evaluation}, approximations can be found by exploiting loop linearity. The number of unique terms in a multilinear loop nest can be used to calculate a lower bound on the innermost loop operation count (where, for higher order methods, the bulk of the computation is performed). For example, in Figure~\ref{code:multi_loopnest_a}, only one term depends on $L_j$ ($b_j$), so at most one multiplication is expected in the innermost loop once sharing is eliminated. An approximation for $\theta_{se}$ is then $\theta_{se} = n_{iters} \cdot n_{unique}$, where $n_{iters}$ is the total number of loop iterations, and $n_{unique}$ is the smallest number of unique terms depending on one the linear loops.
-\end{itemize}
-
-%TODO forget about the special case alpha=beta (ie test and trial from same fs)
-
-These heuristics have been implemented in the code generation system described in Section~\ref{sec:codegen}.
-
 
 \section{Code Generation}
 \label{sec:codegen}
-Sharing elimination, pre-evaluation, the transformation algorithm, and all other features presented in Sections~\ref{sec:optimal-impl} and~\ref{sec:optimal-synthesis} have been implemented in COFFEE, the optimizer for finite element integration routines used in Firedrake. In this section, we discuss implementation and code generation.
+Sharing elimination and pre-evaluation, as well as the transformation algorithm, have been implemented in COFFEE, the compiler for finite element integration routines adopted in Firedrake. In this section, we discuss a few aspects concerning implementation and features of the compiler.
 
 \subsection{Automation through the COFFEE language}
-COFFEE implements all optimizations by composing ``building-block'' transformations, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: any sort of codes characterized by (linear, but also non-linear) loop nests with sharing can be optimized (obviously, without guarantees on optimality). In other words, COFFEE only exploits domain properties, and it is not specifically tied to finite element in any way. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines.
+COFFEE implements sharing elimination and pre-evaluation by composing ``building-block'' operators, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: COFFEE can be seen as a tiny, low level computer algebra system, not specifically tied to finite element integration. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines.
 
-The rewrite operators, which implementation is based on abstract syntax tree manipulation, compose the COFFEE language. A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion. Sharing elimination and pre-evaluation are implemented by applying (composing) in specific sequences these operators.
+The rewrite operators, whose (Python) implementation is based on manipulation of abstract syntax trees (ASTs), compose the COFFEE language. A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion. Sharing elimination and pre-evaluation are implemented by composing, in special ways, these operators.
 
 \subsection{Independence from form compilers}
+COFFEE is independent from the high level form compiler. COFFEE handles generic ASTs, so any form compiler can use it as long as such a representation is properly emitted (with expressions in normal form, or sufficiently close to it). In Firedrake, for example, a modified version of the FEniCS Form Compiler producing ASTs (instead of strings) is used. COFFEE itself provides an interface for building an AST. In particular, COFFEE aims to decouple the mathematical manipulation of a form from code optimization. Another viewpoint is that a form compiler developers should not worry about performance of the generated code.
+
+\subsection{Handling block-sparse tables}
 \label{sec:zeros}
-One of the key pillars of COFFEE is independence from form compilers. Being capable of handling generic abstract syntax trees, COFFEE can be leveraged by any suitably adapted form compiler. For example, in Firedrake a modified version of the FEniCS Form Compiler producing abstract syntax trees instead of strings is used. COFFEE itself provides an interface for building such abstract syntax trees. In particular, COFFEE aims to decouple the form manipulation (i.e., the ``math level'') from code optimization (flops executed, low level optimization such as vectorization). Another viewpoint is: developers of form compilers should not worry about expression optimization in any way, since this is handled at a lower level.
+Basis function tables may be block-sparse (e.g., containing zero-valued columns) depending on certain implementation choices at the level of the form compiler. For example, the FEniCS Form Compiler handles vector-valued function spaces by populating tabulated basis functions with blocks of zero-valued columns -- this makes code generation easier, but performance sub-optimal due to the execution of ``useless'' flops (e.g., by executing operations like \texttt{a + 0}).
 
-To achieve this goal, COFFEE needs a strategy to minimize the execution of potentially ``useless'' flops due to simplistic implementations of non scalar-valued function spaces. For example, the most trivial quadrature mode in the FEniCS Form Compiler implements vector-valued function spaces by populating tabulated basis functions with blocks of zero-valued columns. For the local element matrix/vector evaluation, these blocks are iterated over in a single, rectangular iteration space. This preserves the semantics of the computation while keeping the implementation complexity extremely low, although it also introduces unnecessary operations (e.g., zero-valued summands due to multiplications by zero). COFFEE achieves full independence from form compilers (and so relives the implementation burden) by providing a transformation to avoid the execution of such useless flops. A challenge for this transformation is restructuring the iteration spaces while preserving the effectiveness of low level optimizations, especially (auto-)vectorization.
+If, from one hand, it is true that form compilers usually provide optimization options to work around this issue, we must also consider the fact that not always their outcome is ideal for low level efficiency. Consider, for example, a set of tabulated basis functions with quadrature points along rows and functions along columns. \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. This technique, however, promotes non-contiguous memory loads and stores, which nullify the benefits of vectorization.
 
-Consider a set of tabulated basis functions with quadrature points along rows and functions along columns. For example, \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. Our approach aims to avoid such indirection arrays in the generated code. This is because we want to avoid non-contiguous memory loads and stores, which can nullify the benefits of vectorization. 
+COFFEE provides a mechanism to restructure loops that preserves the effectiveness of low level optimization, such as vectorization. By executing the code symbolically, loop bounds are adjusted and memory offsets are introduced to minimize ``useless'' flops. This is done performing several checks to preserve the semantics of the computation whilst trying not to affect low level optimization (e.g., padding and data alignment are affected by choice of the offsets -- this is, however, out of the scope of this article).
 
-The idea is that if the dimension along which vectorization is performed (typically the innermost) has a contiguous slice of zeros, but that slice is smaller than the vector length, then we do nothing (i.e., the loop nest is not transformed). Otherwise, we restructure the iteration space. This has several non-trivial implications. The most notable one is memory offsetting (e.g., \texttt{A[i+m,j+n]}), which dramatically enters in conflict with padding and data alignment. We use heuristics to retain the positive effects of both and to ensure correctness. Details are, however, beyond the scope of this paper. 
-
-The implementation is based on symbolic execution: the loop nests are traversed and for each statement encountered the location of zeros in each of the involved symbols is tracked. Arithmetic operators have a different impact on tracking. For example, multiplication requires computing the set intersection of the zero-valued slices (for each loop dimension), whereas addition requires computing the set union.
+As discussed in the next section, all code generation systems used for performance evaluation handle block-sparse tables. 
 
 \section{Performance Evaluation}
 \label{sec:perf-results}
@@ -635,10 +623,6 @@ While constants of our study are
 \subsection{Performance results}
 \label{sec:perf-results-forms}
 
-We report the results of our experiments in Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity} as three-dimensional plots. The axes represent $q$, $nf$, and code transformation system. We show one subplot for each problem instance $\langle form, nf, q\rangle$, with the code transformation system varying within each subplot. The best variant for each problem instance is given by the tallest bar, which indicates the maximum speed-up over non-transformed code. We note that if a bar or a subplot are missing, then the form compiler failed at generating code because of either exceeding the system memory limit or unable to handle the form. 
-
-The rest of the section is structured as follows: we provide insights about the main message of the experimentation; we comment on the impact of autovectorization; we explain in detail, individually for each form, the performance results obtained.
-
 \begin{figure}
  \makebox[\textwidth][c]{\includegraphics[scale=0.77]{perf-results/mass}}
 \caption{Performance evaluation for the \textit{mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:mass}
@@ -659,6 +643,9 @@ The rest of the section is structured as follows: we provide insights about the 
 \caption{Performance evaluation for the bilinear form arising in a \textit{hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:hyperelasticity}
 \end{figure}
 
+We report the results of our experiments in Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity} as three-dimensional plots. The axes represent $q$, $nf$, and code transformation system. We show one subplot for each problem instance $\langle form, nf, q\rangle$, with the code transformation system varying within each subplot. The best variant for each problem instance is given by the tallest bar, which indicates the maximum speed-up over non-transformed code. We note that if a bar or a subplot are missing, then the form compiler failed at generating code because of either exceeding the system memory limit or unable to handle the form. 
+
+The rest of the section is structured as follows: we provide insights about the main message of the experimentation; we comment on the impact of autovectorization; we explain in detail, individually for each form, the performance results obtained.
 
 \paragraph{High level view}
 The main observation is that our transformation strategy does not always guarantee minimum execution time. In particular, 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4, nf=0]$. There are two reasons for this. Firstly, low level optimization can have a significant impact on actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Secondly, memory constraints are critical, particularly the transformation strategy adpopted when exceeding $T_H$. We will later thoroughly elaborate on all these aspects.
