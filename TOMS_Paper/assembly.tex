@@ -367,9 +367,11 @@ Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming 
 
 The algorithm makes use of the following notation and terminology:
 \begin{itemize}
-\item $|.|$: a generic ``sizeof'' operator, denoting the cardinality of a set or the extent of a loop
-\item $c_o^l$: the cost of an expression $o$ within a loop $L_l$; that is, the number of operations in $o$ times $|L_l|$.
-\item A \textit{multilinear operand} is any $\alpha_{eij}$ or $\beta_{eik}$ in the expression; a \textit{multilinear symbol} is a symbol appearing in a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, trial functions, first order derivatives of test functions, etc.)
+\item $|.|$: a generic ``sizeof'' operator (e.g., cardinality of a set, extent of a loop)
+\item $c_o^l$: the cost of an expression $o$ in a loop $L_l$ (i.e., operations in $o$ times $|L_l|$).
+\item $n_o$: the number of occurrences of a sub-expression $o$ appears in the input expression.
+\item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the expression in normal form;
+\item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.)
 \end{itemize}
 
 \begin{Algo}[Sharing elimination]
@@ -379,12 +381,14 @@ The initialization step consists of a depth-first visit of the expression tree w
 
 We perform a second depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, with $\mathbb{P} = \lbrace P^0, P^1, ..., P^{p-1}\rbrace$. The multilinear operands within a partition share the same set of multilinear symbols, whereas there is no sharing across different partitions. 
 
-We build a reverse lexicographic ordering for $\mathbb{P}$, with the position of $P$ given by ${<}|\mathbb{P}_{l}|,\ \sum_{o \in P} c_o^l{>}$, in which $\mathbb{P}_{l}$ represents the set of partitions depending on loop $L_l$. Intuitively, this simply means that operands appearing more often in the expression are handled first. We will later elaborate on this.
+We build a reverse lexicographic ordering for $\mathbb{P}$, in which the value of $P$ is given by ${<} ...,\ \sum_{o \in P} c_o^l{>}$.  ...
 
-For each partition, we need choose the optimal strategy between the points (i) and (ii) described in Section~\ref{sec:se-rln}. We adopt the following criteria.
+%By handling more costly operands first, the operation count achieved by temporal sharing elimination will be minimized.
+
+For each partition, we then need choose the optimal strategy between points (i) and (ii), described in Section~\ref{sec:se-rln}. We adopt the following criteria.
 \begin{enumerate}
 \item Let $S_P$ be the set of multilinear symbols in $P$. If $|P| < |S_P|$, (i) is applied; if $|P| > |S_P|$, (ii) is applied; if $|P| = |S_P|$, we go on to criterion 2), which attempts to optimize for the outer loops.
-\item Let $n_{o}$ and $n_{s}$ denote, respectively, the number of times a multilinear operand $o$ and a multilinear symbol $s$ appear in the input expression. The increase in operation count at the level of the outer loops is: if (i) were applied, $\sum_{o \in P_l} (c_{o}^{l} + n_{o} - 1)$; if (ii) were applied, $\sum_{s \in S_P} (n_{s} - 1)$. We then pick (i) or (ii) such that the increase is minimum. Intuitively, this is a way of estimating how two different factorizations affect the operation count, given the fact (criterion 1) that both will eventually minimize the innermost loop cost.
+\item The increase in operation count at the level of the outer loops is: if (i) were applied, $\sum_{o \in P_l} (c_{o}^{l} + n_{o} - 1)$; if (ii) were applied, $\sum_{s \in S_P} (n_{s} - 1)$. We then pick (i) or (ii) such that the increase is minimum. Intuitively, this is a way of estimating how two different factorizations affect the operation count, given the fact (criterion 1) that both will eventually minimize the innermost loop cost.
 \end{enumerate}
 
 Eventually, $L_i$-dependent expressions are scheduled. We perform a last depth-first visit of the expression tree and, for each of such expressions, we apply sharing elimination following a strategy which is very close to point (2) above. In doing this, we speculatively assume that all expressions result from structured tensor operations. If this were not the case, factorization would be applied greedily (i.e., some code motion opportunities will be exposed, but this may lead to a local optimum).
@@ -527,17 +531,17 @@ The following proposition states that our approach guarantees quasi-optimality. 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $P$ be the set of pre-evaluated monomials, and let $Z = M \setminus P$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
 \end{Prop}
 \begin{proof}
-We first observe that the cost function $\theta$ predicts the exact gain/loss in monomial pre-evaluation, so $P$ is always correct by construction. 
+We first observe that the cost function $\theta$ predicts the exact gain/loss in monomial pre-evaluation, so $X$ is always correct by construction. 
 
 Let $c_\Lambda$ denote the operation count in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the subset of all innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
 \begin{enumerate}
 \item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
-\item \textit{pre-evaluating any $Z_P \subseteq Z$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
-\item \textit{not pre-evaluating any $P_Z \subseteq P$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
+\item \textit{pre-evaluating any $m \in Y$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
+\item \textit{not pre-evaluating any $m \in X$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \end{enumerate}
 \item \textit{Sharing elimination produces (at least) quasi-optimal loop nests.}\\
 \end{enumerate}
@@ -547,21 +551,19 @@ We discuss these points separately
 \begin{enumerate}
 \item 
 \begin{enumerate}
-\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Z$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
-\item Let $p \in P$ and $z \in Z$ be two monomials that share some generic multilinear symbols. If $p$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
+\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Partitions are ordered to enforce a specific sequence of factorizations. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Partitions are ordered to promote a specific factorization sequence; this is essential to minimize the operation count in outer loops, although it is non influential for quasi-optimality. Criterion (2) also does not affect innermost loops. Criterion (1) is instead a discriminating factor. Consider a generic partition $P \in \mathbb{P}$. multilinearity...
 \end{enumerate}
 
 
-%
-%A) The only corner situation in which this might occur is whenever some of the pre-evaluated monomials in $Z_P$ result in tables identical to those already deriving from $P$. If that were the case, more sharing elimination opportunities would be exposed, which in turn could break the optimality claim. Assumption 1) prevents this situation, so the statement is true. 
-%
-%B) Let $\theta_{wo}(m)$ and $\theta_{w}(m)$ represent, respectively, the operation count for a monomial $m$ without and with pre-evaluation and let us consider the non-trivial case in which two monomials $p \in P_Z$ and $z \in Z$ share at least one term. We have to contemplate the fact that despite $\theta_{wo}(z) < \theta_w(z)$ and $\theta_{w}(p) < \theta_{wo}(p)$, we could have $\theta^G_{wo}(z, p)  < \theta_w(p) + \theta_{wo}(z)$, where $\theta^G_{wo}$ is a hypothetical global oracle. That is, there could be a larger potential gain in sharing elimination that goes lost if monomials are inspected in isolation. Potential examples are forms in which multiple monomials differ only for the number and/or the space of coefficient functions. The previously discussed assumption 2) allows us to neglect this possibility. 
 \end{proof}
 
 %TODO : In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
 
+% ordering of mathbb{P} is fundamental, because you start with something, then you collect stuff, and what you've collected is gonna be hoisted, which means having made a choice in terms of minimizing the innermost loop cost --- multilinearity and normal form here are super super imporant !
+% |P| <, ==, > then |S_P| is important because think of like: z0*FEik .... F0*FEik .... F1*FEik ...
 
 \section{Code Generation}
 \label{sec:codegen}
