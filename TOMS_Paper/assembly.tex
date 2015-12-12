@@ -539,7 +539,7 @@ Let $c_\Lambda$ denote the operation count in $\Lambda$. Let $\Lambda'_I \subset
 \item \textit{pre-evaluating any $Z_P \subseteq Z$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \item \textit{not pre-evaluating any $P_Z \subseteq P$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \end{enumerate}
-\item \textit{Sharing elimination (Algorithm~\ref{algo:sharing-elimination}) produces (at least) quasi-optimal loop nests.}\\
+\item \textit{Sharing elimination produces (at least) quasi-optimal loop nests.}\\
 \end{enumerate}
 
 We discuss these points separately
@@ -547,10 +547,10 @@ We discuss these points separately
 \begin{enumerate}
 \item 
 \begin{enumerate}
-\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two generic monomials $m_1, m_2 \in Z$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
-\item Let $p \in P$ and $z \in Z$ two monomials that share some subsets of multilinear symbols. If, as by assumption $\theta(p)$ suggests, $p$ will be pre-evaluated, there may be a potential gain in sharing elimination going lost, which potentially leads to a locally optimal solution -- instead of a global one. We avoid this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
+\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Z$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
+\item Let $p \in P$ and $z \in Z$ be two monomials that share some generic multilinear symbols. If $p$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
 \end{enumerate}
-\item ...
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Partitions are ordered to enforce a specific sequence of factorizations. 
 \end{enumerate}
 
 
