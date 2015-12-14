@@ -381,20 +381,16 @@ The algorithm has three main steps: initialization (step 1); scheduling of multi
 \begin{enumerate}
 \item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$.
 \item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, $\mathbb{P} = \lbrace P^0, P^1, ..., P^{p-1}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols, whereas there is no sharing across different partitions. Let $S_P$ be the set of multilinear symbols shared in $P$.
-\item Calculate the cost of each $P \in \mathbb{P}$, as $c_P = {min(}\sum_{o \in P} n_o,\ \sum_{s \in S_P} n_s{)}$. Intuitively, $c_P$ indicates the number of operations induced by $P$ at every innermost loop iteration once sharing elimination will be applied. Take $P$ such that $c_P$ is minimum.
-\item Choose the optimal strategy between points (i) and (ii), described in Section~\ref{sec:se-rln}.
-\begin{enumerate}[label=(\Alph*)]
-\item If $|P| < |S_P|$, (i) is applied. If $|P| > |S_P|$, (ii) is applied. If $|P| = |S_P|$, go to 4B. Intuitively, this means that (i) and (ii) have the same impact on the innermost loop, but the increase in operation count in the outer loops, $i_l$, may be different.
-\item If (i) were applied, $i_l = \sum_{o \in P} (c_{o}^{l} + n_{o} - 1)$. If (ii) were applied, $i_l = \sum_{s \in S_P} (n_{s} - 1)$. We pick (i) or (ii) such that $i_l$ is minimum. 
-\end{enumerate}
+\item Calculate the cost of each $P \in \mathbb{P}$, as $c_P = {min(}|P|,\ |S_P|{)}$. Intuitively, $c_P$ indicates the number of operations induced by $P$ at every innermost loop iteration once sharing elimination will be applied. Take $P$ such that $c_P$ is minimum.
+\item Choose the optimal strategy between points (i) and (ii), described in Section~\ref{sec:se-rln}. If $|P| < |S_P|$, (i) is applied. If $|P| > |S_P|$, (ii) is applied. Otherwise, $|P| = |S_P|$ means that (i) and (ii) have the same impact on the innermost loop. However, the increase in operation count in the outer loops, $i_l$, may still be different. In particular, if (i) were applied, $i_l = \sum_{o \in P} (c_{o}^{l} + n_{o} - 1)$, while if (ii) were applied, $i_l = \sum_{s \in S_P} (n_{s} - 1)$. Note that $n_o$ and $n_s$ capture the number of additions required after collection of $o$ and $s$. We then select (i) or (ii) such that $i_l$ is minimum. 
 \item If $\mathbb{P} \setminus \lbrace P\rbrace$ is not empty, go back to point 2. Otherwise, step to point 6.
-\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent expression, apply sharing elimination (as in point 4B above) assuming a structured tensor operation. The result may clearly be sub-optimal if the assumption does not hold in practice (i.e., only a subset of all possible code motion opportunities are exposed).
+\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent expression, apply sharing elimination assuming a structured tensor operation is in place (i.e., as in point 4 above). The result may be sub-optimal if this speculative assumption does not hold (i.e., only a subset of code motion opportunities are exposed).
 \end{enumerate}
 \end{Algo}
 
 \subsubsection{Examples}
-Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_k^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_j^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
-\begin{figure}\begin{CenteredBox}
+Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_k^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_j^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$, with $c_{P^0} = c_{P^1} = {min(}2, 2{)} = 2$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
+\begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
 ~~~~~~~~~~
 {\subfigcapskip = 7pt \subfigure[After sharing elimination]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
@@ -406,7 +402,7 @@ Sharing elimination explores the transformation space and applies three operator
 
 We start with an example. Consider again the loop nest and the expression in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $I$? The transformation we look for is exemplified in Figure~\ref{code:loopnest_rednored} with a simple loop nest. The reader can easily verify that a similar transformation is applicable to the example in Figure~\ref{code:poisson_a}.
 
-\begin{figure}\begin{CenteredBox}
+\begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 19pt \subfigure[With reduction]{\label{code:loopnest_red}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_red.code}}}
 ~~~~~~~~~~
 {\subfigcapskip = 5pt \subfigure[After pre-evaluation]{\label{code:loopnest_nored}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_nored.code}}}
@@ -552,11 +548,20 @@ We discuss these points separately
 \item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
 \item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Partitions are ordered to promote a specific factorization sequence; this is essential to minimize the operation count in outer loops, although it is non influential for quasi-optimality. Criterion (2) also does not affect innermost loops. Criterion (1) is instead a discriminating factor. Consider a generic partition $P \in \mathbb{P}$. multilinearity...
+\item Consider Algorithm~\ref{algo:sharing-elimination}. The operation count induced by a partition $P$ in the innermost loop is given by $c_P = {min(}|P|,\ |S_P|{)}$. This descends directly from two facts: the assumption that the input expression is in normal form and multilinearity. Therefore, what we have to prove is the fact that by taking each time $P$ such that $c_P$ is minimum -- henceforth, $P_{min}$ -- leads to quasi-optimality. We do it by contradiction. Let us assume that taking any $P$ such that $c_{P} > c_{P_{min}}$ would lead to a lower operation count. We first observe that a partition (i.e., its multilinear symbols) depends on one of the two multilinear loops; we then indicate with $P^l$ the fact that $P$ depends on $L_l$, $l \in \lbrace j, k\rbrace$. Assuming $P_{min}^l$, we have two possibilities:
+\begin{itemize}
+\item likewise, $P^{l}$; that is, both $P_{min}$ and $P$ depend on the same linear loop. This is the simplest case, since swapping the order in which the two partitions are handled would not have any side effects -- there is no clash between all possible different re-factorizations. The assumption is then contradicted because the operation count in the innermost loop is the same irrespective of starting with $P_{min}$ or $P$.
+\item $P^{l'}$ and $l' \neq l$. In this case, it is possible that operands (symbols) in $P^{l'}$ are factorized and code motion takes place such that $P_{min}$ ``loses'' some of its operands (symbols). Linearity and the assumption $c_{P} > c_{P_{min}}$ tell us that once $P$ is scheduled, we will have $c_{\Lambda''_I} \geq c_{\Lambda'_I} + 1$; that is, there is at least one extra operation (an addition) due to 
+\end{itemize}
+
 \end{enumerate}
+
+%Partitions are ordered to promote a specific factorization sequence; this is essential to minimize the operation count in outer loops, although it is non influential for quasi-optimality. Criterion (2) also does not affect innermost loops. Criterion (1) is instead a discriminating factor. Consider a generic partition $P \in \mathbb{P}$. multilinearity...
 
 
 \end{proof}
+
+%TODO : even simpler if we considered linera forms. If we had trilinear forms, we would be fucked
 
 %TODO : In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
 
