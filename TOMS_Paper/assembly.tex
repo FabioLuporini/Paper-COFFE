@@ -367,31 +367,29 @@ Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming 
 
 The algorithm makes use of the following notation and terminology:
 \begin{itemize}
-\item $|.|$: a generic ``sizeof'' operator (e.g., cardinality of a set, extent of a loop)
+\item $|.|$: a generic ``sizeof'' operator (e.g., cardinality of a set, extent of a loop).
 \item $c_o^l$: the cost of an expression $o$ in a loop $L_l$ (i.e., operations in $o$ times $|L_l|$).
-\item $n_o$: the number of occurrences of a sub-expression $o$ appears in the input expression.
-\item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the expression in normal form;
-\item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.)
+\item $n_o$: the number of occurrences of a sub-expression $o$ in the input expression.
+\item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression.
+\item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.).
 \end{itemize}
 
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
-The initialization step consists of a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$. 
-
-We perform a second depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, with $\mathbb{P} = \lbrace P^0, P^1, ..., P^{p-1}\rbrace$. The multilinear operands within a partition share the same set of multilinear symbols, whereas there is no sharing across different partitions. 
-
-We build a reverse lexicographic ordering for $\mathbb{P}$, in which the value of $P$ is given by ${<} ...,\ \sum_{o \in P} c_o^l{>}$.  ...
-
-%By handling more costly operands first, the operation count achieved by temporal sharing elimination will be minimized.
-
-For each partition, we then need choose the optimal strategy between points (i) and (ii), described in Section~\ref{sec:se-rln}. We adopt the following criteria.
+The algorithm has three main steps: initialization (step 1); scheduling of multilinear operands, to reach quasi-optimality (steps 2-4); scheduling of all other sub-expressions (step 5).
 \begin{enumerate}
-\item Let $S_P$ be the set of multilinear symbols in $P$. If $|P| < |S_P|$, (i) is applied; if $|P| > |S_P|$, (ii) is applied; if $|P| = |S_P|$, we go on to criterion 2), which attempts to optimize for the outer loops.
-\item The increase in operation count at the level of the outer loops is: if (i) were applied, $\sum_{o \in P_l} (c_{o}^{l} + n_{o} - 1)$; if (ii) were applied, $\sum_{s \in S_P} (n_{s} - 1)$. We then pick (i) or (ii) such that the increase is minimum. Intuitively, this is a way of estimating how two different factorizations affect the operation count, given the fact (criterion 1) that both will eventually minimize the innermost loop cost.
+\item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$.
+\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, $\mathbb{P} = \lbrace P^0, P^1, ..., P^{p-1}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols, whereas there is no sharing across different partitions. Let $S_P$ be the set of multilinear symbols shared in $P$.
+\item Calculate the cost of each $P \in \mathbb{P}$, as $c_P = {min(}\sum_{o \in P} n_o,\ \sum_{s \in S_P} n_s{)}$. Intuitively, $c_P$ indicates the number of operations induced by $P$ at every innermost loop iteration once sharing elimination will be applied. Take $P$ such that $c_P$ is minimum.
+\item Choose the optimal strategy between points (i) and (ii), described in Section~\ref{sec:se-rln}.
+\begin{enumerate}[label=(\Alph*)]
+\item If $|P| < |S_P|$, (i) is applied. If $|P| > |S_P|$, (ii) is applied. If $|P| = |S_P|$, go to 4B. Intuitively, this means that (i) and (ii) have the same impact on the innermost loop, but the increase in operation count in the outer loops, $i_l$, may be different.
+\item If (i) were applied, $i_l = \sum_{o \in P} (c_{o}^{l} + n_{o} - 1)$. If (ii) were applied, $i_l = \sum_{s \in S_P} (n_{s} - 1)$. We pick (i) or (ii) such that $i_l$ is minimum. 
 \end{enumerate}
-
-Eventually, $L_i$-dependent expressions are scheduled. We perform a last depth-first visit of the expression tree and, for each of such expressions, we apply sharing elimination following a strategy which is very close to point (2) above. In doing this, we speculatively assume that all expressions result from structured tensor operations. If this were not the case, factorization would be applied greedily (i.e., some code motion opportunities will be exposed, but this may lead to a local optimum).
+\item If $\mathbb{P} \setminus \lbrace P\rbrace$ is not empty, go back to point 2. Otherwise, step to point 6.
+\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent expression, apply sharing elimination (as in point 4B above) assuming a structured tensor operation. The result may clearly be sub-optimal if the assumption does not hold in practice (i.e., only a subset of all possible code motion opportunities are exposed).
+\end{enumerate}
 \end{Algo}
 
 \subsubsection{Examples}
