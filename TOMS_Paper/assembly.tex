@@ -341,20 +341,16 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 {\subfigcapskip = 4pt \subfigure[Optimal form]{\label{code:multi_loopnest_c}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of factorization, generalized code motion and (if necessary) common sub-expression elimination. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved if stronger hypotheses hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
+In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of expansion, factorization, and generalized code motion. If the objective were reaching optimality and expressions were systematically unstructured, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, attempts to exploit the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This require coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of treatise -- we neglect this aspect.}, with optimality being achieved if stronger hypotheses hold. Relaxing the problem is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
 
-Sections~\ref{sec:se-mln} and~\ref{sec:se-rln} discuss the structural and algebraic properties that characterize our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
-
-\subsubsection{Common sub-expressions}
-\label{sec:se-mln}
-A typical optimization to reduce the arithmetic complexity of a code is common sub-expression elimination (CSE). This often revolves around searching, possibly across different statements, and replacing with temporaries, sub-expressions that are (i) symbolically identical and (ii) reduce to the same value.  We observe that ``classic CSE'' (CCSE) can straightforwardly be applied without the need for data dependence analysis, since the body of a finite element integration loop nest is an independent basic block. More interestingly, we observe that in the ``special case'' (SCSE) in which test and trial functions are in the same function space, there may exist $w_1$ and $w_2$ such that $\alpha_{eij}^{w1} = \beta_{eik}^{w2}$, in which case common sub-expressions will arise along different loops ($L_j$ and $L_k$). General-purpose compilers cannot detect this (very domain-specific) property. Our algorithm for sharing elimination will exploit this extra information. Although both CSE and factorization target spatial sharing, the latter may actually increase the operation count if preliminary transformations (e.g., expansion) are required. In such a case, CCSE will be preferred.
+Section~\ref{sec:se-rln} discusses structural and algebraic properties characterizing our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. Examples are provided in Section~\ref{sec:se-examples}. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
 
 \subsubsection{Structured tensor operations}
 \label{sec:se-rln}
 Finite element expressions can be seen as composition of operations between tensors. We observe that, when multiplying two tensors, it often happens that the optimal scheduling strategy is to be searched in a space of size 2. To illustrate the concept, we take a matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Let us assume that $y_{\Psi \Delta}$ itself is an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. For simplicity, assume that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions, and consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$. Thus an entry in $y_{L_i}$ is of the form $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression, we basically have two options:
 \begin{enumerate}[label=(\roman*)]
-\item Applying generalized code motion (or simply creating a temporary for CCSE) -- not necessary in this example since there is just one loop.
-\item Searching for spatial sharing, expanding and then factorizing the expression to promote temporal sharing, applying generalized code motion -- the expression in the example would be recast as $f_i (a + c) + g_i (b + d)$, with $(a + c)$ and $(b + d)$ being two hoistable sub-expressions.
+\item Applying generalized code motion -- not needed in the example as we have one loop.
+\item Searching for spatial sharing, expanding and factorizing the expression to promote temporal sharing, applying generalized code motion -- the expression in the example would be recast as $f_i (a + c) + g_i (b + d)$, with $(a + c)$ and $(b + d)$ being two hoistable sub-expressions.
 \end{enumerate}
 The reader can verify that (ii) improves the operation count over (i) for any size of $L_i$. In general, however, the optimal option depends on both the expansion cost in (ii) and the loop size. One can appreciate the dichotomy between (i) and (ii) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}. We then regard as \textit{structured tensor operation} any operation between two tensors that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. 
 
@@ -381,23 +377,24 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \begin{enumerate}
 \item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$.
 \item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
-\item Calculate the operation count induced by applying strategy (i) or (ii) -- as described in Section~\ref{sec:se-rln} -- to $P \in \mathbb{P}$. In particular: $c_P^i = |P||\Lambda| + \sum_{o \in P} (c_{o}^{l} + n_{o} - 1)$ and $c_P^{ii} = |S_P||\Lambda| + \sum_{s \in S_P} (n_{s} - 1)$. Note that:
-\begin{itemize}
-\item $|P||\Lambda|$ ($|S_P||\Lambda|$) represents the operation count in the innermost loop
-\item $n_o$ ($n_s$) captures the number of additions once $o$ ($s$) is factorized
-\end{itemize}
-We define the cost of $P$ as $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$.
-\item For all $P \in \mathbb{P}$ such that $c_P = c_P^i$, for all multilinear operands $o \in P$, apply generalized code motion. Update $\mathbb{P}$ by replacing any hoisted multilinear operand with the corresponding temporary symbol.
-\item For all $P \in \mathbb{P}$ such that $c_P^{ii} - |S_P||\Lambda| > 0$ -- that is, 
-\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent expression, apply sharing elimination assuming a structured tensor operation is in place (i.e., as in point 4 above). The result may be sub-optimal if this speculative assumption does not hold (i.e., only a subset of code motion opportunities are exposed).
-%TODO : this needs to be applied to all lifted sub-expressions as well
+\item Calculate the number of operations in the innermost loop required for the execution of $P \in \mathbb{P}$. There are two possibilities, depending on which strategy -- (i) or (ii), as described in Section~\ref{sec:se-rln} -- is employed. In particular, we have $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$, with $c_P^i = |P|$ and $c_P^{ii} = |S_P|$.
+\item For all multilinear operands $o \in P$ such that $c_P = c_P^i$, apply strategy (i). Update $\mathbb{P}$ by replacing hoisted multilinear operands with the corresponding temporary symbols.
+\item For all $P \in \mathbb{P}$, determine the profitability of strategy (ii). We introduce $g_P$, which measures the gain in operation count in the innermost loop if (ii) were applied. That is, $g_P = \sum_{Q \in \mathbb{Q}} c_{Q_{old}} - c_{Q_{new}}$, with $\mathbb{Q} = \mathbb{P} \setminus \lbrace P \rbrace$. Note that $c_{Q_{new}}$ can be evaluated without applying the actual transformation. Eventually, apply (ii) if $g_P > 0$.
+\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent or previously hoisted sub-expression, apply (i) or (ii). This pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may have been exposed.
 \end{enumerate}
 \end{Algo}
 
 %If there exist $P^i$, $P^j$, and $P^k$
 %\item If $\mathbb{P} \setminus \lbrace P\rbrace$ is not empty, go back to point 2. Otherwise, step to point 6.
+%|\Lambda| + \sum_{s \in S_P} (n_{s} - 1)$. Note that:
+%\begin{itemize}
+%\item $|P||\Lambda|$ ($|S_P||\Lambda|$) represents the operation count in the innermost loop
+%\item $n_o$ ($n_s$) captures the number of additions once $o$ ($s$) is factorized
+%\end{itemize}
+%We define the cost of $P$ as $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$.
 
 \subsubsection{Examples}
+\label{sec:se-examples}
 Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_k^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_j^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$, with $c_{P^0} = c_{P^1} = {min(}2, 2{)} = 2$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -407,7 +404,7 @@ Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to th
 
 \subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
-Sharing elimination explores the transformation space and applies three operators: factorization, code motion and common sub-expression elimination. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., specific factorization and code motion) preserving the correctness of the transformation.
+Sharing elimination explores the transformation space and applies three operators: expansion, factorization, and code motion. In this section, we discuss role and legality of a fourth operator: \textit{reduction pre-evaluation}. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., specific factorization and code motion) preserving the correctness of the transformation.
 
 We start with an example. Consider again the loop nest and the expression in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $I$? The transformation we look for is exemplified in Figure~\ref{code:loopnest_rednored} with a simple loop nest. The reader can easily verify that a similar transformation is applicable to the example in Figure~\ref{code:poisson_a}.
 
