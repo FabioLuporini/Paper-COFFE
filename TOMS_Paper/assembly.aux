@@ -103,19 +103,19 @@
 \@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore opt.code}{13}}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces The loop nest produced by the algorithm for an input as in Figure\nobreakspace  {}1\hbox {}.\relax }}{13}}
 \newlabel{code:loopnest-opt}{{6}{13}}
-\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{14}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Simplified loop nest for a pre-multiplied mass matrix.\relax }}{14}}
-\newlabel{code:increase_factor}{{7}{14}}
+\@writefile{lol}{\contentsline {lstlisting}{listings/loopnest\textunderscore inc\textunderscore factor.code}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Simplified loop nest for a pre-multiplied mass matrix.\relax }}{13}}
+\newlabel{code:increase_factor}{{7}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Formalization}{14}}
 \newlabel{sec:proof}{{4.3}{14}}
 \newlabel{prop:optimal-approach}{{1}{14}}
+\citation{quadrature1}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Code Generation}{15}}
 \newlabel{sec:codegen}{{5}{15}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Automation through the COFFEE language}{15}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Independence from form compilers}{15}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Handling block-sparse tables}{15}}
 \newlabel{sec:zeros}{{5.3}{15}}
-\citation{quadrature1}
 \citation{quadrature1}
 \citation{FFC-TC}
 \citation{Fenics}
@@ -125,22 +125,23 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental setup}{16}}
 \citation{quadrature1}
 \citation{quadrature1}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance results}{17}}
-\newlabel{sec:perf-results-forms}{{6.2}{17}}
-\@writefile{toc}{\contentsline {paragraph}{High level view}{17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the \textit  {mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{17}}
+\newlabel{fig:mass}{{8}{17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form of a \textit  {Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{18}}
+\newlabel{fig:helmholtz}{{9}{18}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Performance results}{18}}
+\newlabel{sec:perf-results-forms}{{6.2}{18}}
+\@writefile{toc}{\contentsline {paragraph}{High level view}{18}}
 \citation{SLP-vect}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Performance evaluation for the \textit  {mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{18}}
-\newlabel{fig:mass}{{8}{18}}
-\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{18}}
-\@writefile{toc}{\contentsline {paragraph}{Mass}{18}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Performance evaluation for the bilinear form of a \textit  {Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{19}}
-\newlabel{fig:helmholtz}{{9}{19}}
-\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{19}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in an \textit  {elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{20}}
-\newlabel{fig:elasticity}{{10}{20}}
-\@writefile{toc}{\contentsline {paragraph}{Elasticity}{20}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Performance evaluation for the bilinear form arising in a \textit  {hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{21}}
-\newlabel{fig:hyperelasticity}{{11}{21}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Performance evaluation for the bilinear form arising in an \textit  {elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{19}}
+\newlabel{fig:elasticity}{{10}{19}}
+\@writefile{toc}{\contentsline {paragraph}{Autovectorization}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Performance evaluation for the bilinear form arising in a \textit  {hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.\relax }}{20}}
+\newlabel{fig:hyperelasticity}{{11}{20}}
+\@writefile{toc}{\contentsline {paragraph}{Mass}{20}}
+\@writefile{toc}{\contentsline {paragraph}{Helmholtz}{20}}
+\@writefile{toc}{\contentsline {paragraph}{Elasticity}{21}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{21}}
 \bibstyle{ACM-Reference-Format-Journals}
 \bibdata{biblio}
 \bibcite{Uflacs}{\citeauthoryear {Aln{\ae }s}{Aln{\ae }s}{2015}}
@@ -152,8 +153,7 @@
 \bibcite{Luporini}{\citeauthoryear {Luporini, Varbanescu, Rathgeber, Bercea, Ramanujam, Ham, and Kelly}{Luporini et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
 \bibcite{quadrature1}{\citeauthoryear {{\O }lgaard and Wells}{{\O }lgaard and Wells}{2010}}
 \bibcite{firedrake-paper}{\citeauthoryear {Rathgeber, Ham, Mitchell, Lange, Luporini, McRae, Bercea, Markall, and Kelly}{Rathgeber et\nobreakspace  {}al\unhbox \voidb@x \hbox {.}}{2015}}
-\@writefile{toc}{\contentsline {paragraph}{Hyperelasticity}{22}}
+\bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
+\lastpage{22}
 \@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{22}}
 \newlabel{sec:conclusions}{{7}{22}}
-\bibcite{Francis}{\citeauthoryear {Russell and Kelly}{Russell and Kelly}{2013}}
-\lastpage{23}
