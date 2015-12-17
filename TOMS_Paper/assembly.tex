@@ -373,14 +373,24 @@ The algorithm makes use of the following notation and terminology:
 \normalfont
 The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-5); scheduling of all other sub-expressions (step 6).
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. For example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$.
+\item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. 
+
+\textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
 \item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
-\item Calculate the number of operations in the innermost loop required for the execution of $P \in \mathbb{P}$. There are two possibilities, depending on which strategy -- (i) or (ii), as described in Section~\ref{sec:se-rln} -- is employed. In particular, we have $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$, with $c_P^i = |P|$ and $c_P^{ii} = |S_P|$.
+\item Calculate the number of operations in the innermost loop required for the execution of $P \in \mathbb{P}$. There are two possibilities, depending on which strategy -- (i) or (ii), as described in Section~\ref{sec:se-rln} -- is used. In particular, we have $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$, with $c_P^i = |P|$ and $c_P^{ii} = |S_P|$.
 \item For all multilinear operands $o \in P$ such that $c_P = c_P^i$, apply strategy (i). Update $\mathbb{P}$ by replacing hoisted multilinear operands with the corresponding temporary symbols.
-\item For all $P \in \mathbb{P}$, determine the profitability of strategy (ii). We introduce $g_P$, which measures the gain in operation count in the innermost loop if (ii) were applied. That is, $g_P = \sum_{Q \in \mathbb{Q}} c_{Q_{old}} - c_{Q_{new}}$, with $\mathbb{Q} = \mathbb{P} \setminus \lbrace P \rbrace$. Note that $c_{Q_{new}}$ can be evaluated without applying the actual transformation. Eventually, apply (ii) if $g_P > 0$.
-\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent or previously hoisted sub-expression, apply (i) or (ii). This pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may have been exposed.
+\item For all $P \in \mathbb{P}$, determine the profitability of strategy (ii). We introduce $g_P$, which measures the gain in operation count in the innermost loop if (ii) were applied. We have $g_P = \sum_{Q \in \mathbb{Q}} c_{Q_{old}} - c_{Q_{new}}$, with $\mathbb{Q} = \mathbb{P} \setminus \lbrace P \rbrace$. Apply (ii) if $g_P > 0$ and the expansion cost does not exceed the gain in operation count. 
+
+\textit{Note: both $c_{Q_{new}}$ and the expansion cost are easily determined through tree visits.}
+
+\textit{Note: $\mathbb{P}$ is in practice very small, so this pass can be accomplished rapidly.}
+\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent or previously hoisted sub-expression, apply the most profitable between (i) and (ii). 
+
+\textit{Note: this pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may have been exposed.}
 \end{enumerate}
 \end{Algo}
+
+%TODO : dire che il costo dell'espansione è semplicemente dato da ciascun s in | S_P | times la 2 evalato al depth di quell s.
 
 \subsubsection{Examples}
 \label{sec:se-examples}
