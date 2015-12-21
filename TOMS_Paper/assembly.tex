@@ -352,7 +352,7 @@ Finite element expressions can be seen as composition of operations between tens
 \item Applying generalized code motion -- not needed in the example as we have one loop.
 \item Searching for spatial sharing, expanding and factorizing the expression to promote temporal sharing, applying generalized code motion -- the expression in the example would be recast as $f_i (a + c) + g_i (b + d)$, with $(a + c)$ and $(b + d)$ being two hoistable sub-expressions.
 \end{enumerate}
-The reader can verify that (ii) improves the operation count over (i) for any size of $L_i$. In general, however, the optimal option depends on multiple factors: the loop size, the expansion cost, and the factorization gain. One can appreciate the dichotomy between (i) and (ii) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}. We then regard as \textit{structured tensor operation} any operation between two tensors that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. 
+The reader can verify that (ii) improves the operation count over (i) for any size of $L_i$. In general, however, the optimal option depends on multiple factors: the loop size, the expansion cost, and code motion. One can appreciate the dichotomy between (i) and (ii) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}. We then regard as \textit{structured tensor operation} any operation between two tensors that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. 
 
 Of notable importance, from the perspective of achieving quasi-optimality, is the fact that sub-expressions depending on the multilinear loop nest always result from structured tensor operations. Often, structured tensor operations characterize the $\sigma_{ei}$ sub-expressions too. For instance, they systematically arise in the weak variational form of the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
 
@@ -366,40 +366,50 @@ The algorithm makes use of the following notation and terminology:
 \item $|.|$: a generic ``sizeof'' operator (e.g., cardinality of a set, extent of a loop).
 \item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression.
 \item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.).
+\item \textit{strategy (i)} and \textit{strategy (ii)}: the two approaches described in Section~\ref{sec:se-rln} for handling structured tensor operations.
 \end{itemize}
 
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
-The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-5); scheduling of all other sub-expressions (step 6).
+The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-4); scheduling of all other sub-expressions (step 5).
 \begin{enumerate}
 \item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. 
 
 \textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
-\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into $p$ disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
-\item Calculate the number of operations in the innermost loop required for the execution of $P \in \mathbb{P}$. There are two possibilities, depending on which strategy -- (i) or (ii), as described in Section~\ref{sec:se-rln} -- is used. In particular, we have $c_P = {min(}c_P^{i},\ c_P^{ii}{)}$, with $c_P^i = |P|$ and $c_P^{ii} = |S_P|$.
-\item For all multilinear operands $o \in P$ such that $c_P = c_P^i$, apply strategy (i). Update $\mathbb{P}$ by replacing hoisted multilinear operands with the corresponding temporary symbols.
-\item For all $P \in \mathbb{P}$, determine the profitability of strategy (ii). We introduce $g_P$, which measures the gain in operation count in the innermost loop if (ii) were applied. We have $g_P = \sum_{Q \in \mathbb{Q}} c_{Q_{old}} - c_{Q_{new}}$, with $\mathbb{Q} = \mathbb{P} \setminus \lbrace P \rbrace$. Apply (ii) if $g_P > 0$ and the expansion cost does not exceed the gain in operation count. 
+\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
+\item For each $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply strategy (i) to the multilinear operands. 
 
-\textit{Note: both $c_{Q_{new}}$ and the expansion cost are easily determined through tree visits.}
+\textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, strategies (i) or (ii) were applied. We will clarify that this directly descends from loop linearity.}
 
-\textit{Note: $\mathbb{P}$ is in practice very small, so this pass can be accomplished rapidly.}
-\item Perform a depth-first visit of the expression tree and, for each $L_i$-dependent or previously hoisted sub-expression, apply the most profitable between (i) and (ii). 
+\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step 3. An edge $(S^i$, $S^j)$ indicates that if the sub-expressions including $S^i$ and $S_j$ were expanded, a product $S^i S^j$ would be exposed. Let $\mathbb{T}$ be the subset of vertices with a single incident edge, or ``terminals''. We apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
+\begin{enumerate}[label=(\Alph*)]
+\item $\lbrace T^0, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii); $\mathbb{S} = \mathbb{S} \setminus \lbrace T^0, ..., T^n \rbrace$.\\ \textit{Note: strategy (ii) involves exposing $S (...T^0 + ... + ...T^n)$ and, subsequently, hoisting $(...T^0 + ... + ...T^n)$}. 
+\item Only one terminal $T$ adjacent to $S$: apply strategy (ii) as in rule (A), but including one non-terminal symbol $S^i$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^i \rbrace$.
+\item $\mathbb{T} = \emptyset$: take $S$, apply strategy (ii), eventually hoisting any two non-terminal symbols.\\ \textit{Note: this represents the ``fallback'' approach in presence of cyclic dependency}
+\end{enumerate}
+\item Perform a depth-first visit of the expression tree and, for each yet unhandled or previously hoisted sub-expression, apply the most profitable between strategies (i) and (ii). 
 
-\textit{Note: this pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may have been exposed.}
+\textit{Note: this pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may be exposed.}
 \end{enumerate}
 \end{Algo}
 
 %TODO : dire che il costo dell'espansione è semplicemente dato da ciascun s in | S_P | times la 2 evalato al depth di quell s.
+%\textit{Note: $\mathbb{S}$ is in practice very small, so this pass can be accomplished rapidly.}
 
 \subsubsection{Examples}
 \label{sec:se-examples}
-Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to the bilinear form arising from a Poisson equation in 2D. We observe that $P_k^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P_j^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$, with $c_{P^0} = c_{P^1} = {min(}2, 2{)} = 2$. A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
+Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying strategy (i) in step 3 has no effect. The sharing graph is $\mathbb{G} = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $\mathbb{T} = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
+
+Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to a realistic example, the bilinear form arising from a Poisson equation in 2D. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so strategy (i) is applied to both partitions (step 3). We then have (step 4) $\mathbb{G} = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \emptyset)$, although no rewrite rule is applicable since $\mathbb{E} = \emptyset$. 
+
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
 ~~~~~~~~~~
 {\subfigcapskip = 7pt \subfigure[After sharing elimination]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
-\end{CenteredBox}\caption{Applying sharing elimination to the bilinear form $J^{-T} \nabla u \cdot J^{-T} \nabla v$ arising from a Poisson equation in 2D.}\label{code:poisson}\end{figure}
+\end{CenteredBox}\caption{Applying sharing elimination to the bilinear form arising from a Poisson equation in 2D.}\label{code:poisson}\end{figure}
+
+A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}
 
 \subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
