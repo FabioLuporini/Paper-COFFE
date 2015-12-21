@@ -480,51 +480,39 @@ We address the two following issues:
 \item \textit{Search for a global optimum.} Consider a form comprising two monomials $m1$ and $m2$. Assume that pre-evaluation is profitable for $m1$ but not for $m2$, and that $m1$ and $m2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m1$, sharing between $m1$ and $m2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction when considering the whole set of monomials (i.e., the expression as a whole).
 \end{enumerate}
 
-Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can focus on the transformation algorithm, whose pseudo-code is provided in Figure~\ref{algo:gamma}.
+Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can focus on the transformation algorithm, provided in Algorithm~\ref{algo:gamma}.
 
-%numbers=left
-\begin{figure}
-\begin{lstlisting}[numbers=left, basicstyle=\small\ttfamily, frame=single]
-// Initialization
-M = $\lbrace$m | m is a monomial in the input expression$\rbrace$
-S = $\lbrace$m | $\theta(m)$ < 0$\rbrace$
-P = M $\setminus$ S
-
-// Find global quasi-optimum honoring memory constraints
-B = $\lbrace$b | b is a bipartite graph from complete graph G = (P, E)$\rbrace$
-for each b $\in$ B:
-  for each (b$_S$, b$_P$) $\in$ b:
-    if memory_required(b$_P$) $\geq$ $T_H$:
-      continue
-    op_count[b] = $\theta_{se}$(S $\cup$ b$_S$) + $\theta_{pre}$(b$_P$)
-(b$_S$, b$_P$) = min(op_count)
-
-// Apply the transformations
-pre_evaluate(P $\cup$ b$_P$)
-eliminate_sharing(S $\cup$ b$_S$ $\cup$ P $\cup$ b$_P$)
-\end{lstlisting}
-\caption{High level view of the transformation algorithm}
+\begin{Algo}[Transformation algorithm]
 \label{algo:gamma}
-\end{figure}
+\normalfont
+The algorithm has three main phases: initialization (step 1); determination of the monomials preserving the memory constraints that should be pre-evaluated (steps 2-4); application of sharing elimination and pre-evaluation (step 5).
+\begin{enumerate}
+\item Perform a depth-first visit of the expression tree and determine the set of monomials $M$. Let $S$ be the subset of monomials $m$ such that $\theta(m) < 0$. The set of monomials that will \textit{potentially} be pre-evaluated is $P = M \setminus S$. \\ \textit{Note: there are two subtle yet fundamental reasons for not pre-evaluating $m_1 \in P$: 1) the presence of spatial sharing between $m_1$ and $m_2 \in S$, which impacts the search for the global optimum; 2) breaking memory constraints.}
+\item Build the set $B$ of all possible bipartitions of $P$.
+\item For each $b = (b_S, b_P) \in B$, if the memory required to store the pre-evaluated tables from the monomials in $b_P$ exceeds $T_H$ (see Constraint~\ref{const:TH}), discard $b$; otherwise, add an entry to the dictionary $d$ of potential operation counts, such that $d[b] = \theta_{se}(S \cup b_S) + \theta_{pre}(b_P)$. \\ \textit{Note: $\mathbb{B}$ is in practice very small, since even complex forms usually have only a few monomials. This pass can then be accomplished rapidly as long as the cost of calculating $\theta_{se}$ and $\theta_{pre}$ is negligible. We elaborate on this aspect in Section~\ref{sec:op_count}.}
+\item Take $b$ such that $min(d[b])$.
+\item Apply pre-evaluation to all monomials in $P \cup b_P$. Apply sharing elimination to the whole expression. \\ \textit{Note: because of reuse of basis functions, pre-evaluation may result in identical tables, which will be mapped to the same temporary. Sharing elimination is therefore transparently applied to the whole expression, including what results from pre-evaluation.}
+\end{enumerate}
+\end{Algo}
 
-The algorithm starts with splitting the monomials into two disjoint sets: the monomials that surely do not take advantage of pre-evaluation ($S$) and those that instead potentially benefit from it ($P$). Some subsets of monomials in $P$: 1) might share terms with $S$, in which case sharing elimination could globally outperform pre-evaluation; 2) might break Constraint~\ref{const:TH}. The algorithm then finds the optimal bipartition $b = (b_S, b_p)$ of $P$ such that $b_P$ represents the subset of monomials for which pre-evaluation is globally optimal and Constraint~\ref{const:TH} is honored. Since the number of monomials in a form tends to be very small (a few units in most complex forms), evaluating all possible bipartitions is not a significant issue as long as the cost of calculating $\theta_{se}$ and $\theta_{pre}$ is negligible. This aspect is elaborated in Section~\ref{sec:op_count}. In addition, observe that because of reuse of basis functions, pre-evaluation may result in identical tables, which will be mapped to the same temporary. Therefore, sharing elimination is transparently applied to all monomials (i.e., to all sub-expressions, even those produced by pre-evaluation). The output of the transformation algorithm is as in Figure~\ref{code:loopnest-opt}, assuming as input the loop nest in Figure~\ref{code:loopnest}. 
+The output of the transformation algorithm is as in Figure~\ref{code:loopnest-opt}, assuming as input the loop nest in Figure~\ref{code:loopnest}. 
 
-\begin{figure}[t]\begin{CenteredBox}
+\begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
 \end{CenteredBox}\caption{The loop nest produced by the algorithm for an input as in Figure~\ref{code:loopnest}.}\label{code:loopnest-opt}\end{figure}
-
-In the following section, we tie up the remaining loose end: the construction of the cost function $\theta$.
 
 
 \subsection{The cost function $\theta$}
 \label{sec:op_count}
+We tie up the remaining loose end: the construction of the cost function $\theta$.
+
 We recall that $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, with $\theta_{se}$ and $\theta_{pre}$ representing the operation counts after applying sharing elimination and pre-evaluation. Since $\theta$ is expected to be used by a compiler, requirements are simplicity and velocity. In the following, we explain how to derive these two values.
 
 The most trivial way of evaluating $\theta_{se}$ and $\theta_{pre}$ is to apply the actual transformations and count the number of operations. If, on one hand, this is definitely possible for $\theta_{se}$ (performing Algorithm~\ref{algo:sharing-elimination} tends to have negligible cost), the overhead becomes unacceptable when applying pre-evaluation to all possible bipartitions (Algorithm~\ref{algo:pre-evaluation}, due to the symbolic evaluation of $L_i$). We then seek an analytic way of determining $\theta_{pre}$.
 
 The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations enabling pre-evaluation. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the coefficient $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $L_i$-dependent quantities. By performing product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
 
-\begin{figure}[t]\begin{CenteredBox}
+\begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_inc_factor.code}
 \end{CenteredBox}\caption{Simplified loop nest for a pre-multiplied mass matrix.}\label{code:increase_factor}\end{figure}
 
@@ -561,7 +549,7 @@ We discuss these points separately
 \item 
 \begin{enumerate}
 \item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
-\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim (lines 7-13 in Figure~\ref{algo:gamma}). Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim. Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Because of linearity, the operation count induced by a partition $P \in \mathbb{P}$ in the innermost loop is given by $c_P = {min(}|P|,\ |S_P|{)}$. 
 
