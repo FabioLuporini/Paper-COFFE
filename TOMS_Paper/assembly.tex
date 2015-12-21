@@ -385,8 +385,8 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step 3. An edge $(S^i$, $S^j)$ indicates that if the sub-expressions including $S^i$ and $S_j$ were expanded, a product $S^i S^j$ would be exposed. Let $\mathbb{T}$ be the subset of vertices with a single incident edge, or ``terminals''. We apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
 \begin{enumerate}[label=(\Alph*)]
 \item $\lbrace T^0, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii); $\mathbb{S} = \mathbb{S} \setminus \lbrace T^0, ..., T^n \rbrace$.\\ \textit{Note: strategy (ii) involves exposing $S (...T^0 + ... + ...T^n)$ and, subsequently, hoisting $(...T^0 + ... + ...T^n)$}. 
-\item Only one terminal $T$ adjacent to $S$: apply strategy (ii) as in rule (A), but including one non-terminal symbol $S^i$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^i \rbrace$.
-\item $\mathbb{T} = \emptyset$: take $S$, apply strategy (ii), eventually hoisting any two non-terminal symbols.\\ \textit{Note: this represents the ``fallback'' approach in presence of cyclic dependency}
+\item Only one terminal $T$ adjacent to $S$: apply strategy (ii) as in rule (A), but including one non-terminal symbol $S^{nt}$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^{nt} \rbrace$.
+\item $\mathbb{T} = \emptyset$: take $S$, apply strategy (ii), hoist any two non-terminal symbols.\\ \textit{Note: this rule represents the ``fallback'' in presence of cyclic dependency}
 \end{enumerate}
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or previously hoisted sub-expression, apply the most profitable between strategies (i) and (ii). 
 
@@ -495,7 +495,7 @@ The algorithm has three main phases: initialization (step 1); determination of t
 \end{enumerate}
 \end{Algo}
 
-The output of the transformation algorithm is as in Figure~\ref{code:loopnest-opt}, assuming as input the loop nest in Figure~\ref{code:loopnest}. 
+The output of the transformation algorithm is provided in Figure~\ref{code:loopnest-opt}, assuming as input the loop nest in Figure~\ref{code:loopnest}. 
 
 \begin{figure}[h]\begin{CenteredBox}
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_opt.code}
@@ -528,19 +528,19 @@ The following proposition states that our approach guarantees quasi-optimality. 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and preserves Constraints~\ref{const:Le} and~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
-We first observe that the cost function $\theta$ predicts the exact gain/loss in monomial pre-evaluation, so $X$ is always correct by construction. 
+We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ is constructed correctly.
 
-Let $c_\Lambda$ denote the operation count in $\Lambda$. Let $\Lambda'_I \subset \Lambda'$ be the subset of all innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
+Let $c_\Lambda$ denote the operation count in $\Lambda$ and let $\Lambda_I \subset \Lambda$ be the subset of innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ preserving the memory constraints such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
 \begin{enumerate}
 \item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
 \item \textit{pre-evaluating any $m \in Y$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \item \textit{not pre-evaluating any $m \in X$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \end{enumerate}
-\item \textit{Sharing elimination produces (at least) quasi-optimal loop nests.}\\
+\item \textit{Sharing elimination produces quasi-optimal (or optimal) loop nests.}\\
 \end{enumerate}
 
 We discuss these points separately
@@ -548,39 +548,22 @@ We discuss these points separately
 \begin{enumerate}
 \item 
 \begin{enumerate}
-\item Let $m_T$ represent the set of tables $T$ resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $m_{T_{1}}$ and $m_{T_{2}}$. If $m_{T_{1}} \cap m_{T_{2}} \neq \emptyset$, at least one table is assigned to the same temporary. $\Gamma$ would then skip a potential global optimum, since $\theta$ only reasons ``locally'' (i.e., on a monomial basis). By assumption, this case is neglected. The assumption is reasonable because such a scenario is of pathological nature (we have never experienced it) and, with high probability, the retrieved solution would be extremely close to the ideal one.
-\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ will be pre-evaluated (as by assumption), there may be a potential gain in sharing elimination that is lost, which potentially leads to a locally optimal solution -- instead of a global one. We prevent this situation by construction. $\Gamma$ models the problem as a graph, analyzing all possible bipartitions that may break the quasi-optimality claim. Since the graph is in practice very small (the number of monomials in a form rarely exceeds a few units), this pass can rapidly be accomplished.
+\item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $X$ and $Y$ are constructed reasoning -- through $\theta$ -- only on monomials in ``isolation''. This case is neglected by assumption. The assumption is reasonable because such a scenario is purely pathological and, with extreme probability, of insignificant importance.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum that also preserves the memory constraints. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of linearity, the operation count induced by a partition $P \in \mathbb{P}$ in the innermost loop is given by $c_P = {min(}|P|,\ |S_P|{)}$. 
-
-%What we have to prove is the fact that by taking each time $P$ such that $c_P$ is minimum -- henceforth, $P_{min}$ -- leads to quasi-optimality. We do it by contradiction. Let us assume that there exists another ordering for $\mathbb{P}$ leading to $c_{\Lambda''_I} < c_{\Lambda'_I}$. In particular, this implies the existence of $P$, with $c_{P} > c_{P_{min}}$, such that if $P$ is scheduled prior to $P_{min}$, a lower operation count is achieved. We distinguish two cases.
-%\begin{itemize}
-%\item $|P| < |S_P|$. This is the simplest scenario, since generalized code motion can be applied to the multilinear operands in $P$ and no disruptive re-factorization takes place. We would then have $c_{\Lambda''_I} = c_{\Lambda'_I}$, which clearly contradicts the hypothesis.
-%\item $|P| \geq |S_P|$. The expression is re-factorized such that the multilinear symbols in $S_P$ can be collected. Assuming $|S_P| = n$, this process exposes $n$ sub-expressions amenable to code motion. It is possible that these $n$ sub-expressions include all of the multilinear operands (symbols) in $P_{min}$. Due to linearity, the innermost loop will suffer from an increase in operation count of $2n - 1$ ($n$ products, $n-1$ additions). Conversely, assuming $|S_{P_{min}}| = n - 1$, if we scheduled $P_{min}$ first, . 
-%\end{itemize}
-
-%In total, therefore, 
-%If none of the $n$ hoisted sub-expressions include operands in $P_{min}$, we have again $c_{\Lambda''_I} = c_{\Lambda'_I}$. If that is not the case, 
-
-%We first observe that a partition (i.e., its multilinear symbols) depends on one of the two multilinear loops; we then indicate with $P^l$ the fact that $P$ depends on $L_l$, $l \in \lbrace j, k\rbrace$. Assuming $P_{min}^l$, we have two possibilities:
-%\begin{itemize}
-%\item likewise, $P^{l}$; that is, both $P_{min}$ and $P$ depend on the same linear loop. This is the simplest case, since swapping the order in which the two partitions are handled would not have any side effects -- there is no clash between all possible different re-factorizations. The assumption is then contradicted because the operation count in the innermost loop is the same irrespective of starting with $P_{min}$ or $P$.
-%\item $P^{l'}$ and $l' \neq l$. In this case, it is possible that operands (symbols) in $P^{l'}$ are factorized and code motion takes place such that $P_{min}$ ``loses'' some of its operands (symbols). Linearity and the assumption $c_{P} > c_{P_{min}}$ tell us that once $P$ is scheduled, we will have $c_{\Lambda''_I} \geq c_{\Lambda'_I} + 1$; that is, there is at least one extra operation (an addition) due to 
-%\end{itemize}
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Loop linearity is a sufficient (although not necessary) condition for removing spatial sharing through factorization. This induces a lower bound on the innermost loop operation count induced by $P \in \mathbb{P}$, which cannot be less than $c_P = 2{min(}|P|,\ |S_P|{)} - 1$. This observation ensures that step (3), which hoists loop-invariant multilinear operands, never prunes optimal solutions from the search space. Step (4) determines an optimal ordering for the factorization of multilinear symbols and temporaries produced at step (3). In particular, we need to demonstrate that the rewrite rules based on properties of the sharing graph bring to a quasi-optimal synthesis:
+\begin{enumerate}[label=(\Alph*)]
+\item Rule (A) has no side-effects since $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$.
+\item By contradiction, we can prove that applying rule (B) is always a step forward towards the optimal solution, assuming (as stated in Algorithm~\ref{algo:sharing-elimination}) no hit is possible for rule (A). Assume then that (B) prunes the path towards quasi-optimality by choosing a sub-optimal factorization. This means that there exists ...
+\item Rule (C) ...
+\end{enumerate}
+Finally, note that step (5) is irrelevant for quasi-optimality.
 
 \end{enumerate}
-
-%Partitions are ordered to promote a specific factorization sequence; this is essential to minimize the operation count in outer loops, although it is non influential for quasi-optimality. Criterion (2) also does not affect innermost loops. Criterion (1) is instead a discriminating factor. Consider a generic partition $P \in \mathbb{P}$. multilinearity...
-
 
 \end{proof}
 
-%TODO : even simpler if we considered linera forms. If we had trilinear forms, we would be fucked
-
 %TODO : In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
-
-% ordering of mathbb{P} is fundamental, because you start with something, then you collect stuff, and what you've collected is gonna be hoisted, which means having made a choice in terms of minimizing the innermost loop cost --- multilinearity and normal form here are super super imporant !
-% |P| <, ==, > then |S_P| is important because think of like: z0*FEik .... F0*FEik .... F1*FEik ...
 
 \section{Code Generation}
 \label{sec:codegen}
@@ -618,7 +601,7 @@ We evaluate the speed-ups achieved by a wide variety of transformation systems o
 \item FEniCS Form Compiler: optimized quadrature mode (work presented in~\citeN{quadrature1}). Referred to as \texttt{quad} 
 \item FEniCS Form Compiler: tensor mode (work presented in~\citeN{FFC-TC}). Referred to as \texttt{tens} 
 \item FEniCS Form Compiler: automatic mode (choice between \texttt{tens} and \texttt{quad} driven by heuristic, detailed in~\citeN{Fenics} and summarized in Section~\ref{sec:qualitative}). Referred to as \texttt{auto} 
-\item UFLACS: a novel back-end for the FEniCS Form Compiler (whose primary goals are improved code generation time and runtime). Referred to as \texttt{ufls} 
+\item UFLACS: a novel back-end for the FEniCS Form Compiler (whose primary goals are improved code generation and execution times). Referred to as \texttt{ufls} 
 \item COFFEE: generalized loop-invariant code motion (work presented in~\citeN{Luporini}). Referred to as \texttt{cfO1} 
 \item COFFEE: optimal loop nest synthesis plus symbolic execution for zero-elimination (work of this article). Referred to as \texttt{cfO2} 
 \end{itemize}
