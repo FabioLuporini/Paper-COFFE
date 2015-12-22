@@ -557,7 +557,7 @@ Step (4) factorizes symbols following an ordering that brings to quasi-optimalit
 \begin{enumerate}[label=(\Alph*)]
 \item Rule (A) is side effects free since $\lbrace T^0, ..., T^n \rbrace$ can be grouped only through the factorization of $S$.
 \item We prove that rule (B) makes the algorithm progress towards the optimal solution. We first observe that the choice of $S^{nt}$ is arbitrary. Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. We then consider the alternative factorization, namely $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we would simply be back to where we started, because rule (B) would be applicable by setting $V = T$ and $S = S^{nt}$. If, on the other hand, $V$ were a non terminal, we would have $S$ appearing in two different sub-expressions, which implies the presence of spatial sharing.
-\item In order to have $\mathbb{T} = \emptyset$, which would trigger rule (C), it must be the case that all non terminals have the same number of incoming edges.  
+\item In order to have $\mathbb{T} = \emptyset$, which would trigger rule (C), it must be the case that ....
 \end{enumerate}
 Finally, we note that step (5) is irrelevant for quasi-optimality.
 
