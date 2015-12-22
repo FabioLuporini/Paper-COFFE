@@ -520,20 +520,20 @@ In general, however, determining $\iota$ is not so straightforward since redunda
 
 If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. Intuitively, this means that we are introducing more operations than we are saving from pre-evaluating $L_i$. 
 
-If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix operator in Figure~\ref{code:increase_factor}. The corresponding monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$.  If we instead take the Poisson example in Figure~\ref{code:poisson}, we have that $\rho = 3$ after a suitable factorization of basis functions. In general, therefore, $\rho$ depends on both form and discretization employed. To determine this parameter, we re-factorize the expression as per Algorithm~\ref{algo:pre-evaluation} and count the terms amenable to pre-evaluation.
+If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. Consider again the mass matrix operator in Figure~\ref{code:increase_factor}. The corresponding monomial is characterized by the dot product of test and trial functions, so trivially $\rho = 1$.  If we instead take the example in Figure~\ref{code:poisson}, we have that $\rho = 3$ after a suitable factorization of basis functions. In general, therefore, $\rho$ depends on both form and discretization employed. To determine this parameter, we re-factorize the expression as per Algorithm~\ref{algo:pre-evaluation} and simply count the terms amenable to pre-evaluation.
 
 \subsection{Formalization}
 \label{sec:proof}
-The following proposition states that our approach guarantees quasi-optimality. The proof re-uses some of the concepts and explanations provided throughout the paper.
+The following proposition states that our approach guarantees quasi-optimality. The proof re-uses concepts and explanations provided throughout the paper, as well as the terminology introduced in Section~\ref{sec:se-algo}.
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that pre-evaluating different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and preserves Constraints~\ref{const:Le} and~\ref{const:TH}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and preserves Constraints~\ref{const:Le} and~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
-We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ is constructed correctly.
+We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ and $Y$ can actually be constructed correctly.
 
-Let $c_\Lambda$ denote the operation count in $\Lambda$ and let $\Lambda_I \subset \Lambda$ be the subset of innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ preserving the memory constraints such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
+Let $c_\Lambda$ denote the operation count for $\Lambda$ and let $\Lambda_I \subset \Lambda$ be the subset of innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ preserving Constraints~\ref{const:Le} and~\ref{const:TH} such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
 \begin{enumerate}
 \item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
@@ -551,13 +551,15 @@ We discuss these points separately
 \item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $X$ and $Y$ are constructed reasoning -- through $\theta$ -- only on monomials in ``isolation''. This case is neglected by assumption. The assumption is reasonable because such a scenario is purely pathological and, with extreme probability, of insignificant importance.
 \item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum that also preserves the memory constraints. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Loop linearity is a sufficient (although not necessary) condition for removing spatial sharing through factorization. This induces a lower bound on the innermost loop operation count induced by $P \in \mathbb{P}$, which cannot be less than $c_P = 2{min(}|P|,\ |S_P|{)} - 1$. This observation ensures that step (3), which hoists loop-invariant multilinear operands, never prunes optimal solutions from the search space. Step (4) determines an optimal ordering for the factorization of multilinear symbols and temporaries produced at step (3). In particular, we need to demonstrate that the rewrite rules based on properties of the sharing graph bring to a quasi-optimal synthesis:
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Based on loop linearity and normal form of input expressions, we observe that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through (i) generalized code motion or (ii) factorization of multilinear symbols, respectively leading to $|P|$ and $|S_P|$ multiplications. An upper bound for $P$ is, therefore, $ub_P = 2{min(}|P|,\ |S_P|{)} - 1$. Thus, when generalized code motion in step (3) is applied, we do know that we are not pruning any potentially optimal solution from the search space. In fact, we are just moving towards the lower bound, given by $lb_P = min(0, ub_P)$, with $0$ reached only if the symbols in $P$ will be grouped and hoisted at step (4). 
+
+Step (4) factorizes multilinear symbols and temporaries produced at step (3) in optimal order; that is, an order that leads to a quasi-optimal synthesis. To demonstrate this, we consider the sharing graph rewrite rules.
 \begin{enumerate}[label=(\Alph*)]
 \item Rule (A) has no side-effects since $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$.
 \item By contradiction, we can prove that applying rule (B) is always a step forward towards the optimal solution, assuming (as stated in Algorithm~\ref{algo:sharing-elimination}) no hit is possible for rule (A). Assume then that (B) prunes the path towards quasi-optimality by choosing a sub-optimal factorization. This means that there exists ...
 \item Rule (C) ...
 \end{enumerate}
-Finally, note that step (5) is irrelevant for quasi-optimality.
+Finally, we note that step (5) is irrelevant for quasi-optimality.
 
 \end{enumerate}
 
