@@ -388,7 +388,7 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \begin{enumerate}[label=(\Alph*)]
 \item $\lbrace T^1, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii); $\mathbb{S} = \mathbb{S} \setminus \lbrace T^1, ..., T^n \rbrace$.\\ \textit{Note: strategy (ii) recasts the expression as $S (...T^0 + ... + ...T^n)$}. 
 \item Only one terminal $T$ adjacent to $S$: apply strategy (ii) including one non-terminal symbol $S^{nt}$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^{nt} \rbrace$.
-\item $\mathbb{T} = \emptyset$: take $S$ adjacent to $\lbrace S^1, ..., S^d \rbrace$ such that $d$ is maximum (i.e. $S$ is the vertex with highest degree in $\mathbb{G}$) and apply strategy (ii);  $\mathbb{S} = \mathbb{S} \setminus \lbrace S^1, ..., S^d \rbrace$.
+\item $\mathbb{T} = \emptyset$: take $S$ with highest degree and apply strategy (ii).
 \end{enumerate}
 Go back to step (2).
 
