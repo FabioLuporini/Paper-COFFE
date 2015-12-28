@@ -350,9 +350,9 @@ Section~\ref{sec:se-rln} discusses structural and algebraic properties character
 Finite element expressions can be seen as composition of operations between tensors. We observe that, when multiplying two tensors, it often happens that the optimal scheduling strategy is to be searched in a space of size 2. To illustrate the concept, we take a matrix-vector product $y_{\Psi \Delta} = A_{\Psi} x_{\Delta}$, in which the entries of $y, A$ and $x$ depend on $\Psi, \Delta \subset \Lambda$. Let us assume that $y_{\Psi \Delta}$ itself is an operand of a larger scalar-valued expression, so its entries can represent any possible sub-expression in $\lbrace \alpha_{eij}, \beta_{eik}, \sigma_{ei} \rbrace$. For example, suppose that $A$ is the inverse Jacobian matrix of a given coefficient and $x$ the gradient of a function in two dimensions, and consider the case $\Psi = \emptyset$, $\Delta = \lbrace L_i \rbrace$. Thus an entry in $y_{L_i}$ is of the form $(a f_i + b g_i) (c f_i + d g_i) \in \sigma_{ei}$. To schedule this expression, we basically have two options:
 \begin{enumerate}[label=(\roman*)]
 \item Applying generalized code motion -- not needed in the example as we have one loop.
-\item Searching for spatial sharing, expanding and factorizing the expression to promote temporal sharing, applying generalized code motion -- the expression in the example would be recast as $f_i (a + c) + g_i (b + d)$, with $(a + c)$ and $(b + d)$ being two hoistable sub-expressions.
+\item Searching for spatial sharing, expanding and factorizing the expression to promote temporal sharing -- the expression in the example would be recast as $f_i (a + c) + g_i (b + d)$, with $(a + c)$ and $(b + d)$ being two hoistable sub-expressions.
 \end{enumerate}
-The reader can verify that (ii) improves the operation count over (i) for any size of $L_i$. In general, however, the optimal option depends on multiple factors: the loop size, the expansion cost, and code motion. One can appreciate the dichotomy between (i) and (ii) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}. We then regard as \textit{structured tensor operation} any operation between two tensors that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. 
+The reader can verify that (ii) improves the operation count over (i) for any size of $L_i$. In general, however, the optimal option depends on multiple factors: the loop size, the expansion cost, and code motion. One can appreciate the dichotomy between (i) and (ii) in several expressions originating from a wide range of variational forms\footnote{In fact, it systematically appears in all of the forms used for experimentation (Section~\ref{sec:perf-results}), and many more.}. We then regard as \textit{structured tensor operation} any tensor operation that result in sub-expressions for which there is no ambiguity in spatial sharing elimination -- implying that the optimal operation scheduling is to be determined out of two alternatives. 
 
 Of notable importance, from the perspective of achieving quasi-optimality, is the fact that sub-expressions depending on the multilinear loop nest always result from structured tensor operations. Often, structured tensor operations characterize the $\sigma_{ei}$ sub-expressions too. For instance, they systematically arise in the weak variational form of the complex hyperelastic model analyzed in Section~\ref{sec:perf-results} (e.g., the Cauchy-Green tensor). 
 
@@ -372,36 +372,40 @@ The algorithm makes use of the following notation and terminology:
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
-The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-4); scheduling of all other sub-expressions (step 5).
+The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-5); scheduling of all other sub-expressions (step 6).
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. 
-
+\item Perform a depth-first visit of the expression tree with recursive collection of identical sub-expressions. \\ 
 \textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
-\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
-\item For each $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply strategy (i) to the multilinear operands. 
 
+\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that multilinear operands in $P$ share a set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
+
+\item For each $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply strategy (i) to the multilinear operands. \\
 \textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, strategies (i) or (ii) were applied. We will clarify that this directly descends from loop linearity.}
 
-\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step 3. An edge $(S^i$, $S^j)$ indicates that if the sub-expressions including $S^i$ and $S_j$ were expanded, a product $S^i S^j$ would be exposed. Let $\mathbb{T}$ be the subset of vertices with a single incident edge, or ``terminals''. We apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
-\begin{enumerate}[label=(\Alph*)]
-\item $\lbrace T^0, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii); $\mathbb{S} = \mathbb{S} \setminus \lbrace T^0, ..., T^n \rbrace$.\\ \textit{Note: strategy (ii) involves exposing $S (...T^0 + ... + ...T^n)$ and, subsequently, hoisting $(...T^0 + ... + ...T^n)$}. 
-\item Only one terminal $T$ adjacent to $S$: apply strategy (ii) as in rule (A), but including one non-terminal symbol $S^{nt}$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^{nt} \rbrace$.
-\item $\mathbb{T} = \emptyset$: take $S$, apply strategy (ii), hoist any two non-terminal symbols.\\ \textit{Note: this rule represents the ``fallback'' in presence of cyclic dependency}
-\end{enumerate}
-\item Perform a depth-first visit of the expression tree and, for each yet unhandled or previously hoisted sub-expression, apply the most profitable between strategies (i) and (ii). 
+\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step 3. An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with a single incident edge, or ``terminals''. 
 
+\item If $\mathbb{S} = \emptyset$, jump to step (6). Otherwise apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
+\begin{enumerate}[label=(\Alph*)]
+\item $\lbrace T^1, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii); $\mathbb{S} = \mathbb{S} \setminus \lbrace T^1, ..., T^n \rbrace$.\\ \textit{Note: strategy (ii) recasts the expression as $S (...T^0 + ... + ...T^n)$}. 
+\item Only one terminal $T$ adjacent to $S$: apply strategy (ii) including one non-terminal symbol $S^{nt}$. $\mathbb{S} = \mathbb{S} \setminus \lbrace T, S^{nt} \rbrace$.
+\item $\mathbb{T} = \emptyset$: take $S$ adjacent to $\lbrace S^1, ..., S^d \rbrace$ such that $d$ is maximum (i.e. $S$ is the vertex with highest degree in $\mathbb{G}$) and apply strategy (ii);  $\mathbb{S} = \mathbb{S} \setminus \lbrace S^1, ..., S^d \rbrace$.
+\end{enumerate}
+Go back to step (2).
+
+\item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted sub-expression, apply the most profitable between strategies (i) and (ii). \\
 \textit{Note: this pass speculatively assumes that structured tensor operations are in place. If the assumption does not hold, the result will generally be sub-optimal since only a subset of code motion opportunities may be exposed.}
 \end{enumerate}
 \end{Algo}
 
 %TODO : dire che il costo dell'espansione è semplicemente dato da ciascun s in | S_P | times la 2 evalato al depth di quell s.
+%\item $\mathbb{T} = \emptyset$: take $S$ at will such that the number of adjacent non terminals is maximum, and apply strategy (ii). 
 %\textit{Note: $\mathbb{S}$ is in practice very small, so this pass can be accomplished rapidly.}
 
 \subsubsection{Examples}
 \label{sec:se-examples}
 Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying strategy (i) in step 3 has no effect. The sharing graph is $\mathbb{G} = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $\mathbb{T} = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-Figure~\ref{code:poisson} applies Algorithm~\ref{algo:sharing-elimination} to a realistic example, the bilinear form arising from a Poisson equation in 2D. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so strategy (i) is applied to both partitions (step 3). We then have (step 4) $\mathbb{G} = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \emptyset)$, although no rewrite rule is applicable since $\mathbb{E} = \emptyset$. 
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, the bilinear form arising from a Poisson equation in 2D. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so strategy (i) is applied to both partitions (step 3). We then have (step 4) $\mathbb{G} = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \emptyset)$, although no rewrite rule is applicable since $\mathbb{E} = \emptyset$. 
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -528,12 +532,12 @@ The following proposition states that our approach guarantees quasi-optimality. 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and preserves Constraints~\ref{const:Le} and~\ref{const:TH}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of pre-evaluated monomials, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and satisfies Constraints~\ref{const:Le} and~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
 We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ and $Y$ can actually be constructed correctly.
 
-Let $c_\Lambda$ denote the operation count for $\Lambda$ and let $\Lambda_I \subset \Lambda$ be the subset of innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ preserving Constraints~\ref{const:Le} and~\ref{const:TH} such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
+Let $c_\Lambda$ denote the operation count for $\Lambda$ and let $\Lambda_I \subset \Lambda$ be the subset of innermost loops (all $L_k$ loops in Figure~\ref{code:loopnest-opt}). We need to show that there is no other synthesis $\Lambda''_{I}$ satisfying Constraints~\ref{const:Le} and~\ref{const:TH} such that $c_{\Lambda''_I} < c_{\Lambda'_I}$. This holds if and only if
 \begin{enumerate}
 \item \textit{The coordination of pre-evaluation with sharing elimination is optimal}. This boils down to prove that
 \begin{enumerate}
@@ -548,18 +552,21 @@ We discuss these points separately
 \begin{enumerate}
 \item 
 \begin{enumerate}
-\item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $X$ and $Y$ are constructed reasoning -- through $\theta$ -- only on monomials in ``isolation''. This case is neglected by assumption. The assumption is reasonable because such a scenario is purely pathological and, with extreme probability, of insignificant importance.
+\item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $\theta$ only reasons on monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
 \item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum that also preserves the memory constraints. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of loop linearity and normal form of expressions, there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through (i) generalized code motion or (ii) factorization of multilinear symbols. These two strategies lead, respectively, to performing $|P|$ and $|S_P|$ products at every iteration. Since (i) is side effects free (i.e., neither expansion nor factorization are needed) and is applied if and only if $|P| < |S_P|$, it is clear that step (3) cannot prune any optimal solution from the search space; in fact, it just moves towards quasi-optimality. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of loop linearity and normal form of expressions, there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through (i) generalized code motion or (ii) factorization of multilinear symbols. These two strategies lead, respectively, to performing $|P|$ or $|S_P|$ products at every loop iteration. Since (i) is side effects free (i.e., neither expansion nor factorization are needed) and is applied if and only if $|P| < |S_P|$, it is clear that step (3) cannot prune any optimal solution from the search space; in fact, it just represents a move towards quasi-optimality. 
 
-Step (4) factorizes symbols following an ordering that brings to quasi-optimality. The order is dictated by the sharing graph and its rewrite rules. We first recall that rewrite rules are tried following the order in which they were presented in Algorithm~\ref{algo:sharing-elimination}; for example, we do not attempt rule (B) until we have handled all possible hits for rule (A).
-\begin{enumerate}[label=(\Alph*)]
-\item Rule (A) is side effects free since $\lbrace T^0, ..., T^n \rbrace$ can be grouped only through the factorization of $S$.
-\item We prove that rule (B) makes the algorithm progress towards the optimal solution. We first observe that the choice of $S^{nt}$ is arbitrary. Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. We then consider the alternative factorization, namely $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we would simply be back to where we started, because rule (B) would be applicable by setting $V = T$ and $S = S^{nt}$. If, on the other hand, $V$ were a non terminal, we would have $S$ appearing in two different sub-expressions, which implies the presence of spatial sharing.
-\item In order to have $\mathbb{T} = \emptyset$, which would trigger rule (C), it must be the case that ....
-\end{enumerate}
-Finally, we note that step (5) is irrelevant for quasi-optimality.
+Steps (4)-(5) factorize symbols following the ordering dictated by the sharing graph and its rewrite rules. Recall that rules are applied in sequence: first all rule (A) hits are handled, then all (B)s and finally all (C)s, with applications of rule (C) that may expose further possibilities for (A) and (B). We prove that the application of these rules, in this sequence, represents a step towards quasi-optimality. 
+\begin{description}
+\item[Rule (A)] $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule is side effects free (i.e., no need to choose between different factorizations).
+\item[Rule (B)] Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we would simply be back to where we started, because rule (B) would be applicable by setting $V = T$ and $S = S^{nt}$. Otherwise ($V$ non terminal), we would have $S$ appearing in two different sub-expressions, which implies sub-optimality because of the presence of spatial sharing.
+\item[Rule (C)] We can interpret $G$ as a bipartite graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, in which $\mathbb{S}_j$ and $\mathbb{S}_k$ represent the partitions of symbols depending on $L_j$ and $L_k$, respectively. For each disconnected component $\mathbb{B^d} = (\mathbb{S}_j^d, \mathbb{S}_k^d, \mathbb{E}^d) \in \mathbb{B}$ we consider two possibilities, namely $\mathbb{B^d}$ is 1) not complete or 2) complete. Case 1) is the simplest: since, at this point, there are no more hits for rules (A) and (B), the lower bound for the operation count (as number of products performed at every loop iteration) is given by ${min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$. This is reachable by taking the vertex with highest degree, as the rule states (note that other choices may break factorization opportunities). In case 2), the lower bound is 1 because factorization can be applied iteratively (e.g., $a_j a_k + a_j b_k + b_j a_k + b_j b_k = (a_j + b_j)(a_k + b_k) = t_j t_k$); this is handled by going back to step (2), at the end of step (5).
+
+% At this point, recall . 
+%In order to have $\mathbb{T} = \emptyset$, which would trigger rule (C), it must be the case that ....
+\end{description}
+Finally, we note that step (6) is irrelevant for quasi-optimality.
 
 \end{enumerate}
 
