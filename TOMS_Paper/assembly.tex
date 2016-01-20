@@ -299,19 +299,27 @@ To contextualize, consider Equation~\ref{eq:quadrature} and the (abstract) loop 
 A finite element integration loop nest is a loop nest in which appear, in order, an imperfect free order loop, an imperfect (perfect only in special cases), linear or non-linear reduction loop, and a multilinear loop nest whose body is an independent basic block in which expressions are in normal form.
 \end{Def}
 
-For a finite element integration loop nest, we characterize optimality and quasi-optimality as follows.
+We then characterize optimality for a finite element integration loop nest as follows.
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the number of operations (additions, products) performed to evaluate the result is minimal.
+\end{Def}
+
+The concept of quasi-optimality, which relies on the particular class of \textit{f-decreasing} transformations, is also introduced.
+
+\begin{Def}[F-decreasing transformation]
+A sequence of transformations reducing the operation count is called f-decreasing (abbreviation for ``flop-decreasing'').
 \end{Def}
 
 \begin{Def}[Quasi-optimality of a loop nest]
 \label{def:mln-quasi-optimality}
-Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) that it performs to evaluate the result is minimal in all innermost loops.
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) performed to evaluate the result, achieved through a sequence of f-decreasing transformations, is minimal in all innermost loops.
 \end{Def}
 
-Note that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements. We also note that quasi-optimality approximates optimality very well whenever the inner loop trip counts are ``sufficiently large''.
+The restriction to f-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing a ``global'' increase in operation count. 
+
+We also observe that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite element, this is often true for more complex multilinear forms and/or higher order elements. 
 
 Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity ensures a certain degree of regularity for the  $\alpha_{eij}$ and $\beta_{eik}$ sub-expressions. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
 \begin{itemize}
@@ -378,7 +386,12 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item For each $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply strategy (i) to the multilinear operands. \\
 \textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, strategies (i) or (ii) were applied. We will clarify that this directly descends from loop linearity and the structure inherent in tensor operations.}
 
-\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step 3. An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with a single incident edge, or ``terminals''. 
+\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
+
+\item Remove $e = (S^i, S^j) \in \mathbb{E}$ if applying strategy (ii) would cause an increase in operation count (i.e., the elimination of temporal sharing after factorization of $S^i$ or $S^j$ would be outweighed by the expansion cost).\\
+\textit{Note: this ensures the f-decreasing nature of the transformations at step (6)}.\\
+\textit{Note: this pass can be accomplished by visiting the expression tree and collecting several information -- for example, the number of products wrapping an instance of $S^i$ or $S^j$, from which the expansion cost can be derived.}
+
 
 \item If $\mathbb{S} = \mathbb{T}$, jump to step (6). Otherwise apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
 \begin{enumerate}[label=(\Alph*)]
@@ -393,9 +406,11 @@ Go back to step (2).
 \end{enumerate}
 \end{Algo}
 
-%TODO : dire che il costo dell'espansione è semplicemente dato da ciascun s in | S_P | times la 2 evalato al depth di quell s.
-%\item $\mathbb{T} = \emptyset$: take $S$ at will such that the number of adjacent non terminals is maximum, and apply strategy (ii). 
-%\textit{Note: $\mathbb{S}$ is in practice very small, so this pass can be accomplished rapidly.}
+\begin{Rem*}
+\normalfont
+It is true that Algorithm~\ref{algo:sharing-elimination} aims for quasi-optimality, but clearly this does not mean that only those sub-expressions depending on the multilinear loop nest are considered for optimization. We emphasize once more that the enforcement of f-decreasing transformations (step 5) and the re-scheduling within outer loops (step 7) attempt to minimize the operation count of the whole loop nest. We will further elaborate this aspect in Section~\ref{sec:proof}.
+\end{Rem*}
+
 
 \subsubsection{Examples}
 \label{sec:se-examples}
@@ -519,7 +534,7 @@ We demonstrate that the orchestration of sharing elimination and pre-evaluation 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that $\Gamma$ establishes to pre-evaluate, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and satisfies Constraint~\ref{const:TH}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that, according to $\Gamma$, need be pre-evaluated, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and satisfies Constraint~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
 We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ and $Y$ can actually be constructed.
@@ -540,21 +555,22 @@ We discuss these points separately
 \item 
 \begin{enumerate}
 \item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $\theta$ only reasons on monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
-\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum that also preserves the memory constraints. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum preserving Constraint~\ref{const:TH}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of normal form of expressions, loop linearity and structure of tensor operations, there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through (i) generalized code motion or (ii) factorization of multilinear symbols. These two strategies lead, respectively, to performing $|P|$ or $|S_P|$ products at every loop iteration. Since (i) is applied if and only if $|P| < |S_P|$ and does not require neither expansion nor factorization, step (3) will not prune any optimal solution from the search space. %; in fact, it simply shifts towards the objective. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of the normal form of expressions and the structure inherent in tensor operations involving test and trial functions, there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (strategy (i)) or factorization of multilinear symbols (achieved through strategy (ii)). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since strategy (i) is applied if and only if $|P| < |S_P|$ and requires neither expansion nor factorization, step (3) will not prune any optimal solution from the search space; in fact, it simply represents a step forward towards quasi-optimality. 
 
-Steps (4)-(5) factorize symbols following the ordering dictated by the sharing graph and its rewrite rules. Recall that rules (A), (B), and (C) are applied in sequence, with applications of rule (C) that may expose further possibilities for (A) and (B). We prove that the application of these rules, in this sequence, represents a step towards quasi-optimality. 
+Step (6) factorizes symbols following the ordering dictated by the sharing graph and its rewrite rules. Non f-decreasing factorizations are excluded by construction (step (5)). We now have to prove that applying in sequence rewrite rules (A), (B), and (C), with applications of rule (C) that may expose further opportunities for (A) and (B), always represents progress towards quasi-optimality. 
 \begin{description}
 \item[Rule (A)] $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule is side effects free (i.e., no need to choose between different factorizations).
-\item[Rule (B)] Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ is a terminal, we are back to where we started, because rule (B) will be applicable by setting $V = T$ and $S = S^{nt}$. Otherwise ($V$ non terminal), we have $S$ appearing in two different sub-expressions, which implies sub-optimality because of the presence of spatial sharing.
-\item[Rule (C)] We can interpret $G$ as a bipartite graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, in which $\mathbb{S}_j$ and $\mathbb{S}_k$ represent the partitions of symbols depending on $L_j$ and $L_k$, respectively. For each disconnected component $\mathbb{B^d} = (\mathbb{S}_j^d, \mathbb{S}_k^d, \mathbb{E}^d)$ in $\mathbb{G}$, we consider two possibilities, namely $\mathbb{B^d}$ 1) is not or 2) is complete. Case 1) is the simplest: since, at this point, there are no more hits for rules (A) and (B), the lower bound on the operation count (as number of products performed at every loop iteration), $lb$, is given by $lb = {min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$. This is reachable by factorizing the vertex with highest degree (as the rule states), as any other choice may break factorization opportunities. In case 2), we have $lb = 1$ because factorization is applicable iteratively (e.g., $a_j a_k + a_j b_k + b_j a_k + b_j b_k = (a_j + b_j)(a_k + b_k) = t_j t_k$); this is handled by going back to step (2), at the end of step (5).
+\item[Rule (B)] Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider a generic alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we would be back to where we started, because rule (B) with $V = T$ and $S = S^{nt}$ would still be applicable. Otherwise ($V$ non terminal), we would have $S$ appearing in two different sub-expressions, which would imply sub-optimality as a consequence of spatial sharing.
+\item[Rule (C)] We can interpret $G$ as a bipartite graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, in which $\mathbb{S}_j$ and $\mathbb{S}_k$ represent the partitions of symbols depending on $L_j$ and $L_k$, respectively. For each disconnected component $\mathbb{B}^d = (\mathbb{S}_j^d, \mathbb{S}_k^d, \mathbb{E}^d)$ in $\mathbb{G}$, we consider two possibilities, namely $\mathbb{B^d}$ 1) is not or 2) is complete. Case 1) is the simplest: since, at this point, there are no more hits for rules (A) and (B), the lower bound on the operation count (as number of products performed at every loop iteration), $lb$, is given by $lb = {min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$. This is reachable by factorizing the vertex with highest degree, as any other choice may break factorization opportunities. In case 2), we have $lb = 1$ because factorization is applicable iteratively (e.g., $a_j a_k + a_j b_k + b_j a_k + b_j b_k = (a_j + b_j)(a_k + b_k) = t_j t_k$); this is handled by going back to step (2), at the end of step (6).
 \end{description}
-The algorithm is guaranteed to terminate because of the jump to step (6) when $\mathbb{S} = \emptyset$, before applying the rewrite rules. 
+The algorithm is guaranteed to terminate because of the jump to step (6) when $\mathbb{S} = \mathbb{T}$. 
 \end{enumerate}
 \end{proof}
 
 %TODO : In addition, if X holds, then $\Lambda'$ is optimal as established by Definition ?.
+%TODO : A list of preconditions that eventually result in optimality
 
 \section{Code Generation}
 \label{sec:codegen}
