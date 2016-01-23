@@ -369,9 +369,14 @@ Eliminating spatial sharing first -- through product expansion and factorization
 In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count, since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. Note that a second example of application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions.
 \begin{Def}[Structured expression]
 \label{def:struct-expr}
-An expression is \textit{structured} with respect to a set of loops $L$ if and only if there is no ambiguity in spatial sharing elimination for the symbols depending on $L$.
+An expression is \textit{structured} with respect to a set of loops $\Lambda$ if and only if there is no ambiguity in the elimination of spatial sharing for the symbols depending on $\Lambda$.
 \end{Def}
-The fundamental observation is that if a loop nest $L$ is multilinear, then all of its expressions will be structured with respect to $L$. In finite element integration loop nests, for example, a factorization of test and trial functions will always result in exposing temporal sharing (Strategy~\ref{strategy:ii}). This property will play a key role in Algorithm~\ref{algo:sharing-elimination}, which targets quasi-optimality. Finally, we observe that it is remarkable that structured sub-expressions sometimes characterize the \textit{entire} variational form (for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}).
+This leads us to the following, fundamental observation.
+\begin{Prop}
+\label{prop:multi-struct}
+In a multilinear loop nest $\Lambda$, all of the expressions are structured with respect to $\Lambda$.
+\end{Prop}
+In finite element integration loop nests, for example, any factorization of test and trial functions will always result in exposing temporal sharing (Strategy~\ref{strategy:ii}). Conversely, in a generic loop nest $\Lambda$, the instances of a symbol depending on $\Lambda$ may appear everywhere (e.g., twice in a summand and only once in all other summands; as argument of a higher level function; in the denominator of a division), thus posing the challenge of finding the optimal factorization that maximizes temporal sharing. Proposition~\ref{prop:multi-struct} played a key role in the development of Algorithm~\ref{algo:sharing-elimination}. Finally, we observe that structured sub-expressions sometimes characterize the \textit{entire} variational form (for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}).
 
 
 \subsubsection{Algorithm}
@@ -382,18 +387,19 @@ Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming 
 \item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression.
 \item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.).
 \end{itemize}
+Examples will be provided in Section~\ref{sec:se-examples}.
 
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
 The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-5); scheduling of all other sub-expressions (step 6).
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree to factorize identical terms within additions. \\ 
+\item Perform a depth-first visit of the expression tree to group identical terms within the same sub-expression. \\ 
 \textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
 
 \item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
 
-\item For each $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i} to the multilinear operands. \\
+\item For all multilinear operands in $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i}. \\
 \textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of the expression being structured with respect to $[L_j, L_k]$.}
 
 \item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
@@ -421,7 +427,7 @@ Go back to step (2).
 
 \begin{Rem*}
 \normalfont
-Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of f-decreasing transformations (step 5) and the re-scheduling of sub-expressions within outer loops (step 7) also aim at optimizing the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
+Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of f-decreasing transformations (step 5) and the re-scheduling of sub-expressions within outer loops (step 7) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
 \end{Rem*}
 
 
