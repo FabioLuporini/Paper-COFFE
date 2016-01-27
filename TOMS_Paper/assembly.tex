@@ -270,7 +270,7 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
-We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to synthesize optimal code.
+We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to synthesize quasi-optimal code.
 
 We define two other classes of loops. 
 
@@ -319,11 +319,11 @@ A sequence of transformations reducing the operation count is called f-decreasin
 Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal and was achieved through a sequence of f-decreasing transformations.
 \end{Def}
 
-The restriction to f-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing a ``global'' increase in operation count. 
+The restriction to f-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing, in fact, a ``global'' increase in operation count. 
 
 We also observe that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite elements, this is often true for more complex multilinear forms and/or higher order elements. 
 
-Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggest a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the $\sigma_{ei}$ sub-expressions are ``sufficiently regular'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
+Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggest a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the monomials are ``sufficiently structured'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
 \begin{itemize}
 \item the space of legal transformations impacting the operation count (Sections~\ref{sec:sharing-elimination} -- \ref{sec:completeness})
 \item an algorithm to select points in the transformation space (Section~\ref{sec:optimal-synthesis})
@@ -341,7 +341,7 @@ A statement within a loop nest $\Lambda$ presents sharing if at least one of the
 \end{description}
 \end{Def}
 
-To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sharing evolves as factorization and code motion are applied to a trivial multilinear loop nest. In the original loop nest (Figure~\ref{code:multi_loopnest_a}), spatial sharing is induced by $b_j$. Factorization eliminates spatial sharing and promotes temporal sharing (Figure~\ref{code:multi_loopnest_b}). Finally, generalized code motion \cite{Luporini}, which seeks redundant sub-expressions analyzing all levels of the loop nest\footnote{Traditional loop-invariant code motion, which is commonly applied by general-purpose compilers, only considers innermost loops.}, leads to optimality (Figure~\ref{code:multi_loopnest_c}). 
+To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sharing evolves as factorization and code motion are applied to a trivial multilinear loop nest. In the original loop nest (Figure~\ref{code:multi_loopnest_a}), spatial sharing is induced by the symbol $b_j$. Factorization eliminates spatial sharing and promotes temporal sharing (Figure~\ref{code:multi_loopnest_b}). Finally, generalized code motion \cite{Luporini}, which seeks sub-expressions that are redundantly executed by at least one loop in the nest\footnote{Traditional loop-invariant code motion, which is commonly applied by general-purpose compilers, only checks invariance with respect to the innermost loop.}, leads to optimality (Figure~\ref{code:multi_loopnest_c}). 
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 13pt \subfigure[With spatial sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
@@ -357,7 +357,7 @@ In this section, we study \textit{sharing elimination}, a transformation that ai
 
 \subsubsection{Identification and exploitation of structure}
 \label{sec:se-rln}
-Finite element expressions can be seen as composition of operations between tensors. Often, the optimal implementation strategy for these operations is to be determined out of two alternatives. To illustrate the concept, consider $J^{-1} \nabla x \cdot J^{-1} \nabla x$, with $J^{-1}$ being the inverse Jacobian matrix for the change of coordinates and $x$ a generic two-dimensional vector. The tensor operation will reduce to $(a x^0_i + b x^1_i) (a x^0_i + b x^1_i) + ...$, in which $x^0_i$ and $x^1_i$ represent components of $x$ that depend on loop $L_i$. To minimize the operation count for sub-expressions of this kind, we have two options.
+Finite element expressions can be seen as composition of operations between tensors. Often, the optimal implementation strategy for these operations is to be determined out of two alternatives. For instance, consider $J^{-1} \nabla x \cdot J^{-1} \nabla x$, with $J^{-1}$ being the inverse Jacobian matrix for the change of coordinates and $x$ a generic two-dimensional vector. The tensor operation will reduce to the scalar expression $(a x^0_i + b x^1_i) (a x^0_i + b x^1_i) + ...$, in which $x^0_i$ and $x^1_i$ represent components of $x$ that depend on $L_i$. To minimize the operation count for expressions of this kind, we have two options.
 \begin{Strategy}
 \label{strategy:i}
 Eliminating temporal sharing through generalized code motion.
@@ -366,18 +366,24 @@ Eliminating temporal sharing through generalized code motion.
 \label{strategy:ii}
 Eliminating spatial sharing first -- through product expansion and factorization -- and temporal sharing afterwards, again through generalized code motion.
 \end{Strategy}
-In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count, since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. Note that a second example of application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions.
+In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. A second application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. With the objective of characterizing when these two strategies suffice to reach quasi-optimality, we introduce a particular class of expressions and its relationship with multilinear loop nests.
 \begin{Def}[Structured expression]
 \label{def:struct-expr}
-An expression is \textit{structured} with respect to a set of loops $\Lambda$ if and only if there is no ambiguity in the elimination of spatial sharing for the symbols depending on $\Lambda$.
+We say that ``an expression is structured along a loop nest $\Lambda$'' if and only if for eliminating the spatial sharing induced by any $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- it is sufficient to factorize all occurrences of $s_{\Lambda}$ in the expression.
 \end{Def}
-This leads us to the following, fundamental observation.
 \begin{Prop}
 \label{prop:multi-struct}
-In a multilinear loop nest $\Lambda$, all of the expressions are structured with respect to $\Lambda$.
+An expression along a multilinear loop nest is structured.
 \end{Prop}
-In finite element integration loop nests, for example, any factorization of test and trial functions will always result in exposing temporal sharing (Strategy~\ref{strategy:ii}). Conversely, in a generic loop nest $\Lambda$, the instances of a symbol depending on $\Lambda$ may appear everywhere (e.g., twice in a summand and only once in all other summands; as argument of a higher level function; in the denominator of a division), thus posing the challenge of finding the optimal factorization that maximizes temporal sharing. Proposition~\ref{prop:multi-struct} played a key role in the development of Algorithm~\ref{algo:sharing-elimination}. Finally, we observe that structured sub-expressions sometimes characterize the \textit{entire} variational form (for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}).
+\begin{proof}
+This is an obvious consequence of multilinearity.
+\end{proof}
+If $\Lambda$ were an arbitrary loop nest, a given symbol $s_{\Lambda}$ could appear everywhere (e.g., $n$ times in a summand and $m$ times in another summand with $n \neq m$, as argument of a higher level function, in the denominator of a division), thus posing the challenge of finding the factorization that maximizes temporal sharing. If $\Lambda$ is instead a finite element integration loop nest, thanks to Proposition~\ref{prop:multi-struct} we can build the space of f-decreasing transformations for quasi-optimality by just composing Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. The challenge for Algorithm~\ref{algo:sharing-elimination} will be to select the best f-decreasing transformations.
 
+Finally, we observe that the $\sigma_{ei}$ sub-expressions are sometimes ``weakly structured''; that is, Definition~\ref{def:struct-expr} applies to them by replacing spatial sharing ``elimination'' with ``minimization''. This happens, for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}, and intuitively explains why under some circumstances (elaborated in Section~\ref{sec:proof}) Algorithm~\ref{algo:sharing-elimination} is capable of reaching actual optimality.
+
+%.the application of Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} to all sub-expressions in which $s_{\Lambda}$ appears
+% the spatial sharing induced by $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- can be eliminated through factorization of all instances of $s_{\Lambda}$.
 
 \subsubsection{Algorithm}
 \label{sec:se-algo}
@@ -400,7 +406,7 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
 
 \item For all multilinear operands in $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i}. \\
-\textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of the expression being structured with respect to $[L_j, L_k]$.}
+\textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of Proposition~\ref{prop:multi-struct}.}
 
 \item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
 
@@ -421,7 +427,7 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 Go back to step (2).
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
-\textit{Note: this pass speculatively assumes that all expressions are structured. If the assumption does not hold, the operation count within the reduction loop will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
+\textit{Note: this pass speculatively assumes that expressions are (weakly) structured along the reduction loop. If the assumption does not hold, the operation count will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
 \end{enumerate}
 \end{Algo}
 
@@ -576,7 +582,7 @@ We discuss these points separately
 \item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $\theta$ only reasons on monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
 \item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum preserving Constraint~\ref{const:TH}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Because of the normal form of expressions and the structure inherent in tensor operations involving test and trial functions, there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (achieved through Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) will not prune optimal solutions from the search space. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} states that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (achieved through Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimal solution from the search space. 
 
 Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non f-decreasing factorizations are excluded by construction at step (5). We then prove that applying in sequence rewrite rules (A), (B), and (C), with applications of rule (C) that may expose further opportunities for (A) and (B), represents a step forward towards quasi-optimality. 
 \begin{description}
