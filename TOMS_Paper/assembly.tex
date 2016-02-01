@@ -267,6 +267,7 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 \end{Def}
 
 \begin{Def}[Multilinear loop nest]
+\label{def:multi-linear-loop}
 A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
 \end{Def}
 
@@ -316,14 +317,14 @@ A sequence of transformations reducing the operation count is called f-decreasin
 
 \begin{Def}[Quasi-optimality of a loop nest]
 \label{def:mln-quasi-optimality}
-Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal and was achieved through a sequence of f-decreasing transformations.
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal and was achieved through f-decreasing transformations.
 \end{Def}
 
 The restriction to f-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing, in fact, a ``global'' increase in operation count. 
 
 We also observe that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite elements, this is often true for more complex multilinear forms and/or higher order elements. 
 
-Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggest a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) optimality whenever the monomials are ``sufficiently structured'';  (ii) quasi-optimality in all other cases. To this purpose, we will construct:
+Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggests a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) at least quasi-optimality in all cases; (ii) optimality whenever the monomials are ``sufficiently structured''. To this purpose, we will construct:
 \begin{itemize}
 \item the space of legal transformations impacting the operation count (Sections~\ref{sec:sharing-elimination} -- \ref{sec:completeness})
 \item an algorithm to select points in the transformation space (Section~\ref{sec:optimal-synthesis})
@@ -336,8 +337,8 @@ We start with introducing the fundamental notion of sharing.
 \begin{Def}[Sharing]
 A statement within a loop nest $\Lambda$ presents sharing if at least one of the following conditions hold:
 \begin{description}
-\item[Spatial sharing] there are at least two symbolically identical sub-expressions
-\item[Temporal sharing] there is at least one non-trivial sub-expression (e.g., an addition or a product) that is redundantly executed, as independent of $\lbrace L_{i_1}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$
+\item[Spatial sharing] There are at least two symbolically identical sub-expressions
+\item[Temporal sharing] There is at least one non-trivial sub-expression (e.g., an addition or a product) that, as independent of $\lbrace L_{i_1}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$, is redundantly executed.
 \end{description}
 \end{Def}
 
@@ -366,21 +367,21 @@ Eliminating temporal sharing through generalized code motion.
 \label{strategy:ii}
 Eliminating spatial sharing first -- through product expansion and factorization -- and temporal sharing afterwards, again through generalized code motion.
 \end{Strategy}
-In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. A second application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions, for which the two strategies have notable importance.
+In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. A second application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions, for which the two strategies assume notable importance.
 \begin{Def}[Structured expression]
 \label{def:struct-expr}
-We say that ``an expression is structured along a loop nest $\Lambda$'' if and only if for eliminating the spatial sharing induced by any $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- it is sufficient to factorize all occurrences of $s_{\Lambda}$ in the expression.
+We say that ``an expression is structured along a loop nest $\Lambda$'' if and only if in order to eliminate the spatial sharing induced by any $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- it is sufficient to factorize all occurrences of $s_{\Lambda}$ in the expression.
 \end{Def}
 \begin{Prop}
 \label{prop:multi-struct}
 An expression along a multilinear loop nest is structured.
 \end{Prop}
 \begin{proof}
-This is an obvious consequence of multilinearity.
+This descends directly from Definition~\ref{def:linear-loop} and Definition~\ref{def:multi-linear-loop}, which essentially restrict the number of occurrences of a symbol $s_{\Lambda}$ in a summand to at most 1.
 \end{proof}
-If $\Lambda$ were an arbitrary loop nest, a given symbol $s_{\Lambda}$ could appear everywhere (e.g., $n$ times in a summand and $m$ times in another summand with $n \neq m$, as argument of a higher level function, in the denominator of a division), thus posing the challenge of finding the factorization that maximizes temporal sharing. If $\Lambda$ is instead a finite element integration loop nest, thanks to Proposition~\ref{prop:multi-struct} the space of f-decreasing transformations for quasi-optimality can be built by simply composing Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. The challenge for Algorithm~\ref{algo:sharing-elimination} will then be to select the best f-decreasing transformations.
+If $\Lambda$ were an arbitrary loop nest, a given symbol $s_{\Lambda}$ could appear everywhere (e.g., $n$ times in a summand and $m$ times in another summand with $n \neq m$, as argument of a higher level function, in the denominator of a division), thus posing the challenge of finding the factorization that maximizes temporal sharing. If $\Lambda$ is instead a finite element integration loop nest, thanks to Proposition~\ref{prop:multi-struct} the space of f-decreasing transformations is constructed by ``composition'' of Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}, as illustrated in Algorithm~\ref{algo:sharing-elimination}.
 
-Finally, we observe that the $\sigma_{ei}$ sub-expressions are sometimes ``weakly structured''; that is, Definition~\ref{def:struct-expr} applies to them by replacing spatial sharing ``elimination'' with ``minimization''. This happens, for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}, and intuitively explains why under some circumstances (elaborated in Section~\ref{sec:proof}) Algorithm~\ref{algo:sharing-elimination} is capable of reaching actual optimality.
+Finally, we observe that the $\sigma_{ei}$ sub-expressions can sometimes be considered ``weakly structured''. This happens when a relaxed version of Definition~\ref{def:struct-expr}, in which the factorization of $s_{\Lambda}$ only ``minimizes'' (rather than ``eliminates'') spatial sharing, applies (for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}). Weak structure will be exploited by Algorithm~\ref{algo:sharing-elimination} in the attempt to achieve optimality.
 
 %.the application of Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} to all sub-expressions in which $s_{\Lambda}$ appears
 % the spatial sharing induced by $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- can be eliminated through factorization of all instances of $s_{\Lambda}$.
@@ -612,18 +613,16 @@ Throughout the paper we have reiterated the idea that Algorithm~\ref{algo:gamma}
 Sharing elimination and pre-evaluation, as well as the transformation algorithm, have been implemented in COFFEE, the compiler for finite element integration routines adopted in Firedrake. In this section, we discuss a few aspects concerning implementation and features of the compiler.
 
 \subsection{Automation through the COFFEE language}
-COFFEE implements sharing elimination and pre-evaluation by composing ``building-block'' operators, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: COFFEE can be seen as a tiny, low level computer algebra system, not specifically tied to finite element integration. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines.
-
-The rewrite operators, whose (Python) implementation is based on manipulation of abstract syntax trees (ASTs), compose the COFFEE language. A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion. Sharing elimination and pre-evaluation are implemented by composing, in special ways, these operators.
+COFFEE implements sharing elimination and pre-evaluation by composing ``building-block'' operators, which we refer to as ``rewrite operators''. This has several advantages. Firstly, extendibility: novel transformations -- for instance, sum-factorization in spectral methods -- could be expressed using the existing operators, or with small effort building on what is already available. Secondly, generality: COFFEE can be seen as a tiny, low level computer algebra system, not specifically tied to finite element integration. Thirdly, robustness: the same operators are exploited, and therefore stressed, by different optimization pipelines. The rewrite operators, whose (Python) implementation is based on manipulation of abstract syntax trees (ASTs), compose the COFFEE language. A non-exhaustive list of such operators includes expansion, factorization, re-association, generalized code motion.
 
 \subsection{Independence from form compilers}
-COFFEE is independent from the high level form compiler. COFFEE handles generic ASTs, so any form compiler can use it as long as such a representation is properly emitted (with expressions in normal form, or sufficiently close to it). In Firedrake, for example, a modified version of the FEniCS Form Compiler producing ASTs (instead of strings, as in FEniCS) is used. COFFEE itself provides an interface for building ASTs. In particular, COFFEE aims to decouple the mathematical manipulation of a form from code optimization. Another viewpoint is that form compiler developers should not worry about performance of the generated code.
+COFFEE aims to be independent of the high level form compiler. It provides an interface to build generic ASTs and only expects expressions to be in normal form (or sufficiently close to it). In Firedrake, for example, a modified version of the FEniCS Form Compiler producing ASTs, instead of strings, is used. Thus, COFFEE decouples the mathematical manipulation of a form from code optimization, or, in other words, relieves form compiler developers of caring about performance of generated code.
 
 \subsection{Handling block-sparse tables}
 \label{sec:zeros}
 Basis function tables may be block-sparse (e.g., containing zero-valued columns) depending on certain implementation choices at the level of the form compiler. For example, the FEniCS Form Compiler handles vector-valued function spaces by populating tabulated basis functions with blocks of zero-valued columns -- this makes code generation easier, but performance sub-optimal due to the execution of ``useless'' flops (e.g., by executing operations like \texttt{a + 0}).
 
-If, from one hand, it is true that form compilers usually provide optimization options to work around this issue, we must also consider the fact that not always their outcome is ideal for low level efficiency. Consider, for example, a set of tabulated basis functions with quadrature points along rows and functions along columns. \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. This technique, however, promotes non-contiguous memory loads and stores, which nullify the benefits of vectorization.
+Form compilers work around this issue in many different ways, which impacts low level efficiency. Consider, for example, a set of tabulated basis functions with quadrature points along rows and functions along columns. \texttt{A[i,j]} provides the value of the \texttt{j-th} basis function at quadrature point \texttt{i}. In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. This technique, however, promotes non-contiguous memory loads and stores, which nullify the benefits of vectorization.
 
 COFFEE provides a mechanism to restructure loops that preserves the effectiveness of low level optimization, such as vectorization. By executing the code symbolically, loop bounds are adjusted and memory offsets are introduced to minimize ``useless'' flops. This is done performing several checks to preserve the semantics of the computation whilst trying not to affect low level optimization (e.g., padding and data alignment are affected by choice of the offsets -- this is, however, out of the scope of this article).
 
