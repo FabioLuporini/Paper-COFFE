@@ -268,7 +268,7 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 
 \begin{Def}[Multilinear loop nest]
 \label{def:multi-linear-loop}
-A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are linear in each loop $L_i$ separately.
+A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are affine in each loop $L_i$ separately.
 \end{Def}
 
 We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to synthesize quasi-optimal code.
@@ -293,7 +293,7 @@ A loop $L_i$ is said to be an order-free loop if its iterations can be executed 
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The loop nest implementing a generic bilinear form.}\label{code:loopnest}\end{figure}
 
-Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises an order-free loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. Expressions (right hand side of a statement) result from the translation of a form in high level matrix notation into code. In particular, $m$ is the number of ``terms'' (a monomial can be implemented by one or more terms), $\alpha_{eij}$ ($\beta_{eik}$) represents the product of a coefficient function (e.g., the inverse Jacobian matrix for the change of coordinates) with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose any restrictions on function spaces (e.g., scalar- or vector-valued), coefficients (e.g., linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We say that such an expression is in \textit{normal form}, because the algebraic structure of a variational form is intact (e.g., products have not been expanded yet, distinct monomials can still be identified, etc.). This bring us to formalize the class of loop nests for which we seek optimality.
+Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises an order-free loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. Expressions (right hand side of a statement) result from the translation of a form in high level matrix notation into code. In particular, $m$ is the number of ``terms'' (a monomial can be implemented by one or more terms), $\alpha_{eij}$ ($\beta_{eik}$) represents the product of a coefficient function (e.g., the inverse Jacobian matrix for the change of coordinates) with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose any restrictions on function spaces (e.g., scalar- or vector-valued), coefficients (e.g., linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We say that such an expression is in \textit{normal form}, because the algebraic structure of a variational form is intact (e.g., products have not been expanded yet, distinct monomials can still be identified, etc.). This bring us to formalize the class of loop nests that we aim to optimize.
 
 %TODO is "not expanded yet == still contracted" ?
 
@@ -306,21 +306,25 @@ We then characterize optimality for a finite element integration loop nest as fo
 
 \begin{Def}[Optimality of a loop nest]
 \label{def:mln-optimality}
-Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a generic transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the total number of operations (additions, products) performed to evaluate the result is minimal.
+Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the total number of operations (additions, products) performed to evaluate the result is minimal.
 \end{Def}
 
-The concept of quasi-optimality, which relies on the particular class of \textit{f-decreasing} transformations, is also introduced.
+The concept of quasi-optimality, which relies on the particular class of \textit{flop-decreasing} transformations, is also introduced.
 
-\begin{Def}[F-decreasing transformation]
-A sequence of transformations reducing the operation count is called f-decreasing (abbreviation for ``flop-decreasing'').
+\begin{Def}[Flop-decreasing transformation]
+A sequence of transformations reducing the operation count is called flop-decreasing.
 \end{Def}
 
 \begin{Def}[Quasi-optimality of a loop nest]
 \label{def:mln-quasi-optimality}
-Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal and was achieved through f-decreasing transformations.
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if:
+\begin{itemize}
+\item the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal, and
+\item $\Gamma$ is expressed as composition of flop-decreasing transformations.
+\end{itemize}
 \end{Def}
 
-The restriction to f-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing, in fact, a ``global'' increase in operation count. 
+The restriction to flop-decreasing transformations aims to exclude those ``deceptive'' solutions that, to achieve flop-optimal innermost loops, would rearrange the computation at the level of the outer loops causing, in fact, a ``global'' increase in operation count. 
 
 We also observe that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite elements, this is often true for more complex multilinear forms and/or higher order elements. 
 
@@ -338,11 +342,11 @@ We start with introducing the fundamental notion of sharing.
 A statement within a loop nest $\Lambda$ presents sharing if at least one of the following conditions hold:
 \begin{description}
 \item[Spatial sharing] There are at least two symbolically identical sub-expressions
-\item[Temporal sharing] There is at least one non-trivial sub-expression (e.g., an addition or a product) that, as independent of $\lbrace L_{i_1}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$, is redundantly executed.
+\item[Temporal sharing] There is at least one non-trivial sub-expression (e.g., an addition or a product) that is redundantly executed because it is independent of $\lbrace L_{i_1}, L_{i_1}, ...L_{i_n} \rbrace \subset \Lambda$.
 \end{description}
 \end{Def}
 
-To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sharing evolves as factorization and code motion are applied to a trivial multilinear loop nest. In the original loop nest (Figure~\ref{code:multi_loopnest_a}), spatial sharing is induced by the symbol $b_j$. Factorization eliminates spatial sharing and promotes temporal sharing (Figure~\ref{code:multi_loopnest_b}). Finally, generalized code motion \cite{Luporini}, which seeks sub-expressions that are redundantly executed by at least one loop in the nest\footnote{Traditional loop-invariant code motion, which is commonly applied by general-purpose compilers, only checks invariance with respect to the innermost loop.}, leads to optimality (Figure~\ref{code:multi_loopnest_c}). 
+To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sharing evolves as factorization and code motion are applied to a trivial multilinear loop nest. In the original loop nest (Figure~\ref{code:multi_loopnest_a}), spatial sharing is induced by the symbol $b_j$. Factorization eliminates spatial sharing and creates temporal sharing (Figure~\ref{code:multi_loopnest_b}). Finally, generalized code motion \cite{Luporini}, which seeks sub-expressions that are redundantly executed by at least one loop in the nest\footnote{Traditional loop-invariant code motion, which is commonly applied by general-purpose compilers, only checks invariance with respect to the innermost loop.}, leads to optimality (Figure~\ref{code:multi_loopnest_c}). 
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 13pt \subfigure[With spatial sharing]{\label{code:multi_loopnest_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest.code}}}
@@ -358,7 +362,7 @@ In this section, we study \textit{sharing elimination}, a transformation that ai
 
 \subsubsection{Identification and exploitation of structure}
 \label{sec:se-rln}
-Finite element expressions can be seen as composition of operations between tensors. Often, the optimal implementation strategy for these operations is to be determined out of two alternatives. For instance, consider $J^{-1} \nabla x \cdot J^{-1} \nabla x$, with $J^{-1}$ being the inverse Jacobian matrix for the change of coordinates and $x$ a generic two-dimensional vector. The tensor operation will reduce to the scalar expression $(a x^0_i + b x^1_i) (a x^0_i + b x^1_i) + ...$, in which $x^0_i$ and $x^1_i$ represent components of $x$ that depend on $L_i$. To minimize the operation count for expressions of this kind, we have two options.
+Finite element expressions can be seen as composition of operations between tensors. Often, the optimal implementation strategy for these operations is to be determined out of two alternatives. For instance, consider $J^{-1} \nabla v \cdot J^{-1} \nabla v$, with $J^{-1}$ being the inverse Jacobian matrix for the change of coordinates and $v$ a generic two-dimensional vector. The tensor operation will reduce to the scalar expression $(a v^0_i + b v^1_i) (a v^0_i + b v^1_i) + ...$, in which $v^0_i$ and $v^1_i$ represent components of $v$ that depend on $L_i$. To minimize the operation count for expressions of this kind, we have two options.
 \begin{Strategy}
 \label{strategy:i}
 Eliminating temporal sharing through generalized code motion.
@@ -367,7 +371,7 @@ Eliminating temporal sharing through generalized code motion.
 \label{strategy:ii}
 Eliminating spatial sharing first -- through product expansion and factorization -- and temporal sharing afterwards, again through generalized code motion.
 \end{Strategy}
-In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count since the expression would be recast as $x^0_i x^0_i a a + x^0_i x^1_i (ab + ab) + x^1_i x^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as  $x$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. A second application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions, for which the two strategies assume notable importance.
+In the current example, we observe that, depending on the size of $L_i$, applying Strategy~\ref{strategy:ii} could reduce the operation count since the expression would be recast as $v^0_i v^0_i a a + v^0_i v^1_i (ab + ab) + v^1_i v^1_i c c + ...$ and some hoistable sub-expressions would be exposed. On the other hand, Strategy~\ref{strategy:i} would have no effect as $v$ only depends on a single loop, $L_i$. In general, the choice between the two strategies depends on multiple factors: the loop(s) size, the increase in operation count due to expansion (in Strategy~\ref{strategy:ii}), and the gain in code motion. A second application of Strategy~\ref{strategy:ii} was provided in Figure~\ref{code:multi_loopnest}. These examples motivate the introduction of a particular class of expressions, for which the two strategies assume notable importance.
 \begin{Def}[Structured expression]
 \label{def:struct-expr}
 We say that ``an expression is structured along a loop nest $\Lambda$'' if and only if in order to eliminate the spatial sharing induced by any $s_{\Lambda}$ -- a generic symbol depending on at least one loop in $\Lambda$ -- it is sufficient to factorize all occurrences of $s_{\Lambda}$ in the expression.
@@ -379,7 +383,7 @@ An expression along a multilinear loop nest is structured.
 \begin{proof}
 This descends directly from Definition~\ref{def:linear-loop} and Definition~\ref{def:multi-linear-loop}, which essentially restrict the number of occurrences of a symbol $s_{\Lambda}$ in a summand to at most 1.
 \end{proof}
-If $\Lambda$ were an arbitrary loop nest, a given symbol $s_{\Lambda}$ could appear everywhere (e.g., $n$ times in a summand and $m$ times in another summand with $n \neq m$, as argument of a higher level function, in the denominator of a division), thus posing the challenge of finding the factorization that maximizes temporal sharing. If $\Lambda$ is instead a finite element integration loop nest, thanks to Proposition~\ref{prop:multi-struct} the space of f-decreasing transformations is constructed by ``composition'' of Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}, as illustrated in Algorithm~\ref{algo:sharing-elimination}.
+If $\Lambda$ were an arbitrary loop nest, a given symbol $s_{\Lambda}$ could appear everywhere (e.g., $n$ times in a summand and $m$ times in another summand with $n \neq m$, as argument of a higher level function, in the denominator of a division), thus posing the challenge of finding the factorization that maximizes temporal sharing. If $\Lambda$ is instead a finite element integration loop nest, thanks to Proposition~\ref{prop:multi-struct} the space of flop-decreasing transformations is constructed by ``composition'' of Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}, as illustrated in Algorithm~\ref{algo:sharing-elimination}.
 
 Finally, we observe that the $\sigma_{ei}$ sub-expressions can sometimes be considered ``weakly structured''. This happens when a relaxed version of Definition~\ref{def:struct-expr}, in which the factorization of $s_{\Lambda}$ only ``minimizes'' (rather than ``eliminates'') spatial sharing, applies (for instance, in the complex hyperelastic model analyzed in Section~\ref{sec:perf-results}). Weak structure will be exploited by Algorithm~\ref{algo:sharing-elimination} in the attempt to achieve optimality.
 
@@ -399,7 +403,7 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
 \normalfont
-The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-5); scheduling of all other sub-expressions (step 6).
+The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-6); scheduling of all other sub-expressions (step 7).
 \begin{enumerate}
 \item Perform a depth-first visit of the expression tree to group identical terms within the same sub-expression. \\ 
 \textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
@@ -412,7 +416,7 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
 
 \item Remove $e = (S^i, S^j) \in \mathbb{E}$ if applying Strategy~\ref{strategy:ii} would cause an increase in operation count (i.e., the elimination of temporal sharing after factorization of $S^i$ or $S^j$ would be outweighed by the expansion cost).\\
-\textit{Note: this ensures the f-decreasing nature of the transformations at step (6)}.\\
+\textit{Note: this ensures the flop-decreasing nature of the transformations at step (6)}.\\
 \textit{Note: this pass can be accomplished by visiting the expression tree and collecting several kinds of information -- for example, the number of products wrapping an instance of $S^i$ or $S^j$, from which the expansion cost will be derived.}
 
 
@@ -434,7 +438,7 @@ Go back to step (2).
 
 \begin{Rem*}
 \normalfont
-Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of f-decreasing transformations (step 5) and the re-scheduling of sub-expressions within outer loops (step 7) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
+Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of flop-decreasing transformations (step 5) and the re-scheduling of sub-expressions within outer loops (step 7) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
 \end{Rem*}
 
 
@@ -448,13 +452,13 @@ In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is execut
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
 ~~~~~~~~~~
 {\subfigcapskip = 7pt \subfigure[After sharing elimination]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
-\end{CenteredBox}\caption{Applying sharing elimination to the bilinear form arising from a Poisson equation in 2D.}\label{code:poisson}\end{figure}
+\end{CenteredBox}\caption{Applying sharing elimination to the bilinear form arising from a Poisson equation in 2D. The operation counts are $E(f(z^0, z^1, ...) + IJK \cdot 18)$ (left) and $E(f(z^0, z^1, ...) + I(J \cdot 6 + K \cdot 9 + JK \cdot 4)$ (right), with $f(z^0, z^1, ...)$ representing the operation count for evaluating $z^0, z^1, ...$, and common sub-expressions being counted once. Note that the synthesis in Figure~\ref{code:poisson_b} reaches optimality, apart from the pathological case  $I, J, K = 1$.}\label{code:poisson}\end{figure}
 
 A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
 
 \subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
-Sharing elimination uses three operators: expansion, factorization, and code motion. In this section, we discuss role and legality of a fourth operator: reduction pre-evaluation. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., a specific factorization of test, trial, and coefficient functions) ensuring its correctness.
+Sharing elimination uses three operators: expansion, factorization, and code motion. In this section, we discuss the role and legality of a fourth operator: reduction pre-evaluation. We will see that what makes this operator special is the fact that there exists a single point in the transformation space of a monomial (i.e., a specific factorization of test, trial, and coefficient functions) ensuring its correctness.
 
 We start with an example. Consider again the loop nest and the expression in Figure~\ref{code:loopnest}. We pose the following question: are we able to identify sub-expressions for which the reduction induced by $L_i$ can be pre-evaluated, thus obtaining a decrease in operation count proportional to the size of $L_i$, $I$? The transformation we look for is exemplified in Figure~\ref{code:loopnest_rednored} with a simple loop nest. The reader may verify that a similar transformation is applicable to the example in Figure~\ref{code:poisson_a}.
 
@@ -464,7 +468,7 @@ We start with an example. Consider again the loop nest and the expression in Fig
 {\subfigcapskip = 5pt \subfigure[After pre-evaluation]{\label{code:loopnest_nored}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest_nored.code}}}
 \end{CenteredBox}\caption{Exposing (through factorization) and pre-evaluating a reduction.}\label{code:loopnest_rednored}\end{figure}
 
-Pre-evaluation opportunities can be exposed through exploration of the expression tree transformation space. This would be challenging if we were to deal with arbitrary loop nests and expressions. We make use of a result -- the foundation of tensor contraction mode -- to simplify our task. As summarized in Section~\ref{sec:tc}, multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces. A monomial can always be reduced to the product between a ``reference'' and a ``geometry'' tensors. In our model, a reference tensor is simply represented by one or more sub-expressions independent of $L_e$, exposed after special transformation of the expression tree. This leads to the following algorithm. 
+Pre-evaluation can be seen as the generalization of tensor contraction (Section~\ref{sec:tc}) to a wider class of sub-expressions. We know that multilinear forms can be seen as sums of monomials, each monomial being an integral over the equation domain of products (of derivatives) of functions from discrete spaces. A monomial can always be reduced to the product between a ``reference'' and a ``geometry'' tensors. In our model, a reference tensor is simply represented by one or more sub-expressions independent of $L_e$, exposed after particular transformations of the expression tree. This leads to the following algorithm. 
 
 \begin{Algo}[Pre-evaluation]
 \label{algo:pre-evaluation}
@@ -483,9 +487,9 @@ We expand on point 1) in the next section, while we address points 2) and 3) in 
 
 \subsection{Memory constraints}
 \label{sec:mem-const}
-We have just observed that code motion, as induced by monomial pre-evaluation, may excessively increase the working set size. Interestingly, even more aggressive code motion strategies are theoretically conceivable. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting time-invariant sub-expressions for minimizing redundant computation at each time step. The working set size would then increase by a factor $E$, and since $E \gg I, J, K$, the gain in operation count would probably be outweighed, from a runtime viewpoint, by a much larger memory pressure.
+We have just observed that the code motion induced by monomial pre-evaluation may excessively increase the working set size. Interestingly, even more aggressive code motion strategies are theoretically conceivable. Imagine $\Lambda$ is enclosed in a time stepping loop. One could think of exposing (through some transformations) and hoisting time-invariant sub-expressions for minimizing redundant computation at each time step. The working set size would then increase by a factor $E$, and since $E \gg I, J, K$, the gain in operation count would probably be outweighed, from a runtime viewpoint, by a much larger memory pressure.
 
-Since, for certain forms and discretizations, hoisting may bring the working set to exceed the size of some level of local memory (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU), we introduce the following \textit{memory constraints}.
+Since, for certain forms and discretizations, hoisting may cause the working set to exceed the size of some level of local memory (e.g. the last level of private cache on a conventional CPU, the shared memory on a GPU), we introduce the following \textit{memory constraints}.
 
 \begin{Const}
 \label{const:Le}
@@ -497,9 +501,9 @@ The size of a temporary due to code motion must not be proportional to the size 
 The total amount of memory occupied by the temporaries due to code motion must not exceed a certain threshold, \texttt{$T_H$}.
 \end{Const}
 
-Note that Constraint~\ref{const:Le} reflects the policy decision that the compiler should not silently consume memory on global data objects. It has the effect of shrinking the transformation space. Constraint~\ref{const:TH} has both theoretical and practical implications, which will be carefully analyzed in the next sections.
+Constraint~\ref{const:Le} is a policy decision that the compiler should not silently consume memory on global data objects. It has the effect of shrinking the transformation space. Constraint~\ref{const:TH} has both theoretical and practical implications, which will be carefully analyzed in the next sections.
 
-\subsection{Completeness under factorization, code motion, and reduction pre-evaluation}
+\subsection{Limitation in the optimization space considered}
 \label{sec:completeness}
 We defined sharing elimination and pre-evaluation as high level transformations on top of basic operators such as code motion and factorization. Factorization addresses \textit{spatial redundancy}. The presence of spatial redundancy means that some operations are needlessly executed at two points in an expression. Code motion and reduction pre-evaluation, on the other hand, target \textit{temporal redundancy}; that is, the needless execution of the same operation with the same operands at two points in the loop nest. We remark that sharing elimination and pre-evaluation aim to minimize spatial and temporal redundancy relying on \textit{a specific set of operators}. Theoretically, lower operation counts may be found by exploiting other domain-specific properties, such as redundancies in basis functions. Constraint~\ref{const:Le} also limits the applicability of code motion, which further reduced the transformation space to be analyzed. 
 
@@ -511,21 +515,21 @@ In this section, we build a transformation algorithm that, given a memory bound,
 We address the two following issues: 
 \begin{enumerate}
 \item \textit{Coordination of pre-evaluation and sharing elimination.} Recall from Section~\ref{sec:pre-evaluation} that pre-evaluation could either increase or decrease the operation count with respect to sharing elimination.
-\item \textit{Search for a global optimum.} Consider a form comprising two monomials $m_1$ and $m_2$. Assume that pre-evaluation is profitable for $m_1$ but not for $m_2$, and that $m_1$ and $m_2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m_1$, sharing between $m_1$ and $m_2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction when considering the whole set of monomials (i.e., the expression as a whole).
+\item \textit{Optimizing over composite operations.} Consider a form comprising two monomials $m_1$ and $m_2$. Assume that pre-evaluation is profitable for $m_1$ but not for $m_2$, and that $m_1$ and $m_2$ share at least one term (e.g. some basis functions). If pre-evaluation were applied to $m_1$, sharing between $m_1$ and $m_2$ would be lost. We then need a mechanism to understand what transformation -- pre-evaluation or sharing elimination -- results in the highest operation count reduction when considering the whole set of monomials (i.e., the expression as a whole).
 \end{enumerate}
 
-Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, where $\theta_{se}$ and $\theta_{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation to, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) > 0$. We return to the issue of deriving $\theta_{se}$ and $\theta_{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can now describe the transformation algorithm (Algorithm~\ref{algo:gamma}).
+Let $\theta : M \rightarrow \mathbb{Z}$ be a cost function that, given a monomial $m \in M$, returns the gain/loss achieved by pre-evaluation over sharing elimination. In particular, we define $\theta(m) = \mathrm{\theta}^{pre}(m) - \mathrm{\theta}^{se}(m)$, where $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ represent the operation counts resulting from applying sharing elimination and pre-evaluation to, respectively. Thus pre-evaluation is profitable for $m$ if and only if $\theta(m) < 0$. We return to the issue of deriving $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ in Section~\ref{sec:op_count}. Having defined $\theta$, we can now describe the transformation algorithm (Algorithm~\ref{algo:gamma}).
 
 \begin{Algo}[Transformation algorithm]
 \label{algo:gamma}
 \normalfont
 The algorithm has three main phases: initialization (step 1); determination of the monomials preserving the memory constraints that should be pre-evaluated (steps 2-4); application of pre-evaluation and sharing elimination (step 5).
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree and determine the set of monomials $M$. Let $S$ be the subset of monomials $m$ such that $\theta(m) < 0$. The set of monomials that will \textit{potentially} be pre-evaluated is $P = M \setminus S$. \\ \textit{Note: there are two fundamental reasons for not pre-evaluating $m_1 \in P$ straight away: 1) the potential presence of spatial sharing between $m_1$ and $m_2 \in S$, which impacts the search for the global optimum; 2) the risk of breaking Constraint~\ref{const:TH}.}
+\item Perform a depth-first visit of the expression tree and determine the set of monomials $M$. Let $S$ be the subset of monomials $m$ such that $\theta(m) > 0$. The set of monomials that will \textit{potentially} be pre-evaluated is $P = M \setminus S$. \\ \textit{Note: there are two fundamental reasons for not pre-evaluating $m_1 \in P$ straight away: 1) the potential presence of spatial sharing between $m_1$ and $m_2 \in S$, which impacts the search for the global optimum; 2) the risk of breaking Constraint~\ref{const:TH}.}
 \item Build the set $B$ of all possible bipartitions of $P$. Let $D$ be the dictionary that will store the operation counts of different alternatives.
-\item Discard $b = (b_S, b_P) \in B$ if the memory required after applying pre-evaluation to the monomials in $b_P$ exceeds $T_H$ (see Constraint~\ref{const:TH}); otherwise, add $D[b] = \theta_{se}(S \cup b_S) + \theta_{pre}(b_P)$. \\ \textit{Note: $\mathbb{B}$ is in practice very small, since even complex forms usually have only a few monomials. This pass can then be accomplished rapidly as long as the cost of calculating $\theta_{se}$ and $\theta_{pre}$ is negligible. We elaborate on this aspect in Section~\ref{sec:op_count}.}
-\item Take $b$ such that $min(D[b])$.
-\item Apply pre-evaluation to all monomials in $b_P$. Apply sharing elimination to all resulting expressions. \\ \textit{Note: because of reuse of basis functions, pre-evaluation may produce some identical tables, which will be mapped to the same temporary variable. Sharing elimination is therefore transparently applied to all expressions, including those resulting from pre-evaluation.}
+\item Discard $b = (b_S, b_P) \in B$ if the memory required after applying pre-evaluation to the monomials in $b_P$ exceeds $T_H$ (see Constraint~\ref{const:TH}); otherwise, add $D[b] = \mathrm{\theta}^{se}(S \cup b_S) + \mathrm{\theta}^{pre}(b_P)$. \\ \textit{Note: $\mathbb{B}$ is in practice very small, since even complex forms usually have only a few monomials. This pass can then be accomplished rapidly as long as the cost of calculating $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ is negligible. We elaborate on this aspect in Section~\ref{sec:op_count}.}
+\item Take $b$ such that $min(b \in D)$.
+\item Apply pre-evaluation to all monomials in $b_P$. Apply sharing elimination to all resulting expressions. \\ \textit{Note: because of the reuse of basis functions, pre-evaluation may produce some identical tables, which will be mapped to the same temporary variable. Sharing elimination is therefore transparently applied to all expressions, including those resulting from pre-evaluation.}
 \end{enumerate}
 \end{Algo}
 
@@ -540,9 +544,9 @@ The output of the transformation algorithm is provided in Figure~\ref{code:loopn
 \label{sec:op_count}
 We tie up the remaining loose end: the construction of the cost function $\theta$.
 
-We recall that $\theta(m) = \theta_{se}(m) - \theta_{pre}(m)$, with $\theta_{se}$ and $\theta_{pre}$ representing the operation counts after applying sharing elimination and pre-evaluation. Since $\theta$ is expected to be used by a compiler, requirements are simplicity and velocity. In the following, we explain how to derive these two values.
+We recall that $\theta(m) = \mathrm{\theta}^{se}(m) - \mathrm{\theta}^{pre}(m)$, with $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ representing the operation counts after applying sharing elimination and pre-evaluation. Since $\theta$ is expected to be used by a compiler, requirements are simplicity and velocity. In the following, we explain how to derive these two values.
 
-The most trivial way of evaluating $\theta_{se}$ and $\theta_{pre}$ would consist of applying the actual transformations and simply count the number of operations. If, on one hand, this would be tolerable for $\theta_{se}$ (Algorithm~\ref{algo:sharing-elimination} tends to have negligible cost), the overhead would be unacceptable if we applied pre-evaluation -- in particular, symbolic execution -- to all bipartitions analyzed by Algorithm~\ref{algo:gamma}. We then seek an analytic way of determining $\theta_{pre}$.
+The most trivial way of evaluating $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ would consist of applying the actual transformations and simply count the number of operations. This would be tolerable for $\mathrm{\theta}^{se}$, as Algorithm~\ref{algo:sharing-elimination} tends to have negligible cost. However, the overhead would be unacceptable if we applied pre-evaluation -- in particular, symbolic execution -- to all bipartitions analyzed by Algorithm~\ref{algo:gamma}. We therefore seek an analytic way of determining $\mathrm{\theta}^{pre}$.
 
 The first step consists of estimating the \textit{increase factor}, $\iota$. This number captures the increase in arithmetic complexity due to the transformations exposing pre-evaluation opportunities. To contextualize, consider the example in Figure~\ref{code:increase_factor}. One can think of this as the (simplified) loop nest originating from the integration of a pre-multiplied mass matrix. The sub-expression \texttt{$f_0$*$b_{i0}$+$f_1$*$b_{i1}$+$f_2$*$b_{i2}$} represents the coefficient $f$ over (tabulated) basis functions (array $B$). In order to apply pre-evaluation, the expression needs be transformed to separate $f$ from all $[L_i, L_j, L_k]$-dependent quantities (see Algorithm~\ref{algo:pre-evaluation}). By product expansion, we observe an increase in the number of $[L_j, L_k]$-dependent terms of a factor $\iota = 3$.
 
@@ -552,7 +556,7 @@ The first step consists of estimating the \textit{increase factor}, $\iota$. Thi
 
 In general, however, determining $\iota$ is not so straightforward since redundant tabulations may result from common sub-expressions. Consider the previous example. One may add one coefficient in the same function space as $f$, repeat the expansion, and observe that multiple sub-expressions (e.g., $b_{10}*b_{01}*...$ and $b_{01}*b_{10}*...$) will reduce to identical tables. To evaluate $\iota$, we then use combinatorics. We calculate the $k$-combinations with repetitions of $n$ elements, where: (i) $k$ is the number of (derivatives of) coefficients appearing in a product; (ii) $n$ is the number of unique basis functions involved in the expansion. In the original example, we had $n=3$ (for $b_{i0}$, $b_{i1}$, and $b_{i2}$) and $k=1$, which confirms $\iota=3$. In the modified example, there are two coefficients, so $k=2$, which means $\iota=6$.
 
-If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. Intuitively, this means that we are introducing more operations than we are saving from pre-evaluating $L_i$. If $\iota < I$, we still need to find the number of terms $\rho$ such that $\theta_{pre} = \rho \cdot \iota$. The mass matrix monomial in Figure~\ref{code:increase_factor} is characterized by the dot product of test and trial functions, so trivially $\rho = 1$. In the example in Figure~\ref{code:poisson}, instead, we have $\rho = 3$ after a suitable factorization of basis functions. In general, therefore, $\rho$ depends on both form and discretization. To determine this parameter, we look at the re-factorized expression (as established by Algorithm~\ref{algo:pre-evaluation}), and simply count the terms amenable to pre-evaluation.
+If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-evaluation will not be profitable. Intuitively, this means that we are introducing more operations than we are saving from pre-evaluating $L_i$. If $\iota < I$, we still need to find the number of terms $\rho$ such that $\mathrm{\theta}^{pre} = \rho \cdot \iota$. The mass matrix monomial in Figure~\ref{code:increase_factor} is characterized by the dot product of test and trial functions, so trivially $\rho = 1$. In the example in Figure~\ref{code:poisson}, instead, we have $\rho = 3$ after a suitable factorization of basis functions. In general, therefore, $\rho$ depends on both form and discretization. To determine this parameter, we look at the re-factorized expression (as established by Algorithm~\ref{algo:pre-evaluation}), and simply count the terms amenable to pre-evaluation.
 
 \section{Formalization}
 \label{sec:proof}
@@ -580,12 +584,12 @@ We discuss these points separately
 \begin{enumerate}
 \item 
 \begin{enumerate}
-\item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may skip a potential global optimum, since $\theta$ only reasons on monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
-\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a local -- instead of a global -- optimum. This situation is prevented by construction, because $\Gamma$ analyzes all possible bipartitions searching for a global optimum preserving Constraint~\ref{const:TH}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished. Finally, note how this problem can be seen as an instance of the well-known Knapsack problem.
+\item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may not be optimal, since $\theta$ only distinguishes monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a non-optimum. This situation is prevented by construction, because $\Gamma$ exhaustively searches all possible bipartitions for determining an optimum preserving Constraint~\ref{const:TH}\footnote{Note that the problem can be seen as an instance of the well-known Knapsack problem}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished.
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} states that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (achieved through Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimal solution from the search space. 
 
-Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non f-decreasing factorizations are excluded by construction at step (5). We then prove that applying in sequence rewrite rules (A), (B), and (C), with applications of rule (C) that may expose further opportunities for (A) and (B), represents a step forward towards quasi-optimality. 
+Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non flop-decreasing factorizations are excluded by construction at step (5). We then prove that applying in sequence rewrite rules (A), (B), and (C), with applications of rule (C) that may expose further opportunities for (A) and (B), represents a step forward towards quasi-optimality. 
 \begin{description}
 \item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
 \item[Rule (B)] Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, it is easy to see that setting $V = T$ and $S = S^{nt}$ would just expose another possible hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we see that applying rule (C) prior to rule (B) may prune the optimal solution from the search space.
