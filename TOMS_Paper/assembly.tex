@@ -60,6 +60,8 @@
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
 
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 % Metadata Information
 %\acmVolume{9}
 %\acmNumber{4}
@@ -413,7 +415,7 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item For all multilinear operands in $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i}. \\
 \textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of Proposition~\ref{prop:multi-struct}.}
 
-\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S_j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
+\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S^j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
 
 \item Remove $e = (S^i, S^j) \in \mathbb{E}$ if applying Strategy~\ref{strategy:ii} would cause an increase in operation count (i.e., the elimination of temporal sharing after factorization of $S^i$ or $S^j$ would be outweighed by the expansion cost).\\
 \textit{Note: this ensures the flop-decreasing nature of the transformations at step (6)}.\\
@@ -425,10 +427,9 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \item $\lbrace T^1, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply Strategy~\ref{strategy:ii}.\\
 \textit{Note: this recasts the expression as $S (...T^1 + ... + ...T^n)$}.
 \item Only one terminal $T$ adjacent to $S$: take an arbitrary non-terminal symbol $S^{nt}$ adjacent to $S$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $S (...T + ...S^{nt})$}. 
-\item $\mathbb{T} = \emptyset$: take $S$ with highest degree and apply Strategy~\ref{strategy:ii} such that all symbols $\lbrace S^1, ..., S^n \rbrace$ adjacent to $S$ are grouped.\\
-\textit{Note: this recasts the expression as $S (...S^1 + ... + ...S^n)$}.
-\end{enumerate}
+\textit{Note: this recasts the expression as $S (...T + ...S^{nt})$}.
+\item There exists a complete bipartite sub-graph $\mathbb{B}^d = (\mathbb{S}_j^d, \mathbb{S}_k^d, \mathbb{E}^d)$, with $\mathbb{S}_j$ and $\mathbb{S}_k$ being partitions of symbols depending on $L_j$ and $L_k$, respectively: take an arbitrary symbol in $\mathbb{S}_j^d \cup \mathbb{S}_k^d$ and apply Strategy~\ref{strategy:ii}.
+\item $\mathbb{T} = \emptyset$: take $S$ with highest degree and apply Strategy~\ref{strategy:ii}. \end{enumerate}
 Go back to step (2).
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
@@ -528,7 +529,7 @@ The algorithm has three main phases: initialization (step 1); determination of t
 \item Perform a depth-first visit of the expression tree and determine the set of monomials $M$. Let $S$ be the subset of monomials $m$ such that $\theta(m) > 0$. The set of monomials that will \textit{potentially} be pre-evaluated is $P = M \setminus S$. \\ \textit{Note: there are two fundamental reasons for not pre-evaluating $m_1 \in P$ straight away: 1) the potential presence of spatial sharing between $m_1$ and $m_2 \in S$, which impacts the search for the global optimum; 2) the risk of breaking Constraint~\ref{const:TH}.}
 \item Build the set $B$ of all possible bipartitions of $P$. Let $D$ be the dictionary that will store the operation counts of different alternatives.
 \item Discard $b = (b_S, b_P) \in B$ if the memory required after applying pre-evaluation to the monomials in $b_P$ exceeds $T_H$ (see Constraint~\ref{const:TH}); otherwise, add $D[b] = \mathrm{\theta}^{se}(S \cup b_S) + \mathrm{\theta}^{pre}(b_P)$. \\ \textit{Note: $\mathbb{B}$ is in practice very small, since even complex forms usually have only a few monomials. This pass can then be accomplished rapidly as long as the cost of calculating $\mathrm{\theta}^{se}$ and $\mathrm{\theta}^{pre}$ is negligible. We elaborate on this aspect in Section~\ref{sec:op_count}.}
-\item Take $b$ such that $min(b \in D)$.
+\item Take $\argmin_b D[b]$.
 \item Apply pre-evaluation to all monomials in $b_P$. Apply sharing elimination to all resulting expressions. \\ \textit{Note: because of the reuse of basis functions, pre-evaluation may produce some identical tables, which will be mapped to the same temporary variable. Sharing elimination is therefore transparently applied to all expressions, including those resulting from pre-evaluation.}
 \end{enumerate}
 \end{Algo}
@@ -564,7 +565,7 @@ We demonstrate that the orchestration of sharing elimination and pre-evaluation 
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that, according to $\Gamma$, need be pre-evaluated, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality}, and satisfies Constraint~\ref{const:TH}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that, according to $\Gamma$, need be pre-evaluated, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality} and satisfies Constraint~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
 We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ and $Y$ can actually be constructed.
@@ -585,17 +586,22 @@ We discuss these points separately
 \item 
 \begin{enumerate}
 \item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may not be optimal, since $\theta$ only distinguishes monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
-\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials that share some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a non-optimum. This situation is prevented by construction, because $\Gamma$ exhaustively searches all possible bipartitions for determining an optimum preserving Constraint~\ref{const:TH}\footnote{Note that the problem can be seen as an instance of the well-known Knapsack problem}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished.
+\item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials sharing some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a non-optimum. This situation is prevented by construction, because $\Gamma$ exhaustively searches all possible bipartitions for determining an optimum preserving Constraint~\ref{const:TH}\footnote{Note that the problem can be seen as an instance of the well-known Knapsack problem}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} states that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (achieved through Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimal solution from the search space. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (through Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimum from the search space. 
 
-Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non flop-decreasing factorizations are excluded by construction at step (5). We then prove that applying in sequence rewrite rules (A), (B), and (C), with applications of rule (C) that may expose further opportunities for (A) and (B), represents a step forward towards quasi-optimality. 
+Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non flop-decreasing factorizations are excluded by construction at step (5). We have to prove that applying in sequence rewrite rules (A), (B), (C), and (D), with applications of rules (C) and (D) that may expose further opportunities for (A) and (B), represents a step forward towards quasi-optimality. 
 \begin{description}
 \item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
-\item[Rule (B)] Since $S^{nt}$ is no terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, it is easy to see that setting $V = T$ and $S = S^{nt}$ would just expose another possible hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we see that applying rule (C) prior to rule (B) may prune the optimal solution from the search space.
-\item[Rule (C)] We interpret $G$ as a bipartite graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, in which $\mathbb{S}_j$ and $\mathbb{S}_k$ represent the partitions of symbols depending on $L_j$ and $L_k$, respectively. For each disconnected component $\mathbb{B}^d = (\mathbb{S}_j^d, \mathbb{S}_k^d, \mathbb{E}^d)$ in $\mathbb{G}$, we consider two possibilities, namely $\mathbb{B^d}$ 1) is not or 2) is complete. Case 1) is the simplest: since, at this point, there are no more hits for rules (A) and (B), and thanks to loop linearity, the lower bound on the operation count (as number of products performed at every loop iteration), $lb$, is given by $lb = {min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$. This is reachable by factorizing the vertex with highest degree, as any other choice may break factorization opportunities. In case 2), we have $lb = 1$ because factorization is applicable iteratively (e.g., $a_j a_k + a_j b_k + b_j a_k + b_j b_k = (a_j + b_j)(a_k + b_k) = t_j t_k$). This lower bound is achieved by repeating the sharing elimination algorithm (notice the jump back to step (2) at the end of step (6)).
+\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we see that applying rule (C) prior to rule (B) may prune the optimum from the search space.
+\item[Rule (C)] We interpret $G$ as a bipartite graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, in which $\mathbb{S}_j$ and $\mathbb{S}_k$ represent the partitions of symbols depending on $L_j$ and $L_k$, respectively. There can be multiple connected components, each of which we denote by $\mathbb{B}^d$. We identify with $lb^d$ the lower bound on the operation count, which we recall is an affine function of the number of products, induced by the symbols in $\mathbb{B}^d$. The factorization in any $\mathbb{B}^d$ is independent of that in other connected components. It therefore suffices to consider an arbitrary $\mathbb{B}^d$. We distinguish the two following possibilities.
+\begin{description}
+\item[$\mathbb{B^d}$ is complete] We simply have that $lb^d = 1$, which the algorithm reaches through iterative factorization (e.g., $a_j a_k + a_j b_k + b_j a_k + b_j b_k = (a_j + b_j)(a_k + b_k) = t_j t_k$), by jumping back to step (2) at the end of step (6). 
+\item[$\mathbb{B^d}$ is not complete] As a consequence of loop linearity and the absence of further hits for rules (A) and (B), $lb^d = {\min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$. 
+By not choosing the vertex with highest degree (as the rule states),  ...
 \end{description}
-The algorithm is guaranteed to terminate because of the jump to step (6) as $\mathbb{S} = \mathbb{T}$. 
+\end{description}
+The algorithm is guaranteed to terminate because of the jump to step (7) as $\mathbb{S} = \mathbb{T}$. 
 \end{enumerate}
 \end{proof}
 
