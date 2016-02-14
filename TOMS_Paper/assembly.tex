@@ -428,9 +428,11 @@ The algorithm has three main phases: initialization (step 1); scheduling of mult
 \textit{Note: this recasts the expression as $S (...T^1 + ... + ...T^n)$}.
 \item Only one terminal $T$ adjacent to $S$: take an arbitrary non-terminal symbol $S^{nt}$ adjacent to $S$ and apply Strategy~\ref{strategy:ii}.\\
 \textit{Note: this recasts the expression as $S (...T + ...S^{nt})$}.
-\item There exists a complete bipartite sub-graph $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$, with $\mathbb{S}_j$ and $\mathbb{S}_k$ being partitions of symbols depending on $L_j$ and $L_k$, respectively: apply Strategy~\ref{strategy:ii} to either the symbols in $\mathbb{S}_j$ or $\mathbb{S}_k$ (choice is arbitrary).
-\item $\mathbb{T} = \emptyset$, $S$ is in a cycle (i.e., a path starting and ending in $S$ with at least one edge and no repeated edges or vertices): take $S$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: the precondition basically discards factorizations that can be ``distributed within larger factorizations''. Further details will be provided in Section~\ref{sec:proof}}.
+\item There is no cyclic path $[S, W, ..., S]$: take $S$ and apply Strategy~\ref{strategy:ii}, similarly to (B).\\
+\textit{Note: this recasts the expression as $S (...W + ...)$}.\\
+\textit{Note: the idea is that the product ${S}\ {W}$ cannot be ``hidden within larger factorizations''. Further details will be provided in Section~\ref{sec:proof}}.
+\item $[S, ..., V, ..., S]$ is a cycle, $\lbrace S^1, ..., S^n \rbrace$ adjacent to $S$: take $S$ and apply Strategy~\ref{strategy:ii}.\\
+\textit{Note: this recasts the expression as $S (...S^1 + ...S^n)$}.
 \end{enumerate}
 Go back to step (2).
 
@@ -592,24 +594,20 @@ We discuss these points separately
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimum from the search space. 
 
-Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. Non flop-decreasing factorizations are excluded by construction at step (5). We first discuss the individual impact of the rewrite rules; then, we explain why applying them in a certain order represents a step forward towards quasi-optimality.
+Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. We here demonstrate why this is a step forwards towards the optimum. Note that, at this point, non flop-decreasing factorizations have already been pruned (step (5)). 
 
+Instances of rules (A) and (B) represent ``unavoidable'' factorizations, for which one multiplication must be paid regardless of how the applications of Strategy~\ref{strategy:ii} are scheduled. In particular:
 \begin{description}
 \item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
-\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we evince that applying rule (D) prior to rule (B) may prune the optimum from the search space.
-\item[Rule (C)] The fact that $\mathbb{B} = (\mathbb{S}_j, \mathbb{S}_k, \mathbb{E})$ is complete implies that a sub-expression can be implemented by only one multiplication at every inner loop iteration. For example, the expression $S^0_j S^0_k + S^0_j S^1_k + S^1_j S^0_k + S^1_j S^1_k$ can first be recast (factorization) as $(S^0_j + S^1_j) (S^0_k + S^1_k)$ and finally (code motion) as $P_j P_k$. Rule (C) will apply Strategy~\ref{strategy:ii} ${\min(}|\mathbb{S}_j^d|, |\mathbb{S}_k^d|{)}$ times, thus reaching the objective. 
-\item[Rule (D)] The precondition implies that whatever factorization is chosen, no symbols will be eradicated from the expression. The rule then acts conservatively: the absence of a cycle through $S$ simply implies that $S$ will be hoisted through other applications of Strategy~\ref{strategy:ii}, so there is no need to perform a factorization.
+\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we evince that applying rules (C) and (D) prior to rule (B) may prune the optimum from the search space.
 \end{description}
 
-Instances of (A) and (B) represent ``unavoidable'' factorizations, for which one multiplication must be paid regardless of how the applications of Strategy~\ref{strategy:ii} are scheduled. (C), similarly, guarantees a single multiplication for a whole set of symbols. From this, we deduce that what Algorithm~\ref{algo:sharing-elimination} actually has to guarantee is a partial ordering: (A), (B), and (C) can be applied in arbitrary order, whereas (D), as explained above, must be considered only when none of the other rules can be hit. Rule (D) is clearly the most expensive from a computational point of view, because it must prune all choices that will not lead to the optimum. However, this rule becomes relevant only in extremely complex forms, in which extensive use of differential operators is made. 
+Rule (C) is the critical one. Let $\mathbb{A}$ be an acyclic sub-graph rooted in $S$, and let $W$ be the neighbor of $S$ in $\mathbb{A}$. Since $\mathbb{T} = \emptyset$, $S$ is also the root a second sub-graph $\mathbb{C}$. The non-trivial case in when $\mathbb{C}$ is cyclic. If any vertex in $\mathbb{C}$ were factorized prior to $S$, the product $S\ W$ could eventually appear in the transformed expression. Conversely, is Strategy~\ref{strategy:ii} were first applied to $S$, $W$ and one or more symbols in $\mathbb{C}$ would be grouped in the same sub-expression and hoisted. 
  
 Finally, note that the algorithm is guaranteed to terminate because of the jump to step (7) as $\mathbb{S} = \mathbb{T}$. 
 \end{enumerate}
 \end{proof}
 
-%\item $\lbrace T^1, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: apply strategy (ii)
-%\item Only one terminal $T$ adjacent to $S$: take an arbitrary non-terminal symbol $S^{nt}$ adjacent to $S$ and apply strategy (ii).\\
-%\item $\mathbb{T} = \emptyset$: take $S$ with highest degree and apply strategy (ii) such that all symbols $\lbrace S^1, ..., S^n \rbrace$ adjacent to $S$ are grouped.\\
 
 Throughout the paper we have reiterated the idea that Algorithm~\ref{algo:gamma} reaches optimality if stronger preconditions on the input variational form are satisfied. We here discuss such preconditions, in increasing order of complexity.
 \begin{enumerate}
