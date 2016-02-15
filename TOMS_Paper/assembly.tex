@@ -396,7 +396,6 @@ Finally, we observe that the $\sigma_{ei}$ sub-expressions can sometimes be cons
 \label{sec:se-algo}
 Algorithm~\ref{algo:sharing-elimination} describes sharing elimination assuming as input a tree representation of the loop nest. It makes use of the following notation and terminology:
 \begin{itemize}
-\item $|.|$: a generic ``sizeof'' operator (e.g., cardinality of a set, extent of a loop).
 \item \textit{multilinear operand}: any $\alpha_{eij}$ or $\beta_{eik}$ in the input expression.
 \item \textit{multilinear symbol}: a symbol appearing within a multilinear operand depending on $L_j$ or $L_k$ (e.g., test functions, first order derivatives of test functions, etc.).
 \end{itemize}
@@ -404,37 +403,31 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 
 \begin{Algo}[Sharing elimination]
 \label{algo:sharing-elimination}
-\normalfont
-The algorithm has three main phases: initialization (step 1); scheduling of multilinear operands for reaching quasi-optimality (steps 2-6); scheduling of all other sub-expressions (step 7).
+\normalfont 
+~
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree to group identical terms within the same sub-expression. \\ 
-\textit{Note: for example, an expression $(a + a + b + c + a)$ would be transformed into $(3a + b + c)$}.
-
-\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions.
-
-\item For all multilinear operands in $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i}. \\
+\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions. For all multilinear operands in $P \in \mathbb{P}$ such that $|P| < |S_P|$, apply Strategy~\ref{strategy:i}. \\
 \textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of Proposition~\ref{prop:multi-struct}.}
 
-\item Build the \textit{sharing graph} $\mathbb{G} = (\mathbb{S}, \mathbb{E})$, with $S^i \in \mathbb{S}$ representing a multilinear symbol or a temporary produced at step (3). An edge $(S^i$, $S^j)$ indicates that a product $S^i S^j$ would appear if the sub-expressions including $S^i$ and $S^j$ were expanded. Let $\mathbb{T}$ be the subset of vertices with at most one incident edge, or ``terminals''. 
+\item Build the \textit{sharing graph} $G= (S, E)$. Each $s \in S$ represents a multilinear symbol or a temporary produced at step (2). An edge $(s^i$, $s^j)$ indicates that a product $s^i s^j$ would appear if the sub-expressions including $s^i$ and $s^j$ were expanded. 
 
-\item Remove $e = (S^i, S^j) \in \mathbb{E}$ if applying Strategy~\ref{strategy:ii} would cause an increase in operation count (i.e., the elimination of temporal sharing after factorization of $S^i$ or $S^j$ would be outweighed by the expansion cost).\\
-\textit{Note: this ensures the flop-decreasing nature of the transformations at step (6)}.\\
-\textit{Note: this pass can be accomplished by visiting the expression tree and collecting several kinds of information -- for example, the number of products wrapping an instance of $S^i$ or $S^j$, from which the expansion cost will be derived.}
+\item Let $T \subset S$ be the subset of vertices with at most one incident edges, or ``terminals''. Partition $T$ into disjoint sets, $\mathbb{T} = \lbrace T^1, ..., T^t\rbrace$, such that the terminals in $T^i$ are either adjacent to the same vertex or disconnected. Apply Strategy~\ref{strategy:ii} factorizing the terminals in each $T^i$, provided that this leads to a reduction in operation count.\\
+\textit{Note: the last check ensures the flop-decreasing nature of the transformation; the cases in which the expansion cost exceeds the code motion gain are discarded.}
 
+\item Partition $S$ into disjoint sets, $\mathbb{S} = \lbrace S^1, ..., S^n\rbrace$, such that $S^i$ includes all instances of a given symbol $s$ in the expression. Transform $G$ by merging $\lbrace s^1, ..., s^m \rbrace \subset S^i$ into a unique vertex $s$ (taking the union of the edges), provided that factorizing $[s^1, ..., s^m]$ would not cause an increase in operation count.\\
+\textit{Note: the variation in operation count is a function of (number and arity) of the products wrapping the elements in $S^i$, which impact the expansion cost.}
 
-\item If $\mathbb{S} = \mathbb{T}$, jump to step (7). Otherwise apply, in order, the following rewrite rules (\textit{precondition}: \textit{action}):
+\item Restructure the expression based on the structure of $G$ and a set of rewrite rules $<$\textit{precondition}: \textit{action}$>$, to be applied in the order given below.
 \begin{enumerate}[label=(\Alph*)]
-\item $\lbrace T^1, ..., T^n \rbrace \subset \mathbb{T}$ adjacent to $S$, $n > 1$: take $S$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $S (...T^1 + ... + ...T^n)$}.
-\item Only one terminal $T$ adjacent to $S$: take an arbitrary non-terminal symbol $S^{nt}$ adjacent to $S$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $S (...T + ...S^{nt})$}.
-\item There is no cyclic path $[S, W, ..., S]$: take $S$ and apply Strategy~\ref{strategy:ii}, similarly to (B).\\
-\textit{Note: this recasts the expression as $S (...W + ...)$}.\\
-\textit{Note: the idea is that the product ${S}\ {W}$ cannot be ``hidden within larger factorizations''. Further details will be provided in Section~\ref{sec:proof}}.
-\item $[S, ..., V, ..., S]$ is a cycle, $\lbrace S^1, ..., S^n \rbrace$ adjacent to $S$: take $S$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $S (...S^1 + ...S^n)$}.
+\item $\lbrace t^1, ..., t^n \rbrace \subset T$ adjacent to $s \in S$, $n > 1$: take $s$ and apply Strategy~\ref{strategy:ii}.\\
+\textit{Note: this recasts the expression as $s (...t^1 + ... + ...t^n)$}.
+\item Only one terminal $t$ adjacent to $s$: take an arbitrary non-terminal symbol $s^{nt}$ adjacent to $s$ and apply Strategy~\ref{strategy:ii}.\\
+\textit{Note: this recasts the expression as $s (...t + ...s^{nt})$}. 
+\item $T = \emptyset$, $C = [s, ..., v, ..., s]$ is a cycle, $v$ has highest degree in $C$, $\lbrace s^1, ..., s^n \rbrace$ adjacent to $v$: take $v$ and apply Strategy~\ref{strategy:ii}.\\
+\textit{Note: this recasts the expression as $v (...s^1 + ... + ...s^n)$}.
 \end{enumerate}
-Go back to step (2).
+Rule (C) may expose further hits for rules (A) and (B). Rules are therefore applied cyclically until no more hits are possible.\\
+\textit{Note: the last two steps only impact bilinear forms, since otherwise $E = \emptyset$.}
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
 \textit{Note: this pass speculatively assumes that expressions are (weakly) structured along the reduction loop. If the assumption does not hold, the operation count will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
@@ -443,15 +436,15 @@ Go back to step (2).
 
 \begin{Rem*}
 \normalfont
-Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of flop-decreasing transformations (step 5) and the re-scheduling of sub-expressions within outer loops (step 7) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
+Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of flop-decreasing transformations (steps (3) and (4)) and the re-scheduling of sub-expressions within outer loops (last step) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
 \end{Rem*}
 
 
 \subsubsection{Examples}
 \label{sec:se-examples}
-Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step 3 has no effect. The sharing graph is $\mathbb{G} = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $\mathbb{T} = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
+Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step 3). We then have (step 4) $\mathbb{G} = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \emptyset)$, although no rewrite rule is applicable since $\mathbb{S} = \mathbb{T}$. 
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (3)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, although no rewrite rule is applicable since $S = T$
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -592,19 +585,30 @@ We discuss these points separately
 \item Let $T_m$ represent the set of tables resulting from applying pre-evaluation to a monomial $m$. Consider two monomials $m_1, m_2 \in Y$ and the respective sets of pre-evaluated tables, $T_{m_{1}}$ and $T_{m_{2}}$. If $T_{m_{1}} \cap\ T_{m_{2}} \neq \emptyset$, at least one table is assignable to the same temporary. $\Gamma$, therefore, may not be optimal, since $\theta$ only distinguishes monomials in ``isolation''. We neglect this scenario (see assumptions) because of its purely pathological nature and its -- with high probability -- negligible impact on the operation count.
 \item Let $m_1 \in X$ and $m_2 \in Y$ be two monomials sharing some generic multilinear symbols. If $m_1$ were carelessly pre-evaluated, there may be a potential gain in sharing elimination that is lost, potentially leading to a non-optimum. This situation is prevented by construction, because $\Gamma$ exhaustively searches all possible bipartitions for determining an optimum preserving Constraint~\ref{const:TH}\footnote{Note that the problem can be seen as an instance of the well-known Knapsack problem}. Recall that since the number of monomials is in practice very small, this pass can rapidly be accomplished.
 \end{enumerate}
-\item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (3) cannot prune the optimum from the search space. 
+\item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (1) cannot prune the optimum from the search space. 
 
-Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. We here demonstrate why this is a step forwards towards the optimum. Note that, at this point, non flop-decreasing factorizations have already been pruned (step (5)). 
+After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, a set of rewrite rules are applied. We here discuss why applying, in rigorous order, rules (A), (B), and (C), leads to the optimum. 
 
-Instances of rules (A) and (B) represent ``unavoidable'' factorizations, for which one multiplication must be paid regardless of how the applications of Strategy~\ref{strategy:ii} are scheduled. In particular:
+Rules (A) and (B) represent ``unavoidable'' factorizations, for which one multiplication must be paid no matter how Strategy~\ref{strategy:ii} is scheduled. In particular:
 \begin{description}
-\item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
-\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we evince that applying rules (C) and (D) prior to rule (B) may prune the optimum from the search space.
+\item[Rule (A)] The terminals $\lbrace t^1, ..., t^n \rbrace$ can only be grouped through the factorization of $s$ (by definition of terminal), so this rule has no side effects.
+\item[Rule (B)] Since $s^{nt}$ is not a terminal, there must exist at least one edge between $s^{nt}$ and a generic vertex $v$. Let us consider the alternative factorization $s^{nt}(...s + ... + ...v)$. If $v$ were a terminal, we observe that setting $v = t$ and $s = s^{nt}$ would simply expose another hit for rule (B). Otherwise ($v$ non terminal), we would have $s$ now appearing in two different sub-expressions ($(...s + ... + ...v)$ and $(...s\ t)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $s$. From this, we evince that applying (C) prior (B) may prune the optimum from the search space.
 \end{description}
+To reach the optimum, rule (C) discards all those potential factorizations that can be rather ``aggregated'' with \textit{essential} factorizations. A factorization is essential if a vertex is in a cycle. Being in a cycle is the fundamental condition to 
 
-Rule (C) is the critical one. Let $\mathbb{A}$ be an acyclic sub-graph rooted in $S$, and let $W$ be the neighbor of $S$ in $\mathbb{A}$. Since $\mathbb{T} = \emptyset$, $S$ is also the root a second sub-graph $\mathbb{C}$. The non-trivial case in when $\mathbb{C}$ is cyclic. If any vertex in $\mathbb{C}$ were factorized prior to $S$, the product $S\ W$ could eventually appear in the transformed expression. Conversely, is Strategy~\ref{strategy:ii} were first applied to $S$, $W$ and one or more symbols in $\mathbb{C}$ would be grouped in the same sub-expression and hoisted. 
- 
-Finally, note that the algorithm is guaranteed to terminate because of the jump to step (7) as $\mathbb{S} = \mathbb{T}$. 
+Having higher degree simply means grouping more symbols (i.e., avoiding more products); 
+
+%Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. We here demonstrate why this is a step forwards towards the optimum. Note that, at this point, non flop-decreasing factorizations have already been pruned (step (5)). 
+%
+%Instances of 
+%\begin{description}
+%\item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
+%\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we evince that applying rules (C) and (D) prior to rule (B) may prune the optimum from the search space.
+%\end{description}
+%
+%Rule (C) is the critical one. Let $\mathbb{A}$ be an acyclic sub-graph rooted in $S$, and let $W$ be the neighbor of $S$ in $\mathbb{A}$. Since $\mathbb{T} = \emptyset$, $S$ is also the root a second sub-graph $\mathbb{C}$. The non-trivial case in when $\mathbb{C}$ is cyclic. If any vertex in $\mathbb{C}$ were factorized prior to $S$, the product $S\ W$ could eventually appear in the transformed expression. Conversely, is Strategy~\ref{strategy:ii} were first applied to $S$, $W$ and one or more symbols in $\mathbb{C}$ would be grouped in the same sub-expression and hoisted. 
+% 
+%Finally, note that the algorithm is guaranteed to terminate because of the jump to step (7) as $\mathbb{S} = \mathbb{T}$. 
 \end{enumerate}
 \end{proof}
 
