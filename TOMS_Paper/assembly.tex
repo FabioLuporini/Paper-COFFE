@@ -38,6 +38,7 @@
 
 \usepackage{lineno}
 \usepackage{xfrac}
+\usepackage{amssymb}
 
 % Theorems, definitions, lemmas, etc
 \newtheorem{Def}{Definition}
@@ -417,17 +418,14 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 \item Partition $S$ into disjoint sets, $\mathbb{S} = \lbrace S^1, ..., S^n\rbrace$, such that $S^i$ includes all instances of a given symbol $s$ in the expression. Transform $G$ by merging $\lbrace s^1, ..., s^m \rbrace \subset S^i$ into a unique vertex $s$ (taking the union of the edges), provided that factorizing $[s^1, ..., s^m]$ would not cause an increase in operation count.\\
 \textit{Note: the variation in operation count is a function of (number and arity) of the products wrapping the elements in $S^i$, which impact the expansion cost.}
 
-\item Restructure the expression based on the structure of $G$ and a set of rewrite rules $<$\textit{precondition}: \textit{action}$>$, to be applied in the order given below.
+\item Use rewrite rules to restructure the expression. Let $V = \lbrace v^1, ..., v^n \rbrace$ be the vertices adjacent to $s \in S$; the preconditions for the three rewrite rules (A), (B), and (C) are:
 \begin{enumerate}[label=(\Alph*)]
-\item $\lbrace t^1, ..., t^n \rbrace \subset T$ adjacent to $s \in S$, $n > 1$: take $s$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $s (...t^1 + ... + ...t^n)$}.
-\item Only one terminal $t$ adjacent to $s$: take an arbitrary non-terminal symbol $s^{nt}$ adjacent to $s$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $s (...t + ...s^{nt})$}. 
-\item $T = \emptyset$, $C = [s, ..., v, ..., s]$ is a cycle, $v$ has highest degree in $C$, $\lbrace s^1, ..., s^n \rbrace$ adjacent to $v$: take $v$ and apply Strategy~\ref{strategy:ii}.\\
-\textit{Note: this recasts the expression as $v (...s^1 + ... + ...s^n)$}.
+\item $A \subsetneq V$ is a set of vertices not standing on cyclic paths, $A \neq \emptyset$
+\item $s$ is in a cycle $C$ and has highest degree among all vertices in $C$
+\item $\lbrace v^1, ..., v^{n-1} \rbrace$ are leaves of a tree, $p = v^n$ is the parent of $s$ (unless $s$ is the root)
 \end{enumerate}
-Rule (C) may expose further hits for rules (A) and (B). Rules are therefore applied cyclically until no more hits are possible.\\
-\textit{Note: the last two steps only impact bilinear forms, since otherwise $E = \emptyset$.}
+If a precondition is met, we take $s$ and apply Strategy~\ref{strategy:ii} (i.e., we factorize $s$ and perform code motion), and we remove all edges incident to $s$. The preconditions are checked cyclically (first all (A)s, then all (B)s, with (B) that may expose further hits for (A), and finally all (C)s) until no more hits are possible (i.e., until $S = T$).  \\
+\textit{Note: steps (4) and (5) only impact bilinear forms, since otherwise $E = \emptyset$.}
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
 \textit{Note: this pass speculatively assumes that expressions are (weakly) structured along the reduction loop. If the assumption does not hold, the operation count will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
@@ -444,7 +442,7 @@ Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operati
 \label{sec:se-examples}
 Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (3)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, although no rewrite rule is applicable since $S = T$
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, although no rewrite rule (step (5)) is applicable since $S = T$
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -587,28 +585,11 @@ We discuss these points separately
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (1) cannot prune the optimum from the search space. 
 
-After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, a set of rewrite rules are applied. We here discuss why applying, in rigorous order, rules (A), (B), and (C), leads to the optimum. 
+After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, a set of rewrite rules are applied. We here discuss why applying in order rules (A), (B) and (C) leads to the optimum. 
 
-Rules (A) and (B) represent ``unavoidable'' factorizations, for which one multiplication must be paid no matter how Strategy~\ref{strategy:ii} is scheduled. In particular:
-\begin{description}
-\item[Rule (A)] The terminals $\lbrace t^1, ..., t^n \rbrace$ can only be grouped through the factorization of $s$ (by definition of terminal), so this rule has no side effects.
-\item[Rule (B)] Since $s^{nt}$ is not a terminal, there must exist at least one edge between $s^{nt}$ and a generic vertex $v$. Let us consider the alternative factorization $s^{nt}(...s + ... + ...v)$. If $v$ were a terminal, we observe that setting $v = t$ and $s = s^{nt}$ would simply expose another hit for rule (B). Otherwise ($v$ non terminal), we would have $s$ now appearing in two different sub-expressions ($(...s + ... + ...v)$ and $(...s\ t)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $s$. From this, we evince that applying (C) prior (B) may prune the optimum from the search space.
-\end{description}
-To reach the optimum, rule (C) discards all those potential factorizations that can be rather ``aggregated'' with \textit{essential} factorizations. A factorization is essential if a vertex is in a cycle. Being in a cycle is the fundamental condition to 
+Rule (A) is the critical one because it coordinates factorization at the junction between a cyclic and an acyclic components. It exploits the observation that a vertex outside of cyclic paths may be ``aggregated'' within one or more ``potentially unavoidable'' factorizations, thus saving on the final number of multiplications. This is quite evident for terminals (for which there is at most one way of being factorized), although not so obvious for vertices of arbitrary degree. Let $a$ be a vertex outside of cyclic paths, and let $V = \lbrace v^1, ..., v^n \rbrace$ be the set of vertices adjacent to $a$. Consider the non-trivial case in which at least one vertex $s \in V$ is within a cycle. If $a$ and $s$ were factorized separately, we could end up with the two sub-expressions $a(...v^1 + ... s + ...v^n)$ and $s(...)$. The spatial sharing induced by $s$ would make the synthesis sub-optimal. Conversely, if $s$ is factorized such that a single sub-expression $s(...a + ...)$ will be produced, the operation count is at worst unchanged.
 
-Having higher degree simply means grouping more symbols (i.e., avoiding more products); 
-
-%Step (6) applies factorization following the ordering dictated by the sharing graph and its rewrite rules. We here demonstrate why this is a step forwards towards the optimum. Note that, at this point, non flop-decreasing factorizations have already been pruned (step (5)). 
-%
-%Instances of 
-%\begin{description}
-%\item[Rule (A)] As terminals, $\lbrace T^0, ..., T^n \rbrace$ can only be grouped through the factorization of $S$, so this rule has no side effects.
-%\item[Rule (B)] Since $S^{nt}$ is not a terminal, there must exist at least one edge between $S^{nt}$ and a generic vertex $V$. Let us consider the alternative factorization $S^{nt}(...S + ... + ...V)$. If $V$ were a terminal, we see that setting $V = T$ and $S = S^{nt}$ would simply expose another hit for rule (B). Otherwise ($V$ non terminal), we would have $S$ now appearing in two different sub-expressions ($(...S + ... + ...V)$ and $(...S\ T)$), which would clearly be sub-optimal as a consequence of the spatial sharing induced by $S$. From this, we evince that applying rules (C) and (D) prior to rule (B) may prune the optimum from the search space.
-%\end{description}
-%
-%Rule (C) is the critical one. Let $\mathbb{A}$ be an acyclic sub-graph rooted in $S$, and let $W$ be the neighbor of $S$ in $\mathbb{A}$. Since $\mathbb{T} = \emptyset$, $S$ is also the root a second sub-graph $\mathbb{C}$. The non-trivial case in when $\mathbb{C}$ is cyclic. If any vertex in $\mathbb{C}$ were factorized prior to $S$, the product $S\ W$ could eventually appear in the transformed expression. Conversely, is Strategy~\ref{strategy:ii} were first applied to $S$, $W$ and one or more symbols in $\mathbb{C}$ would be grouped in the same sub-expression and hoisted. 
-% 
-%Finally, note that the algorithm is guaranteed to terminate because of the jump to step (7) as $\mathbb{S} = \mathbb{T}$. 
+Rule (B) acts within cycles by iteratively picking the vertex with highest degree. Since the assumption is that there are no more hits for rule (A), the problem here is as simple as selecting the minimum number of vertices whose incident edges would cover the whole cycle. With a very similar concept, rule (C) schedules the remaining (disconnected) sub-trees.
 \end{enumerate}
 \end{proof}
 
@@ -698,13 +679,13 @@ While constants of our study are
 
 We report the results of our experiments in Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity} as three-dimensional plots. The axes represent $q$, $nf$, and code transformation system. We show one subplot for each problem instance $\langle form, nf, q\rangle$, with the code transformation system varying within each subplot. The best variant for each problem instance is given by the tallest bar, which indicates the maximum speed-up over non-transformed code. We note that if a bar or a subplot are missing, then the form compiler failed at generating code because of either exceeding the system memory limit or unable to handle the form. 
 
-The rest of the section is organized as follows: we first provide insights into the overall outcome of the experimentation; we then comment on the impact of a fundamental low-level optimization, namely autovectorization; finally, we explain, in detail and individually for each form, the performance results obtained.
+The rest of the section is organized as follows: we first provide insights into the general outcome of the experimentation; we then comment on the impact of a fundamental low-level optimization, namely autovectorization; finally, we motivate, for each form, the performance results obtained.
 
 \paragraph{High level view}
-The main observation is that our transformation strategy does not always guarantee minimum execution time. In particular, 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4, nf=0]$. There are two reasons for this. Firstly, low level optimization can have a significant impact on actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Secondly, memory constraints are critical, particularly the transformation strategy adopted when exceeding $T_H$. We will later thoroughly elaborate on all these aspects.
+Our transformation strategy does not always guarantee minimum execution time. In particular, 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4, nf=0]$. There are two reasons for this. Firstly, low level optimization can have a significant impact on the actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Secondly, the transformation strategy adopted when $T_H$ is exceeded plays a key role, as we will later elaborate.
 
 \paragraph{Autovectorization}
-The discretizations employed result in inner loops and basis function tables of size multiple of the machine vector length. This, combined with the chosen compilation flags, promotes autovectorization in the majority of code variants. An exception is \texttt{quad} due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; manual inspection of the compiled code suggests, however, that block vectorization (\cite{SLP-vect}) is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have similar structure (there are a few exceptions in \texttt{cfO2} due to zero-elimination), with loop vectorization being regularly applied, as far as we could evince from compiler reports and manual inspection of assembly code.
+We discretized our problems such that the inner loop sizes would be a multiple of the machine vector length. This ensured autovectorization in the majority of code variants\footnote{The compilation flag \texttt{xHost} helped the Intel compiler generating efficient vector code. We verified the vectorization of inner loops by looking at both compiler reports and assembly code.}. The biggest exception is \texttt{quad}, due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; the compiler reports suggest, however, that block vectorization (\cite{SLP-vect}) is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have identical structure, with loop vectorization being regularly applied.
 
 \paragraph{Mass}
 We start with the simplest of the bilinear forms investigated, the mass matrix. Results are in Figure~\ref{fig:mass}. We first notice that the lack of improvements when $q=1$ is due to the fact that matrix insertion outweighs local assembly. As $q \geq 2$, \texttt{cfO2} generally shows the highest speed-ups. It is worth noting how \texttt{auto} does not always select the fastest implementation: \texttt{auto} always opts for \texttt{tens}, while as $nf \geq 2$ \texttt{quad} would tend to be preferable. On the other hand, \texttt{cfO2} always makes the optimal decision about whether applying pre-evaluation or not.  
@@ -737,7 +718,7 @@ In the experiments on the hyperelastic model, shown in Figure~\ref{fig:hyperelas
 
 \section{Conclusions}
 \label{sec:conclusions}
-We have developed transformation algorithms and a theory of optimality for finite element integration. The implementation was carried out in COFFEE, a compiler fully integrated with the Firedrake framework, and therefore made available to an increasingly significant user base. Performance results show the effectiveness of our methodology. There are still several open problems. The main one is an elaborate classification of forms for which optimality can be reached. Secondly, we would like to extend our methodology to classes of loops arising in spectral methods, in which interaction with low level optimization becomes even more critical due to the larger working sets.
+We have developed transformation algorithms and a theory of optimality for finite element integration. The implementation was carried out in COFFEE, a compiler fully integrated with the Firedrake framework, and therefore made publicly available. Performance results suggest the effectiveness of our methodology. There are still several open problems. Among them, a classification of forms for which optimality can be reached and a generalization of the methodology to other loop nests, for instance those arising in spectral methods.
 
 % Bibliography
 \bibliographystyle{ACM-Reference-Format-Journals}
