@@ -418,14 +418,17 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 \item Partition $S$ into disjoint sets, $\mathbb{S} = \lbrace S^1, ..., S^n\rbrace$, such that $S^i$ includes all instances of a given symbol $s$ in the expression. Transform $G$ by merging $\lbrace s^1, ..., s^m \rbrace \subset S^i$ into a unique vertex $s$ (taking the union of the edges), provided that factorizing $[s^1, ..., s^m]$ would not cause an increase in operation count.\\
 \textit{Note: the variation in operation count is a function of (number and arity) of the products wrapping the elements in $S^i$, which impact the expansion cost.}
 
-\item Use rewrite rules to restructure the expression. Let $V = \lbrace v^1, ..., v^n \rbrace$ be the vertices adjacent to $s \in S$; the preconditions for the three rewrite rules (A), (B), and (C) are:
-\begin{enumerate}[label=(\Alph*)]
-\item $A \subsetneq V$ is a set of vertices not standing on cyclic paths, $A \neq \emptyset$
-\item $s$ is in a cycle $C$ and has highest degree among all vertices in $C$
-\item $\lbrace v^1, ..., v^{n-1} \rbrace$ are leaves of a tree, $p = v^n$ is the parent of $s$ (unless $s$ is the root)
-\end{enumerate}
-If a precondition is met, we take $s$ and apply Strategy~\ref{strategy:ii} (i.e., we factorize $s$ and perform code motion), and we remove all edges incident to $s$. The preconditions are checked cyclically (first all (A)s, then all (B)s, with (B) that may expose further hits for (A), and finally all (C)s) until no more hits are possible (i.e., until $S = T$).  \\
-\textit{Note: steps (4) and (5) only impact bilinear forms, since otherwise $E = \emptyset$.}
+\item Map $G$ to an Integer Linear Programming (ILP) problem for determining how to optimally apply Strategy~\ref{strategy:ii}. The solution is the set of symbols that will be factorized by Strategy~\ref{strategy:ii}. Let $|S| = n$; the ILP model then is as follows:
+\begin{gather*}
+x_i \text{: a vertex in } S \text{ (1 if a symbol must be factorized, 0 otherwise)}\\
+y_{ij} \text{: a direct edge in } E \text{ (1 if the product } s^i s^j \text{ is factorized through } s^i \text{, 0 otherwise)}\\
+n_i \text{: the number of edges incident to } x_i \\
+\begin{align*}
+\min \sum_{i=1}^{n} x_i,\ s.t. ~~~~~~~~~&\sum_{j=1}^{n} y_{ij} \leq n_i x_i,\ i = 1, ..., n \\
+&\sum_{i=1}^{n} y_{ij} = 1,\ j = 1, ..., n
+\end{align*}
+\phantom{\hspace{6cm}}
+\end{gather*}
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
 \textit{Note: this pass speculatively assumes that expressions are (weakly) structured along the reduction loop. If the assumption does not hold, the operation count will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
@@ -440,9 +443,9 @@ Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operati
 
 \subsubsection{Examples}
 \label{sec:se-examples}
-Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. Rewrite rule (4A) is hit, which leads to the code in Figure~\ref{code:multi_loopnest_c}.
+Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. The ILP formulation leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, although no rewrite rule (step (5)) is applicable since $S = T$
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, and since $S = T$ the ILP formulation becomes irrelevant because there are no factorization opportunities.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -585,11 +588,7 @@ We discuss these points separately
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (1) cannot prune the optimum from the search space. 
 
-After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, a set of rewrite rules are applied. We here discuss why applying in order rules (A), (B) and (C) leads to the optimum. 
-
-Rule (A) is the critical one because it coordinates factorization at the junction between a cyclic and an acyclic components. It exploits the observation that a vertex outside of cyclic paths may be ``aggregated'' within one or more ``potentially unavoidable'' factorizations, thus saving on the final number of multiplications. This is quite evident for terminals (for which there is at most one way of being factorized), although not so obvious for vertices of arbitrary degree. Let $a$ be a vertex outside of cyclic paths, and let $V = \lbrace v^1, ..., v^n \rbrace$ be the set of vertices adjacent to $a$. Consider the non-trivial case in which at least one vertex $s \in V$ is within a cycle. If $a$ and $s$ were factorized separately, we could end up with the two sub-expressions $a(...v^1 + ... s + ...v^n)$ and $s(...)$. The spatial sharing induced by $s$ would make the synthesis sub-optimal. Conversely, if $s$ is factorized such that a single sub-expression $s(...a + ...)$ will be produced, the operation count is at worst unchanged.
-
-Rule (B) acts within cycles by iteratively picking the vertex with highest degree. Since the assumption is that there are no more hits for rule (A), the problem here is as simple as selecting the minimum number of vertices whose incident edges would cover the whole cycle. With a very similar concept, rule (C) schedules the remaining (disconnected) sub-trees.
+After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, the ILP model is instantiated. At this point, the optimality of the algorithm reduces to prove the correctness of the model. The model aims ...
 \end{enumerate}
 \end{proof}
 
