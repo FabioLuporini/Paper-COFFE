@@ -425,7 +425,7 @@ y_{ij} \text{: a direct edge in } E \text{ (1 if the product } s^i s^j \text{ is
 n_i \text{: the number of edges incident to } x_i \\
 \begin{align*}
 \min \sum_{i=1}^{n} x_i,\ s.t. ~~~~~~~~~&\sum_{j=1}^{n} y_{ij} \leq n_i x_i,\ i = 1, ..., n \\
-&\sum_{i=1}^{n} y_{ij} = 1,\ j = 1, ..., n
+& y_{ij} + y_{ji} = 1,\ i, j = 1, ..., n
 \end{align*}
 \phantom{\hspace{6cm}}
 \end{gather*}
