@@ -86,7 +86,7 @@ Paul H. J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Optimality and quasi-optimality are defined in terms of floating point operations given a memory bound. We provide an approach for exploring the space of legal transformations, which systematically reaches quasi-optimality. The conditions under which optimality is achieved are also discussed. A theoretical analysis and extensive experimentation, which shows significant performance improvements over several state-of-the-art code generation systems, validate the approach.
+We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Global and local optimality are defined in terms of floating point operations given a memory bound. We provide an approach for exploring the space of legal transformations, which systematically reaches a local optimum. The conditions under which optimality is achieved are also discussed. A theoretical analysis and extensive experimentation, which shows significant performance improvements over several state-of-the-art code generation systems, validate the approach.
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
@@ -138,12 +138,12 @@ The need for rapid implementation of high performance, robust, and portable fini
 
 As demonstrated by the substantial body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent in the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary; we show this is Section~\ref{sec:perf-results}). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO (\cite{PLUTO}), focus on parallelization and optimization for cache locality, treating issues orthogonal to the question of minimising flops. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. In~\citeN{quadrature1}, it is shown how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. In~\citeN{FFC-TC} and~\citeN{Francis}, mathematical reformulations of finite element integration are studied with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low level optimizations are analysed. It is also worth mentioning an on-going effort to produce a new form compiler, called UFLACS (\cite{Uflacs}), which adds to the already abundant set of code transformation systems for assembly operators. The performance evaluation in Section~\ref{sec:perf-results} includes most of these optimization systems.
 
-However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``quasi-optimality'', which relates operation count with inner loops). Summarizing, our contributions are as follows:
+However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``local optimality'', which relates operation count with inner loops). Summarizing, our contributions are as follows:
 
 \begin{itemize}
 \item We formalize finite element integration loop nests and we build the space of legal transformations impacting their operation count.
 \item We provide an algorithm to select points in the transformation space. The algorithm uses a cost model to: (i) understand whether a transformation reduces or increases the operation count; (ii) choose between different (non-composable) transformations.
-\item We demonstrate that our algorithm systematically leads to quasi-optimality. We also explain under what conditions of the input problem optimality is achieved.
+\item We demonstrate that our algorithm systematically leads to a local optimum. We also explain under what conditions of the input problem global optimality is achieved.
 \item We integrate our approach with a compiler, COFFEE\footnote{COFFEE stands for COmpiler For Fast Expression Evaluation. The compiler is open-source and available at \url{https://github.com/coneoproject/COFFEE}}, which is in use in the Firedrake framework.
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
@@ -234,7 +234,7 @@ These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}
 
 \section{Transformation Space}
 \label{sec:optimal-impl}
-In this section, we characterize optimality and quasi-optimality for finite element integration as well as the space of legal transformations that needs be explored to achieve them. How the exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
+In this section, we characterize global and local optimality for finite element integration as well as the space of legal transformations that needs be explored to achieve them. How the exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
 
 \subsection{Loop nests, expressions and optimality}
 \label{sec:lnopt}
@@ -274,7 +274,7 @@ A loop $L$ defining the iteration space $I$ through the iteration variable $i$, 
 A multilinear loop nest of arity $n$ is a perfect nest composed of $n$ loops, in which all of the expressions appearing in the body of the innermost loop are affine in each loop $L_i$ separately.
 \end{Def}
 
-We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to synthesize quasi-optimal code.
+We will show that multilinear loop nests, which arise naturally when translating bilinear or linear forms into code, are important because they have a structure that we can take advantage of to reach a local optimum.
 
 We define two other classes of loops. 
 
@@ -312,15 +312,15 @@ We then characterize optimality for a finite element integration loop nest as fo
 Let $\Lambda$ be a generic loop nest, and let $\Gamma$ be a transformation function $\Gamma : \Lambda \rightarrow \Lambda'$ such that $\Lambda'$ is semantically equivalent to $\Lambda$ (possibly, $\Lambda' = \Lambda$). We say that $\Lambda' = \Gamma (\Lambda)$ is an optimal synthesis of $\Lambda$ if the total number of operations (additions, products) performed to evaluate the result is minimal.
 \end{Def}
 
-The concept of quasi-optimality, which relies on the particular class of \textit{flop-decreasing} transformations, is also introduced.
+The concept of local optimality, which relies on the particular class of \textit{flop-decreasing} transformations, is also introduced.
 
 \begin{Def}[Flop-decreasing transformation]
 A sequence of transformations reducing the operation count is called flop-decreasing.
 \end{Def}
 
-\begin{Def}[Quasi-optimality of a loop nest]
+\begin{Def}[Local optimality of a loop nest]
 \label{def:mln-quasi-optimality}
-Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a quasi-optimal synthesis of $\Lambda$ if:
+Given $\Lambda$, $\Lambda'$ and $\Gamma$ as in Definition~\ref{def:mln-optimality}, we say that $\Lambda' = \Gamma (\Lambda)$ is a locally optimal synthesis of $\Lambda$ if:
 \begin{itemize}
 \item the number of operations (additions, products) in the innermost loops performed to evaluate the result is minimal, and
 \item $\Gamma$ is expressed as composition of flop-decreasing transformations.
@@ -331,7 +331,7 @@ The restriction to flop-decreasing transformations aims to exclude those ``decep
 
 We also observe that Definitions~\ref{def:mln-optimality} and~\ref{def:mln-quasi-optimality} do not take into account memory requirements. If the loop nest were memory-bound -- the ratio of operations to bytes transferred from memory to the CPU being too low -- then speaking of optimality would clearly make no sense. Henceforth we assume to operate in a CPU-bound regime, in which arithmetic-intensive expressions need be evaluated. In the context of finite elements, this is often true for more complex multilinear forms and/or higher order elements. 
 
-Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggests a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) at least quasi-optimality in all cases; (ii) optimality whenever the monomials are ``sufficiently structured''. To this purpose, we will construct:
+Achieving optimality in polynomial time is not generally feasible, since the $\sigma_{ei}$ sub-expressions can be arbitrarily unstructured. On the other hand, multilinearity suggests a certain degree of regularity for $\alpha_{eij}$ and $\beta_{eik}$. In the following sections, we will elaborate on these observations and formulate an approach that achieves: (i) at least a local optimum in all cases; (ii) optimality whenever the monomials are ``sufficiently structured''. To this purpose, we will construct:
 \begin{itemize}
 \item the space of legal transformations impacting the operation count (Sections~\ref{sec:sharing-elimination} -- \ref{sec:completeness})
 \item an algorithm to select points in the transformation space (Section~\ref{sec:optimal-synthesis})
@@ -359,7 +359,7 @@ To illustrate the definition, we show in Figure~\ref{code:multi_loopnest} how sh
 {\subfigcapskip = 4pt \subfigure[Optimal form]{\label{code:multi_loopnest_c}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/multilinear_loopnest_opt.code}}}
 \end{CenteredBox}\caption{Reducing a simple multilinear loop nest to optimal form.}\label{code:multi_loopnest}\end{figure}
 
-In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of expansion, factorization, and generalized code motion. If the objective were reaching optimality and the expressions lacked structure, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, exploits the structure inherent in finite element integration expressions to guarantee quasi-optimality\footnote{This requires coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of exposition -- we neglect this aspect.}, with optimality being achieved if stronger preconditions hold. Setting quasi-optimality, instead of optimality, as primary goal is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
+In this section, we study \textit{sharing elimination}, a transformation that aims to reduce the operation count by removing sharing through the application of expansion, factorization, and generalized code motion. If the objective were reaching optimality and the expressions lacked structure, a transformation of this sort would require solving a large combinatorial problem -- for instance to evaluate the impact of all possible factorizations. Our sharing elimination strategy, instead, exploits the structure inherent in finite element integration expressions to guarantee local optimality\footnote{This requires coordination with other transformations, as discussed in the following sections. For the moment -- and for ease of exposition -- we neglect this aspect.}, with optimality being achieved if stronger preconditions hold. Setting local optimality, instead of optimality, as primary goal is essential to produce simple and computationally efficient algorithms -- two necessary conditions for integration with a compiler. 
 
 %Section~\ref{sec:se-rln} discusses structural and algebraic properties characterizing our expressions. Section~\ref{sec:se-algo} presents the sharing elimination algorithm. Examples are provided in Section~\ref{sec:se-examples}. We recall that we are assuming a generic finite element integration loop nest $\Lambda=[L_e, L_i, L_j, L_k]$ with expressions in normal form.
 
@@ -508,7 +508,7 @@ We defined sharing elimination and pre-evaluation as high level transformations 
 
 \section{Selection and composition of transformations}
 \label{sec:optimal-synthesis}
-In this section, we build a transformation algorithm that, given a memory bound, systematically produces quasi-optimal finite element integration loop nests. 
+In this section, we build a transformation algorithm that, given a memory bound, systematically reaches a local optimum for finite element integration loop nests. 
 
 \subsection{Transformation algorithm}
 We address the two following issues: 
@@ -559,11 +559,11 @@ If $\iota \geq I$ (the extent of the reduction loop), we already know that pre-e
 
 \section{Formalization}
 \label{sec:proof}
-We demonstrate that the orchestration of sharing elimination and pre-evaluation as performed by the transformation algorithm guarantees quasi-optimality (Definition~\ref{def:mln-quasi-optimality}). The proof re-uses concepts and explanations provided throughout the paper, as well as the terminology introduced in Section~\ref{sec:se-algo}.
+We demonstrate that the orchestration of sharing elimination and pre-evaluation as performed by the transformation algorithm guarantees local optimality (Definition~\ref{def:mln-quasi-optimality}). The proof re-uses concepts and explanations provided throughout the paper, as well as the terminology introduced in Section~\ref{sec:se-algo}.
 
 \begin{Prop}
 \label{prop:optimal-approach}
-Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that, according to $\Gamma$, need be pre-evaluated, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is quasi-optimal in the sense of Definition~\ref{def:mln-quasi-optimality} and satisfies Constraint~\ref{const:TH}.
+Consider a multilinear form comprising a set of monomials $M$, and let $\Lambda$ be the corresponding finite element integration loop nest. Let $\Gamma$ be the transformation algorithm. Let $X$ be the set of monomials that, according to $\Gamma$, need be pre-evaluated, and let $Y = M \setminus X$. Assume that the pre-evaluation of different monomials does not result in identical tables. Then, $\Lambda' = \Gamma(\Lambda)$ is a local optimum in the sense of Definition~\ref{def:mln-quasi-optimality} and satisfies Constraint~\ref{const:TH}.
 \end{Prop}
 \begin{proof}
 We first observe that the cost function $\theta$ predicts the \textit{exact} gain/loss in monomial pre-evaluation, so $X$ and $Y$ can actually be constructed.
@@ -575,7 +575,7 @@ Let $c_\Lambda$ denote the operation count for $\Lambda$ and let $\Lambda_I \sub
 \item \textit{pre-evaluating any $m \in Y$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \item \textit{not pre-evaluating any $m \in X$ would result in $c_{\Lambda''_I} > c_{\Lambda'_I}$}
 \end{enumerate}
-\item \textit{Sharing elimination produces quasi-optimal (or optimal) loop nests.}\\
+\item \textit{Sharing elimination leads to a (at least) local optimum.}\\
 \end{enumerate}
 
 We discuss these points separately
