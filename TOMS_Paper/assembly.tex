@@ -420,12 +420,12 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 
 \item Map $G$ to an Integer Linear Programming (ILP) problem for determining how to optimally apply Strategy~\ref{strategy:ii}. The solution is the set of symbols that will be factorized by Strategy~\ref{strategy:ii}. Let $|S| = n$; the ILP model then is as follows:
 \begin{gather*}
-x_i \text{: a vertex in } S \text{ (1 if a symbol must be factorized, 0 otherwise)}\\
-y_{ij} \text{: a direct edge in } E \text{ (1 if the product } s^i s^j \text{ is factorized through } s^i \text{, 0 otherwise)}\\
+x_i \text{: a vertex in } S \text{ (1 if a symbol should be factorized, 0 otherwise)}\\
+y_{ij} \text{: an edge in } E \text{ (1 if } s^i \text{ is factorized in the product } s^i s^j \text{ , 0 otherwise)}\\
 n_i \text{: the number of edges incident to } x_i \\
 \begin{align*}
-\min \sum_{i=1}^{n} x_i,\ s.t. ~~~~~~~~~&\sum_{j=1}^{n} y_{ij} \leq n_i x_i,\ i = 1, ..., n \\
-& y_{ij} + y_{ji} = 1,\ i, j = 1, ..., n
+\min \sum_{i=1}^{n} x_i,\ s.t. ~~~~~~~~~&\sum_{j|(i,j) \in E} y_{ij} \leq n_i x_i,\ i = 1, ..., n \\
+& y_{ij} + y_{ji} = 1,\ (i, j) \in E
 \end{align*}
 \phantom{\hspace{6cm}}
 \end{gather*}
@@ -445,7 +445,7 @@ Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operati
 \label{sec:se-examples}
 Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. The ILP formulation leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$, and since $S = T$ the ILP formulation becomes irrelevant because there are no factorization opportunities.
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$. Since there are no more factorization opportunities, the ILP formulation becomes irrelevant.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
@@ -453,7 +453,7 @@ In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is execut
 {\subfigcapskip = 7pt \subfigure[After sharing elimination]{\label{code:poisson_b}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_after_se.code}}}
 \end{CenteredBox}\caption{Applying sharing elimination to the bilinear form arising from a Poisson equation in 2D. The operation counts are $E(f(z^0, z^1, ...) + IJK \cdot 18)$ (left) and $E(f(z^0, z^1, ...) + I(J \cdot 6 + K \cdot 9 + JK \cdot 4)$ (right), with $f(z^0, z^1, ...)$ representing the operation count for evaluating $z^0, z^1, ...$, and common sub-expressions being counted once. Note that the synthesis in Figure~\ref{code:poisson_b} reaches optimality apart from the pathological case  $I, J, K = 1$.}\label{code:poisson}\end{figure}
 
-A much more complex example, using the hyperelastic model evaluated in Section~\ref{sec:perf-results}, is made available online\footnote{Sharing elimination example - application to a hyperelastic model: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
+For reasons of space, further examples, including the hyperelastic model evaluated in Section~\ref{sec:perf-results} and other non-trivial ILP instances, are made available online\footnote{Sharing elimination examples: \url{https://gist.github.com/FabioLuporini/14e79457d6b15823c1cd}}.
 
 \subsection{Monomial pre-evaluation}
 \label{sec:pre-evaluation}
@@ -588,7 +588,7 @@ We discuss these points separately
 \end{enumerate}
 \item Consider Algorithm~\ref{algo:sharing-elimination}. Proposition~\ref{prop:multi-struct} ensures that there are only two ways of scheduling the multilinear operands in $P \in \mathbb{P}$: through generalized code motion (Strategy~\ref{strategy:i}) or factorization of multilinear symbols (via Strategy~\ref{strategy:ii}). If applied, these two strategies would lead, respectively, to performing $|P|$ and $|S_P|$ multiplications at every loop iteration. Since Strategy~\ref{strategy:i} is applied if and only if $|P| < |S_P|$ and does not change the structure of the expression (it requires neither expansion nor factorization), step (1) cannot prune the optimum from the search space. 
 
-After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, the ILP model is instantiated. At this point, the optimality of the algorithm reduces to prove the correctness of the model. The model aims ...
+After structuring the sharing graph $G$ in such a way that only flop-decreasing transformations are possible, the ILP model is instantiated. At this point, the optimality of the algorithm reduces to prove the correctness of the model, which is relatively straightforward because of its simplicity. The model aims to minimize the operation count by individuating the most promising factorizations. The second set of constraints is to select all edges (i.e., all multiplications), exactly once. The first set of inequalities allows scheduling multiplications: once a vertex $s$ is selected (i.e., once a symbol is decided to be factorized), all multiplications involving $s$ can be grouped. 
 \end{enumerate}
 \end{proof}
 
