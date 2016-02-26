@@ -134,11 +134,11 @@ Department of Mathematics, Imperial College London;
 
 \section{Introduction}
 
-The need for rapid implementation of high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proven successful in the context of the FEniCS (\cite{Fenics}) and Firedrake (\cite{firedrake-paper}) projects. In these frameworks, the weak variational form of a problem is expressed at high level by means of a domain-specific language. The mathematical specification is manipulated by a form compiler that generates a representation of assembly operators. By applying these operators to an element in the discretized domain, a local matrix and a local vector, which represent the contributions of that element to the equation approximated solution, are computed. The code for assembly operators must be carefully optimized: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
+The need for rapid implementation of high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proven successful in the context of the FEniCS (\cite{Fenics}) and Firedrake (\cite{firedrake-paper}) projects. In these frameworks, the weak variational form of a problem is expressed at high level by means of a domain-specific language. The mathematical specification is manipulated by a form compiler that generates a representation of assembly operators. By applying these operators to an element in the discretized domain, a local matrix and a local vector, which represent the contributions of that element to the equation's approximated solution, are computed. The code for assembly operators must be carefully optimized: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
 
 As demonstrated by the substantial body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent in the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary; we show this is Section~\ref{sec:perf-results}). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO (\cite{PLUTO}), focus on parallelization and optimization for cache locality, treating issues orthogonal to the question of minimising flops. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. In~\citeN{quadrature1}, it is shown how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. In~\citeN{FFC-TC} and~\citeN{Francis}, mathematical reformulations of finite element integration are studied with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low level optimizations are analysed. It is also worth mentioning an on-going effort to produce a new form compiler, called UFLACS (\cite{Uflacs}), which adds to the already abundant set of code transformation systems for assembly operators. The performance evaluation in Section~\ref{sec:perf-results} includes most of these optimization systems.
 
-However, in spite of such a considerable research effort, still there is no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``local optimality'', which relates operation count with inner loops). Summarizing, our contributions are as follows:
+However, in spite of such a considerable research effort, there is still no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``local optimality'', which relates operation count with inner loops). Summarizing, our contributions are as follows:
 
 \begin{itemize}
 \item We formalize the class of finite element integration loop nests and we build the space of legal transformations impacting their operation count.
@@ -151,7 +151,7 @@ However, in spite of such a considerable research effort, still there is no answ
 In addition, in order to place COFFEE on the same level as other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison)
 
 \begin{itemize}
-\item We introduce an engine based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities).
+\item We introduce a transformation based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities).
 \end{itemize}
 
 
@@ -180,7 +180,7 @@ b_i = L(\phi_i(x))
 \end{equation}
 The matrix $A$ and the vector $b$ are ``assembled'' and subsequently used to solve the linear system through (typically) an iterative method.
 
-We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation approximated solution. In global assembly, such local contributions are ``coupled'' by suitably inserting them into $A$ and $b$. 
+We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation's approximated solution. In global assembly, such local contributions are ``coupled'' by suitably inserting them into $A$ and $b$. 
 
 We illustrate local assembly in a concrete example, the evaluation of the local element matrix for a Laplacian operator. Consider the weighted Laplace equation
 \begin{equation}
@@ -265,7 +265,7 @@ concepts of a \textit{linear loop} and, more generally, a (perfect) multilinear 
 A loop $L$ defining the iteration space $I$ through the iteration variable $i$, or simply $L_i$, is linear if in its body
 \begin{enumerate}
 \item $i$ appears only as an array index, and
-\item whenever an array $a$ is indexed by $i$ ($a[i]$), all expressions in which this appears are affine in $a$.
+\item whenever an array $a$ is indexed by $i$ ($a[i]$), all expressions in which this appears are affine in $a[i]$.
 \end{enumerate}
 \end{Def}
 
