@@ -407,16 +407,17 @@ Examples will be provided in Section~\ref{sec:se-examples}.
 \normalfont 
 ~
 \begin{enumerate}
-\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions. For all multilinear operands in $P \in \mathbb{P}$ such that $|P| < |S_P|$, apply Strategy~\ref{strategy:i}. \\
-\textit{Note: $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if, respectively, Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied. This is a consequence of Proposition~\ref{prop:multi-struct}.}
+\item Perform a depth-first visit of the expression tree to collect and partition multilinear operands into disjoint sets, $\mathbb{P} = \lbrace P^1, ..., P^{p}\rbrace$. $\mathbb{P}$ is such that all multilinear operands in $P$ share the same set of multilinear symbols $S_P$, whereas there is no sharing across different partitions. For all multilinear operands in $P \in \mathbb{P}$ such that $|P| \leq |S_P|$, apply Strategy~\ref{strategy:i}. \\
+\textit{Note: as a consequence of Proposition~\ref{prop:multi-struct}, $|P|$ and $|S_P|$ represent the number of products in the innermost loop induced by $P$ if Strategy~\ref{strategy:i} or Strategy~\ref{strategy:ii} were applied}
 
-\item Build the \textit{sharing graph} $G= (S, E)$. Each $s \in S$ represents a multilinear symbol or a temporary produced at step (1). An edge $(s^i$, $s^j)$ indicates that a product $s^i s^j$ would appear if the sub-expressions including $s^i$ and $s^j$ were expanded. 
+\item For each sub-expression $expr$ depending on exactly one linear loop, collect the multilinear symbols and the temporaries produced at step (1). Partition them into disjoint sets, $\mathbb{T} = \lbrace T^1, ..., T^t\rbrace$, such that $T^i$ includes all instances of a given symbol in $expr$. Apply Strategy~\ref{strategy:ii} factorizing the symbols in each $T^i$, provided that this leads to a reduction in operation count; otherwise, apply Strategy~\ref{strategy:i} \\
+\textit{Note: the last check ensures the flop-decreasing nature of the transformation. In the cases in which expansion outweighs code motion, Strategy~\ref{strategy:i} is preferred.}\\
+\textit{Note: the expansion cost is a function of the products wrapping a symbol (how many of them and their arity), so it can be determined in a tree visit.}
 
-\item Let $T \subset S$ be the subset of vertices with at most one incident edges, or ``terminals''. Partition $T$ into disjoint sets, $\mathbb{T} = \lbrace T^1, ..., T^t\rbrace$, such that the terminals in $T^i$ are either adjacent to the same vertex or disconnected. Apply Strategy~\ref{strategy:ii} factorizing the terminals in each $T^i$, provided that this leads to a reduction in operation count.\\
-\textit{Note: the last check ensures the flop-decreasing nature of the transformation; the cases in which the expansion cost exceeds the code motion gain are discarded.}
+\item Build the \textit{sharing graph} $G = (S, E)$. Each $s \in S$ represents a multilinear symbol or a temporary produced by the previous steps. An edge $(s^i$, $s^j)$ indicates that a product $s^i s^j$ would appear if the sub-expressions including $s^i$ and $s^j$ were expanded.\\
+\textit{Note: the following steps will only impact bilinear forms, since otherwise $E = \emptyset$.}
 
-\item Partition $S$ into disjoint sets, $\mathbb{S} = \lbrace S^1, ..., S^n\rbrace$, such that $S^i$ includes all instances of a given symbol $s$ in the expression. Transform $G$ by merging $\lbrace s^1, ..., s^m \rbrace \subset S^i$ into a unique vertex $s$ (taking the union of the edges), provided that factorizing $[s^1, ..., s^m]$ will not cause an increase in operation count.\\
-\textit{Note: the variation in operation count is a function of (number and arity) of the products wrapping $[s^1, ..., s^m]$, which impact the expansion cost.}
+\item Partition $S$ into disjoint sets, $\mathbb{S} = \lbrace S^1, ..., S^n\rbrace$, such that $S^i$ includes all instances of a given symbol $s$ in the expression. Transform $G$ by merging $\lbrace s^1, ..., s^m \rbrace \subset S^i$ into a unique vertex $s$ (taking the union of the edges), provided that factorizing $[s^1, ..., s^m]$ would not cause an increase in operation count.
 
 \item Map $G$ to an Integer Linear Programming (ILP) model for determining how to optimally apply Strategy~\ref{strategy:ii}. The solution is the set of symbols that will be factorized by Strategy~\ref{strategy:ii}. Let $|S| = n$; the ILP model then is as follows:
 \begin{gather*}
@@ -429,7 +430,7 @@ n_i \text{: the number of edges incident to } x_i \\
 \end{align*}
 \phantom{\hspace{6cm}}
 \end{gather*}
-\textit{Note: steps (4) and (5) only impact bilinear forms, since otherwise $E = \emptyset$.}
+
 
 \item Perform a depth-first visit of the expression tree and, for each yet unhandled or hoisted expression, apply the most profitable between Strategy~\ref{strategy:i} and Strategy~\ref{strategy:ii}. \\
 \textit{Note: this pass speculatively assumes that expressions are (weakly) structured along the reduction loop. If the assumption does not hold, the operation count will generally be sub-optimal because only a subset of factorizations and code motion opportunities may eventually be considered.}
@@ -438,7 +439,7 @@ n_i \text{: the number of edges incident to } x_i \\
 
 \begin{Rem*}
 \normalfont
-Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of flop-decreasing transformations (steps (3) and (4)) and the re-scheduling of sub-expressions within outer loops (last step) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
+Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operation count minimization within the multilinear loop nest, the enforcement of flop-decreasing transformations (steps (2) and (4)) and the re-scheduling of sub-expressions within outer loops (last step) also attempt to optimize the loop nest ``globally''. We will further elaborate this aspect in Section~\ref{sec:proof}.
 \end{Rem*}
 
 
@@ -446,7 +447,7 @@ Although the primary goal of Algorithm~\ref{algo:sharing-elimination} is operati
 \label{sec:se-examples}
 Consider again Figure~\ref{code:multi_loopnest_a}. We have $\mathbb{P} = \lbrace P^0, P^1, P^2\rbrace$, with $P^0 = \lbrace b_j\rbrace$, $P^1 = \lbrace c_i\rbrace$, and $P^2 = \lbrace d_i\rbrace$. For all $P^i$, we have $|P^i| = 1 = |S_{P^i}|$, although applying Strategy~\ref{strategy:i} in step (1) has no effect. The sharing graph is $G = (\lbrace b_j, c_i, d_i \rbrace, \lbrace (b_j, c_i), (b_j, d_i) \rbrace$, and $T = \lbrace c_i, d_i \rbrace$. The ILP formulation leads to the code in Figure~\ref{code:multi_loopnest_c}.
 
-In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (2)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$. Since there are no more factorization opportunities, the ILP formulation becomes irrelevant.
+In Figure~\ref{code:poisson}, Algorithm~\ref{algo:sharing-elimination} is executed in a realistic scenario, which originates from the bilinear form of a Poisson equation in two dimensions. We observe that $\mathbb{P} = \lbrace P^0, P^1\rbrace$, with $P^0 = \lbrace (z_0 a_{ik} + z_2 b_{ik}), (z_1 a_{ik} + z_3 b_{ik})\rbrace$ and $P^1 = \lbrace (z_0 a_{ij} + z_2 b_{ij}), (z_1 a_{ij} + z_3 b_{ij})\rbrace$. In addition, $|P^i| = |S_{P^i}| = 2$, so Strategy~\ref{strategy:i} is applied to both partitions (step (1)). We then have (step (3)) $G = (\lbrace t^0, t^1, t^2, t^3 \rbrace, \lbrace (t^0, t^2), (t^1, t^3) \rbrace)$. Since there are no more factorization opportunities, the ILP formulation becomes irrelevant.
 
 \begin{figure}[h]\begin{CenteredBox}
 {\subfigcapskip = 7pt \subfigure[Normal form]{\label{code:poisson_a}\lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/poisson_pre_se.code}}}
