@@ -74,10 +74,11 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{On Optimality of Finite Element Integration}
+\markboth{F. Luporini et al.}{An algorithm for the optimization of finite element integration loops}
 
 % Title portion
-\title{On Optimality of Finite Element Integration}
+
+\title{An algorithm for the optimization of finite element integration loops}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -86,7 +87,7 @@ Paul H. J. Kelly
 \affil{Imperial College London}}
 
 \begin{abstract}
-We tackle the problem of automatically generating optimal finite element integration routines given a high level specification of arbitrary multilinear forms. Global and local optimality are defined in terms of floating point operations given a memory bound. We provide an approach for exploring the space of legal transformations, which systematically reaches a local optimum. The conditions under which a global optimum is achieved are also discussed. A theoretical analysis and extensive experimentation, which shows significant performance improvements over several state-of-the-art code generation systems, validate the approach.
+We present an algorithm for the  optimization of a finite element integration loop nest. This algorithm is proven to achieve a locally optimal operation count. In specified circumstances the optimum achieved is global. Extensive numerical experiments demonstrate significant performance improvements over the state of the art in finite element code generation in almost all cases. This validates the algorithm presented here, and illustrate its limitations. 
 \end{abstract}
 
 \category{G.1.8}{Numerical Analysis}{Partial Differential Equations -
@@ -98,7 +99,7 @@ We tackle the problem of automatically generating optimal finite element integra
 
 \keywords{Finite element integration, local assembly, compilers, performance optimization}
 
-\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2015. On Optimality of Finite Element Integration.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2015. An algorithm for the optimization of finite element integration loops.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
