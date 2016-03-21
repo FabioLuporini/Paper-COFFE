@@ -133,11 +133,11 @@ Imperial College London; David A. Ham, Department of Mathematics, Imperial Colle
 
 \section{Introduction}
 
-The need for rapid implementation of high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proven successful in the context of the FEniCS (\cite{Fenics}) and Firedrake (\cite{firedrake-paper}) projects. In these frameworks, the weak variational form of a problem is expressed at high level by means of a domain-specific language. The mathematical specification is manipulated by a form compiler that generates a representation of assembly operators. By applying these operators to an element in the discretized domain, a local matrix and a local vector, which represent the contributions of that element to the equation's approximated solution, are computed. The code for assembly operators must be carefully optimized: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
+The need for rapid implementation of high performance, robust, and portable finite element methods has led to approaches based on automated code generation. This has been proven successful in the context of the FEniCS \cite{Fenics} and Firedrake \cite{firedrake-paper} projects. In these frameworks, the weak variational form of a problem is expressed in a high level mathematical syntax by means of the domain-specific language UFL \cite{UFL}. This mathematical specification is used by a domain-specific compiler, known as a form compiler, to generate low-level C or C++ code for the integration over a single element of the computational mesh of the variational problem's left and right hand side operators. The code for assembly operators must be carefully optimized: as the complexity of a variational form increases, in terms of number of derivatives, pre-multiplying functions, or polynomial order of the chosen function spaces, the operation count increases, with the result that assembly often accounts for a significant fraction of the overall runtime. 
 
-As demonstrated by the substantial body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent in the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as \emph{GNU's} and \emph{Intel's}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary; we show this is Section~\ref{sec:perf-results}). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO (\cite{PLUTO}), focus on parallelization and optimization for cache locality, treating issues orthogonal to the question of minimising flops. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. In~\citeN{quadrature1}, it is shown how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. In~\citeN{FFC-TC} and~\citeN{Francis}, mathematical reformulations of finite element integration are studied with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low level optimizations are analysed. It is also worth mentioning an on-going effort to produce a new form compiler, called UFLACS (\cite{Uflacs}), which adds to the already abundant set of code transformation systems for assembly operators. The performance evaluation in Section~\ref{sec:perf-results} includes most of these optimization systems.
+As demonstrated by the substantial body of research on the topic, automating the generation of such high performance implementations poses several challenges. This is a result of the complexity inherent in the mathematical expressions involved in the numerical integration, which varies from problem to problem, and the particular structure of the loop nests enclosing the integrals. General-purpose compilers, such as those by \emph{GNU} and \emph{Intel}, fail at exploiting the structure inherent in the expressions, thus producing sub-optimal code (i.e., code which performs more floating-point operations, or ``flops'', than necessary; we show this is Section~\ref{sec:perf-results}). Research compilers, for instance those based on polyhedral analysis of loop nests such as PLUTO \cite{PLUTO}, focus on parallelization and optimization for cache locality, treating issues orthogonal to the question of minimising flops. The lack of suitable third-party tools has led to the development of a number of domain-specific code transformation (or synthesizer) systems. \citeN{quadrature1} show how automated code generation can be leveraged to introduce optimizations that a user should not be expected to write ``by hand''. \citeN{FFC-TC} and~\citeN{Francis} employ mathematical reformulations of finite element integration with the aim of minimizing the operation count. In~\citeN{Luporini}, the effects and the interplay of generalized code motion and a set of low level optimizations are analysed. It is also worth mentioning two new new form compilers, UFLACS \cite{Uflacs} and \cite{TSFC}, which particularly target the compile time challenges of the more complex variational forms. The performance evaluation in Section~\ref{sec:perf-results} includes most of these optimization systems.
 
-However, in spite of such a considerable research effort, there is still no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``local optimality'', which relates operation count with inner loops). Summarizing, our contributions are as follows:
+However, in spite of such a considerable research effort, there is still no answer to one fundamental question: can we automatically generate an implementation of a form which is optimal in the number of flops executed? In this paper, we formulate an approach that solves this problem for a particular class of forms and provides very good approximations in all other cases (we will define ``local optimality'', which relates operation count with inner loops). In summary, our contributions are as follows:
 
 \begin{itemize}
 \item We formalize the class of finite element integration loop nests and we build the space of legal transformations impacting their operation count.
@@ -147,26 +147,26 @@ However, in spite of such a considerable research effort, there is still no answ
 \item We experimentally evaluate using a broader suite of forms, discretizations, and code generation systems than has been used in prior research. This is essential to demonstrate that our optimality model holds in practice.
 \end{itemize}
 
-In addition, in order to place COFFEE on the same level as other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison)
+In addition, in order to place COFFEE on the same level as other code generation systems from the viewpoint of low level optimization (which is essential for a fair performance comparison):
 
 \begin{itemize}
-\item We introduce a transformation based on symbolic execution that allows skipping irrelevant floating point operations (e.g., those involving zero-valued quantities).
+\item We introduce a transformation based on symbolic execution that allows irrelevant floating point operations to be skipped (for example those involving zero-valued quantities).
 \end{itemize}
 
-After reviewing basic concepts in finite element integration, we introduce in Section~\ref{sec:lnopt} a set of definitions mapping mathematical properties to the level of loop nests. This step is essential for understanding the two algorithms -- sharing elimination (Section~\ref{sec:sharing-elimination}) and pre-evaluation (Section~\ref{sec:pre-evaluation}) -- through which we construct the space of legal transformations. The main ``transformation algorithm'' in Section~\ref{sec:optimal-synthesis} delivers the local optimality claim by using a cost model to ``coordinate'' the application of sharing elimination and pre-evaluation. We elaborate on the correctness of the methodology in Section~\ref{sec:proof}. The numerical experiments are showed in Section~\ref{sec:perf-results}. We conclude discussing the limitations of the algorithms presented and future work. 
+After reviewing basic concepts in finite element integration, in Section~\ref{sec:lnopt} we introduce a set of definitions mapping mathematical properties to the level of loop nests. This step is an essential precursor to the definition of the two algorithms -- sharing elimination (Section~\ref{sec:sharing-elimination}) and pre-evaluation (Section~\ref{sec:pre-evaluation}) -- through which we construct the space of legal transformations. The main transformation algorithm in Section~\ref{sec:optimal-synthesis} delivers the local optimality claim by using a cost model to coordinate the application of sharing elimination and pre-evaluation. We elaborate on the correctness of the methodology in Section~\ref{sec:proof}. The numerical experiments are showed in Section~\ref{sec:perf-results}. We conclude discussing the limitations of the algorithms presented and future work. 
 
 \section{Preliminaries}
 \label{sec:background}
 We review finite element integration using the same notation and examples adopted in~\citeN{quadrature1} and~\citeN{Francis}. 
 
-We consider the weak formulation of a linear variational problem
+Consider the weak formulation of a linear variational problem:
 \begin{equation}
 \begin{split}
 \text{Find}\ u \in U\ \text{such that} \\
 a(u, v) = L(v), \forall v \in V
 \end{split}
 \end{equation}
-where $a$ and $L$ are, respectively, a bilinear and a linear form. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are discrete function spaces. For simplicity, we assume $U = V$. Let $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$:
+where $a$ and $L$ are, respectively, a bilinear and a linear form. The set of \textit{trial} functions $U$ and the set of \textit{test} functions $V$ are suitable discrete function spaces. For simplicity, we assume $U = V$. Let $\lbrace \phi_i \rbrace$ be the set of basis functions spanning $U$. The unknown solution $u$ can be approximated as a linear combination of the basis functions $\lbrace \phi_i \rbrace$. From the solution of the following linear system it is possible to determine a set of coefficients to express $u$:
 \begin{equation}
 Au = b
 \end{equation}
@@ -178,11 +178,11 @@ A_{ij} = a(\phi_i(x), \phi_j(x)) \\
 b_i = L(\phi_i(x))
 \end{split}
 \end{equation}
-The matrix $A$ and the vector $b$ are ``assembled'' and subsequently used to solve the linear system through (typically) an iterative method.
+The matrix $A$ and the vector $b$ are assembled and subsequently used to solve the linear system through (typically) an iterative method.
 
-We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation's approximated solution. In global assembly, such local contributions are ``coupled'' by suitably inserting them into $A$ and $b$. 
+We focus on the assembly phase, which is often characterized as a two-step procedure: \textit{local} and \textit{global} assembly. Local assembly is the subject of this article. It consists of computing the contributions of a single element in the discretized domain to the equation's approximated solution. During global assembly, these local contributions are coupled by suitably inserting them into $A$ and $b$. 
 
-We illustrate local assembly in a concrete example, the evaluation of the local element matrix for a Laplacian operator. Consider the weighted Laplace equation
+We illustrate local assembly in a concrete example, the evaluation of the local element matrix for a Laplacian operator. Consider the weighted Poisson equation:
 \begin{equation}
 - \nabla \cdot (w \nabla u) = 0
 \end{equation}
@@ -190,7 +190,7 @@ in which $u$ is unknown, while $w$ is prescribed. The bilinear form associated w
 \begin{equation}
 a(v, u) = \int_\Omega w \nabla v \cdot \nabla u\ \mathrm{d}x
 \end{equation}
-The domain $\Omega$ of the equation is partitioned into a set of cells (elements) $T$ such that $\bigcup T = \Omega$ and $\bigcap T = \emptyset$. By defining $\lbrace \phi_i^K \rbrace$ as the set of local basis functions spanning $U$ on the element $K$, we can express the local element matrix as
+The domain $\Omega$ of the equation is partitioned into a set of cells (elements) $T$ such that $\bigcup T = \Omega$ and $\bigcap T = \emptyset$. By defining $\lbrace \phi_i^K \rbrace$ as the set of basis functions with support on the element $K$ (i.e. those which do not vanish on this element), we can express the local element matrix as
 \begin{equation}
 \label{stiffness}
 A_{ij}^K = \int_K w \nabla \phi_i^K \cdot \nabla \phi_j^K\ \mathrm{d}x
@@ -199,42 +199,43 @@ The local element vector $L$ can be determined in an analogous way.
 
 \subsection{Monomials}
 \label{sec:monomials}
-It has been shown (e.g., in~\citeN{Kirby:TC}) that local element tensors can be expressed as a sum of integrals over $K$, each integral being the product of derivatives of functions from sets of discrete spaces and, possibly, functions of some spatially varying coefficients. An integral of this form is called \textit{monomial}. 
+It has been shown (for example in~\citeN{Kirby:TC}) that local element tensors can be expressed as a sum of integrals over $K$, each integral being the product of derivatives of functions from sets of discrete spaces and, possibly, functions of some spatially varying coefficients. An integral of this form is called \textit{monomial}. 
 
 %From the computational perspective, its evaluation is however less expensive than that of $A$.
 
 \subsection{Quadrature mode}
-Quadrature schemes are typically used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies that a change of variables from reference coordinates $X_0$ to real coordinates $x = F_K (X_0)$ is necessary any time a new element is evaluated. The numerical integration routine based on quadrature over an element $K$ can be expressed as follows
+Quadrature schemes are typically used to numerically evaluate $A_{ij}^K$. For convenience, a reference element $K_0$ and an affine mapping $F_K : K_0 \rightarrow K$ to any element $K \in T$ are introduced. This implies that a change of variables from reference coordinates $X$ to real coordinates $x = F_K (X)$ is necessary any time a new element is evaluated. The basis functions $\{\phi_i^K\}$ are then replaced with local basis functions $\{\Phi_i\}$ such that $\Phi_i(X) = \phi_i^k(F_K(X)) = \phi_i^k(x) $. The numerical integration of \eqref{stiffness} over an element $K$ can then be expressed as follows:
 \begin{equation}
 \label{eq:quadrature}
-A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \phi_{\alpha_3}(X^q)w_{\alpha_3} \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\beta=1}^d \frac{\partial X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial \phi_i^K(X^q)}{\partial X_{\alpha_1}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \frac{\partial \phi_j^K(X^q)}{\partial X_{\alpha_2}} det F_K' W^q
+A_{ij}^K = \sum_{q=1}^N \sum_{\alpha_3=1}^n \Phi_{\alpha_3}(X^q)w_{\alpha_3} \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\beta=1}^d \frac{\partial X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial \Phi_i(X^q)}{\partial X_{\alpha_1}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \frac{\partial \Phi_j(X^q)}{\partial X_{\alpha_2}}  \det (F_K')W^q
 \end{equation}
-where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ is the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $det$ the determinant of the Jacobian matrix used for the aforementioned change of coordinates.  
+where $N$ is the number of integration points, $W^q$ the quadrature weight at the integration point $X^q$, $d$ the dimension of $\Omega$, $n$ the number of degrees of freedom associated to the local basis functions, and $\det (F_K')$ the determinant of the Jacobian of the aforementioned change of coordinates.  
 
 % Magari la summation sui coefficients la sputo dentro? che dici?
 
 \subsection{Tensor contraction mode}
 \label{sec:tc}
-Starting from Equation~\ref{eq:quadrature}, exploiting linearity, associativity and distributivity of the involved mathematical operators, we can rewrite the expression as
+By exploiting the linearity, associativity and distributivity of the
+relevant mathematical operators, we can rewrite \eqref{eq:quadrature} as
 \begin{equation}
 \label{eq:tensor}
-A_{ij}^K = \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\alpha_3=1}^n det F_K' w_{\alpha_3} \sum_{\beta=1}^d \frac{X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \int_{K_0} \phi_{\alpha_3} \frac{\partial \phi_{i_1}}{\partial X_{\alpha_1}} \frac{\partial \phi_{i_2}}{\partial X_{\alpha_2}} dX.
+A_{ij}^K = \sum_{\alpha_1=1}^d \sum_{\alpha_2=1}^d \sum_{\alpha_3=1}^n \left(\det (F_K') w_{\alpha_3} \sum_{\beta=1}^d \frac{X_{\alpha_1}}{\partial x_{\beta}} \frac{\partial X_{\alpha_2}}{\partial x_{\beta}} \left(\sum_{q=1}^{N} \Phi_{\alpha_3} \frac{\partial \Phi_{i_1}}{\partial X_{\alpha_1}} \frac{\partial \Phi_{i_2}}{\partial X_{\alpha_2}}W^q\right)\right).
 \end{equation}
-A generalization of this transformation has been proposed in~\cite{Kirby:TC}. Because of only involving reference element terms, the integral in the equation can be pre-evaluated and stored in temporary variables. The evaluation of the local tensor can then be abstracted as
+A generalization of this transformation was introduced in~\cite{Kirby:TC}. Since it only involves reference element terms, the quadrature sum can be pre-evaluated and reused for each element. The evaluation of the local tensor can then be abstracted as
 \begin{equation}
 A_{ij}^K = \sum_{\alpha} A_{i_1 i_2 \alpha}^0 G_{K}^\alpha
 \end{equation}
-in which the pre-evaluated ``reference tensor'' $A_{i_1 i_2 \alpha}$ and the cell-dependent ``geometry tensor'' $G_{K}^\alpha$ are exposed. 
+in which the pre-evaluated \emph{reference tensor}, $A_{i_1 i_2 \alpha}$, and the cell-dependent \emph{geometry tensor}, $G_{K}^\alpha$, are exposed. 
 
 \subsection{Qualitative comparison}
 \label{sec:qualitative}
-Depending on form and discretization, the relative performance of the two modes, in terms of the operation count, can vary quite dramatically. The presence of derivatives or coefficient functions in the input form increases the rank of the geometry tensor, making the traditional quadrature mode preferable for ``complex'' forms. On the other hand, speed-ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains ``sufficiently small''. The discretization, particularly the relative polynomial order of trial, test, and coefficient functions, also plays a key role in the resulting operation count. 
+Depending on form and discretization, the relative performance of the two modes, in terms of the operation count, can vary quite dramatically. The presence of derivatives or coefficient functions in the input form increases the rank of the geometry tensor, making the traditional quadrature mode preferable for sufficiently complex forms. On the other hand, speed-ups from adopting tensor mode can be significant in a wide class of forms in which the geometry tensor remains sufficiently small. The discretization, particularly the polynomial order of trial, test, and coefficient functions, also plays a key role in the resulting operation count. 
 
-These two modes have been implemented in the FEniCS Form Compiler (\cite{FFC-TC}). In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically (\cite{Fenics}). We will later comment on the efficacy of this approach (Section~\ref{sec:perf-results}). For the moment, we just recall that one of the goals of this research is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
+These two modes are implemented in the FEniCS Form Compiler \cite{FFC-TC}. In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically \cite{Fenics}. We will return to the efficacy of this approach in section \ref{sec:perf-results}. One of the objectives of this paper is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
 
 \section{Transformation Space}
 \label{sec:optimal-impl}
-In this section, we characterize global and local optimality for finite element integration as well as the space of legal transformations that needs be explored to achieve them. How the exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
+In this section, we characterize global and local optimality for finite element integration as well as the space of legal transformations that needs be explored to achieve them. The method by which exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
 
 \subsection{Loop nests, expressions and optimality}
 \label{sec:lnopt}
@@ -296,7 +297,7 @@ A loop $L_i$ is said to be an order-free loop if its iterations can be executed 
 \lstinputlisting[basicstyle=\footnotesize\ttfamily]{listings/loopnest.code}
 \end{CenteredBox}\caption{The loop nest implementing a generic bilinear form.}\label{code:loopnest}\end{figure}
 
-Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises an order-free loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. Expressions (right hand side of a statement) result from the translation of a form in high level matrix notation into code. In particular, $m$ is the number of ``terms'' (a monomial can be implemented by one or more terms), $\alpha_{eij}$ ($\beta_{eik}$) represents the product of a coefficient function (e.g., the inverse Jacobian matrix for the change of coordinates) with test (trial) functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose any restrictions on function spaces (e.g., scalar- or vector-valued), coefficients (e.g., linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We say that such an expression is in \textit{normal form}, because the algebraic structure of a variational form is intact (e.g., products have not been expanded yet, distinct monomials can still be identified, etc.). This bring us to formalize the class of loop nests that we aim to optimize.
+Consider Equation~\ref{eq:quadrature} and the (abstract) loop nest implementing it illustrated in Figure~\ref{code:loopnest}. The imperfect nest $\Lambda=[L_e, L_i, L_j, L_k]$ comprises an order-free loop $L_e$ (over elements in the mesh), a reduction loop $L_i$ (performing numerical integration), and a multilinear loop nest $[L_j, L_k]$ (over test and trial functions). In the body of $L_k$, one or more statements evaluate the local tensor for the element $e$. Expressions (the right hand side of a statement) result from the translation of a form in high level matrix notation into code. In particular, $m$ is the number of monomials (a form is a sum of monomials), $\alpha_{eij}$ ($\beta_{eik}$) represents the product of a coefficient function (e.g., the inverse Jacobian matrix for the change of coordinates) with test  or trial functions, and $\sigma_{ei}$ is a function of coefficients and geometry. We do not pose any restrictions on function spaces (e.g., scalar- or vector-valued), coefficient expressions (linear or non-linear), differential and vector operators, so $\sigma_{ei}$ can be arbitrarily complex. We say that such an expression is in \textit{normal form}, because the algebraic structure of a variational form is intact: products have not yet been expanded, distinct monomials can still be identified, and so on. This brings us to formalize the class of loop nests that we aim to optimize.
 
 
 \begin{Def}[Finite element integration loop nest]
