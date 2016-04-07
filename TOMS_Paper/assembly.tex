@@ -61,6 +61,8 @@
 \usepackage[cmex10]{amsmath}
 \usepackage{url}
 
+\usepackage[utf8]{inputenc}
+
 \DeclareMathOperator*{\argmin}{arg\,min}
 
 % Metadata Information
@@ -74,11 +76,11 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{An algorithm for the optimization of finite element integration}
+\markboth{F. Luporini et al.}{An algorithm for the optimization of finite element integration operators}
 
 % Title portion
 
-\title{An algorithm for the optimization of finite element integration}
+\title{An algorithm for the optimization of finite element integration operators}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -99,7 +101,7 @@ We present an algorithm for the optimization of a class of finite element integr
 
 \keywords{Finite element integration, local assembly, compilers, performance optimization}
 
-\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2016. An algorithm for the optimization of finite element integration.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2016. An algorithm for the optimization of finite element integration operators.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -631,7 +633,7 @@ For several reasons, basis function tables may be block-sparse (e.g., containing
 
 Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache (private), 256KB L2 cache (private) and 8MB L3 cache (shared). The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost}. The compilation flag \texttt{xHost} tells the Intel compiler to generate efficient code for the underlying platform.
 
-The Zenodo system was used to archive all packages used to perform the experiments: Firedrake \cite{lawrence_mitchell_2016_49284}, PETSc \cite{barry_smith_2016_49285}, petsc4py \cite{firedrake_2016_49283}, FIAT \cite{marie_e_rognes_2016_49280}, UFL \cite{martin_sandve_alnaes_2016_49282}, FFC \cite{anders_logg_2016_49276}, PyOP2 \cite{florian_rathgeber_2016_49281} and COFFEE \cite{fabio_luporini_2016_49279}.
+The Zenodo system was used to archive all packages used to perform the experiments: Firedrake \cite{lawrence_mitchell_2016_49284}, PETSc \cite{barry_smith_2016_49285}, petsc4py \cite{firedrake_2016_49283}, FIAT \cite{marie_e_rognes_2016_49280}, UFL \cite{martin_sandve_alnaes_2016_49282}, FFC \cite{anders_logg_2016_49276}, PyOP2 \cite{florian_rathgeber_2016_49281} and COFFEE \cite{fabio_luporini_2016_49279}. The experiments can be reproduced using a publicly available benchmarking suite~\cite{florian_rathgeber_2016_49290}.
 
 We analyze the execution time of four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix (``\texttt{Mass}'') and the bilinear forms arising in a Helmholtz equation (``\texttt{Helmholtz}''), in an elastic model (``\texttt{Elasticity}''), and in a hyperelastic model (``\texttt{Hyperelasticity}''). The complete specification of these forms is made publicly available\footnote{\url{https://github.com/firedrakeproject/firedrake-bench/blob/experiments/forms/firedrake_forms.py}}. 
 
