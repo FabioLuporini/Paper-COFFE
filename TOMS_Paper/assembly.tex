@@ -74,11 +74,11 @@
 \begin{document}
 
 % Page heads
-\markboth{F. Luporini et al.}{An algorithm for the optimization of finite element integration loops}
+\markboth{F. Luporini et al.}{An algorithm for the optimization of finite element integration}
 
 % Title portion
 
-\title{An algorithm for the optimization of finite element integration loops}
+\title{An algorithm for the optimization of finite element integration}
 \author{Fabio Luporini
 \affil{Imperial College London}
 David A. Ham
@@ -99,7 +99,7 @@ We present an algorithm for the  optimization of a class of finite element integ
 
 \keywords{Finite element integration, local assembly, compilers, performance optimization}
 
-\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2016. An algorithm for the optimization of finite element integration loops.}
+\acmformat{Fabio Luporini, David A. Ham, and Paul H. J. Kelly, 2016. An algorithm for the optimization of finite element integration.}
 
 % At a minimum you need to supply the author names, year and a title.
 % IMPORTANT: Full first names whenever they are known, surname last,
@@ -414,7 +414,7 @@ The input of the algorithm is a tree representation a finite element integration
 
 \item For each sub-expression $\operatorname{expr}$ depending on exactly one linear loop, collect the multilinear symbols and the temporaries produced at step (1). Partition them into disjoint sets, $\mathbb{T} = \lbrace T_1, ..., T_t\rbrace$, such that $T_i$ includes all instances of a given symbol in $\operatorname{expr}$. Apply Strategy~\ref{strategy:ii} factorizing the symbols in each $T_i$, provided that this leads to a reduction in operation count; otherwise, apply Strategy~\ref{strategy:i} \\
 \textit{Note: the last check ensures the flop-decreasing nature of the transformation. In the cases in which expansion outweighs code motion, Strategy~\ref{strategy:i} is preferred.}\\
-\textit{Note: the expansion cost is a function of the products wrapping a symbol (how many of them and their arity), so it can be determined in a tree visit.}
+\textit{Note: the expansion cost is a function of the products wrapping a symbol (how many of them and their arity), so it can be determined through tree visits.}
 
 \item Build the \textit{sharing graph} $G = (S, E)$. Each $s \in S$ represents a multilinear symbol or a temporary produced by the previous steps. An edge $(s_i$, $s_j)$ indicates that a product $s_i s_j$ would appear if the sub-expressions including $s_i$ and $s_j$ were expanded.\\
 \textit{Note: the following steps will only impact bilinear forms, since otherwise $E = \emptyset$.}
@@ -631,6 +631,8 @@ For several reasons, basis function tables may be block-sparse (e.g., containing
 
 Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache (private), 256KB L2 cache (private) and 8MB L3 cache (shared). The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost}. The compilation flag \texttt{xHost} tells the Intel compiler to generate efficient code for the underlying platform.
 
+The Zenodo system was used to archive all packages used to perform the experiments: Firedrake \cite{lawrence_mitchell_2016_49284}, PETSc \cite{barry_smith_2016_49285}, petsc4py \cite{firedrake_2016_49283}, FIAT \cite{marie_e_rognes_2016_49280}, UFL \cite{martin_sandve_alnaes_2016_49282}, FFC \cite{anders_logg_2016_49276}, PyOP2 \cite{florian_rathgeber_2016_49281} and COFFEE \cite{fabio_luporini_2016_49279}.
+
 We analyze the execution time of four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix (``\texttt{Mass}'') and the bilinear forms arising in a Helmholtz equation (``\texttt{Helmholtz}''), in an elastic model (``\texttt{Elasticity}''), and in a hyperelastic model (``\texttt{Hyperelasticity}''). The complete specification of these forms is made publicly available\footnote{\url{https://github.com/firedrakeproject/firedrake-bench/blob/experiments/forms/firedrake_forms.py}}. 
 
 We evaluate the speed-ups achieved by a wide variety of transformation systems over the ``original'' code produced by the FEniCS Form Compiler (i.e., no optimizations applied). We analyze the following transformation systems:
@@ -643,13 +645,9 @@ We evaluate the speed-ups achieved by a wide variety of transformation systems o
 \item[cfO2] Optimal loop nest synthesis with handling of block-sparse tables. Work presented in this article, implemented in COFFEE.
 \end{description}
 
-{\color{red}FIXME: We need to put the exact versions of software in
-  here. for Firedrake this should be Zenodo DOIs. This is especially true
-  for the patched version of firedrake you used below}.
-
 The values that we report are the average of three runs with ``warm cache''; that is, with all kernels retrieved directly from the Firedrake's cache, so code generation and compilation times are not counted. The timing includes however the cost of both local assembly and matrix insertion, with the latter minimized through the choice of a mesh (details below) small enough to fit the L3 cache of the CPU. 
 
-For a fair comparison, small patches (publicly available) were written to the make \texttt{quad}, \texttt{tens}, and \texttt{ufls} compatible with Firedrake. By executing all simulations in Firedrake, we guarantee that both matrix insertion and mesh iteration have a fixed cost, independent of the transformation system employed. The patches adjust the data storage layout to what Firedrake expects (e.g., by generating an array of pointers instead of a pointer to pointers, by replacing flattened arrays with bi-dimensional ones).
+For a fair comparison, small patches were written to the make \texttt{quad}, \texttt{tens}, and \texttt{ufls} compatible with Firedrake. By executing all simulations in Firedrake, we guarantee that both matrix insertion and mesh iteration have a fixed cost, independent of the transformation system employed. The patches adjust the data storage layout to what Firedrake expects (e.g., by generating an array of pointers instead of a pointer to pointers, by replacing flattened arrays with bi-dimensional ones). 
 
 For Constraint~\ref{const:TH}, discussed in Section~\ref{sec:mem-const}, we set $T_H = \operatorname{size}(\mathrm{L2})$; that is, the size of the processor L2 cache (the last level of private cache). When the threshold had an impact on the transformation process, the experiments were repeated with $T_H = \operatorname{size}(\mathrm{L3})$. The results are documented later, individually for each problem.
 
@@ -698,10 +696,8 @@ The rest of the section is organized as follows: we first provide insights into 
 Our transformation strategy does not always guarantee minimum execution time. In particular, about 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4,\ \mathrm{nf}=0]$. There are two reasons for this. First, low level optimization can have a significant impact on the actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Second, the transformation strategy adopted when $T_H$ is exceeded plays a key role, as we will later elaborate.
 
 \paragraph{Autovectorization}
-
-{\color{red}I don't think you mean ``discretized'' in the next sentence. We need to discuss what this really means.}
  
-We discretized our problems such that the inner loop sizes would be a multiple of the machine vector length. This ensured autovectorization in the majority of code variants\footnote{We verified the vectorization of inner loops by looking at both compiler reports and assembly code.}. The biggest exception is \texttt{quad}, due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; the compiler reports suggest, however, that block vectorization \cite{SLP-vect} is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have identical structure, with loop vectorization being regularly applied.
+We chose the mesh dimension and the function spaces such that the inner loop sizes would always be a multiple of the machine vector length. This ensured autovectorization in the majority of code variants\footnote{We verified the vectorization of inner loops by looking at both compiler reports and assembly code.}. The biggest exception is \texttt{quad}, due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; the compiler reports suggest, however, that block vectorization \cite{SLP-vect} is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have identical structure, with loop vectorization being regularly applied.
 
 \paragraph{Mass matrix}
 We start with the simplest of the bilinear forms investigated, the mass matrix. Results are in Figure~\ref{fig:mass}. We first notice that the lack of improvements when $q=1$ is due to the fact that matrix insertion outweighs local assembly. For $q \geq 2$, \texttt{cfO2} generally shows the highest speed-ups. It is worth noting why \texttt{auto} does not always select the fastest implementation: \texttt{auto} always opts for \texttt{tens}, while for $\mathrm{nf} \geq 2$ \texttt{quad} tends to be preferable. On the other hand, \texttt{cfO2} always makes the optimal decision about whether to apply pre-evaluation or not. Surprisingly, despite the simplicity of the form, the performance of the various code generation systems can differ significantly.
