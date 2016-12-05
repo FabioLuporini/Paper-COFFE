@@ -669,45 +669,37 @@ While constants of our study are
 \subsection{Performance results}
 \label{sec:perf-results-forms}
 
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.70]{perf-results/mass}}
-\caption{Performance evaluation for the \textit{mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:mass}
-\end{figure}
-
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.70]{perf-results/helmholtz}}
-\caption{Performance evaluation for the bilinear form of a \textit{Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:helmholtz}
-\end{figure}
-
-\begin{figure}
-\includegraphics[scale=0.70]{perf-results/elasticity}
-\caption{Performance evaluation for the bilinear form arising in an \textit{elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:elasticity}
-\end{figure}
-
-\begin{figure}
- \makebox[\textwidth][c]{\includegraphics[scale=0.70]{perf-results/hyperelasticity}}
-\caption{Performance evaluation for the bilinear form arising in a \textit{hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:hyperelasticity}
-\end{figure}
-
 We report the results of our experiments in Figures~\ref{fig:mass},~\ref{fig:helmholtz},~\ref{fig:elasticity}, and~\ref{fig:hyperelasticity} as three-dimensional plots. The axes represent $q$, $\mathrm{nf}$, and code transformation system. We show one subplot for each problem instance ${\langle} \textrm{form}, \mathrm{nf}, q {\rangle}$, with the code transformation system varying within each subplot. The best variant for each problem instance is given by the tallest bar, which indicates the maximum speed-up over non-transformed code. We note that if a bar or a subplot are missing, then the form compiler failed to generate code because it either exceeded the system memory limit or was otherwise unable to handle the form. 
 
 The rest of the section is organized as follows: we first provide insights into the general outcome of the experimentation; we then comment on the impact of a fundamental low-level optimization, namely autovectorization; finally, we motivate, for each form, the performance results obtained and the relationship with the operation count.
 
-\paragraph{High level view}
+\subsubsection{High level view}
 Our transformation strategy does not always guarantee minimum execution time. In particular, about 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4,\ \mathrm{nf}=0]$. There are two reasons for this. First, low level optimization can have a significant impact on the actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Second, the transformation strategy adopted when $T_H$ is exceeded plays a key role, as we will later elaborate.
 
-\paragraph{Autovectorization}
+\subsubsection{Autovectorization}
  
 We chose the mesh dimension and the function spaces such that the inner loop sizes would always be a multiple of the machine vector length. This ensured autovectorization in the majority of code variants\footnote{We verified the vectorization of inner loops by looking at both compiler reports and assembly code.}. The biggest exception is \texttt{quad}, due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; the compiler reports suggest, however, that block vectorization \cite{SLP-vect} is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have identical structure, with loop vectorization being regularly applied.
 
-\paragraph{Mass matrix}
+\subsubsection{Mass matrix}
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.685]{perf-results/mass}}
+\caption{Performance evaluation for the \textit{mass} matrix. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:mass}
+\end{figure}
+
 We start with the simplest of the bilinear forms investigated, the mass matrix. Results are in Figure~\ref{fig:mass}.
 
 We first notice the lack of improvements when $q=1$. The operation count of \texttt{cfO2} and \texttt{tensor} is roughly 9$\times$ lower than that of the alternatives (tens instead of hundreads operations), but nontheless no gain in execution time is obtained. This is due to the fact that local assembly is memory-bound. For instance, in the simplest case $nf=0$, in addition to the determinant of the Jacobian inverse, \texttt{tens} only requries three unique multiplications to evaluate the local element matrix (26 operations in total), whereas almost a hundred memory accesses are performed. In particular, we have: 12 loads for the vertex coordinates; for each vertex, 1 load to indirectly access its data; for each of the 16 local elements, 4 loads (optimistically) and 1 store to update an entry in the global matrix in compressed sparse row format. This unsurprisingly leads to a very low arithmetic intensity (i.e., $\frac{\text{operation count}}{\text{bytes moved}}$), which collocates the kernels in a memory-bound regime.
 
 For $q \geq 2$, instead, the transformation systems impact the performance, and \texttt{cfO2} generally shows the highest speed-ups. It is worth noting that \texttt{auto} does not always select the fastest implementation, as it always opts for \texttt{tens}, while for $\mathrm{nf} \geq 2$ \texttt{quad} tends to be preferable. On the other hand, \texttt{cfO2} always makes the optimal decision about whether to apply pre-evaluation or not. Unexpectedly, in spite of the simplicity of the form, the performance of the various code generation systems can differ significantly.
 
-\paragraph{Helmholtz}
+\subsubsection{Helmholtz}
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.685]{perf-results/helmholtz}}
+\caption{Performance evaluation for the bilinear form of a \textit{Helmholtz} equation. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:helmholtz}
+\end{figure}
+
 As in the case of mass matrix, when $q=1$ the matrix insertion phase is dominant. For $q \geq 2$, the general trend is that \texttt{cfO2} outperforms the competitors. In particular:
 
 \begin{description}
@@ -724,7 +716,13 @@ The slow-downs (or marginal improvements) seen in a small number of cases exhibi
 
 An interesting experiment we additionally performed was relaxing the memory threshold by setting $T_H = \operatorname{size}(\mathrm{L3})$. We found that this makes \texttt{cfO2} generally slower for $\mathrm{nf} \geq 2$, with a maximum slow-down of 2.16$\times$ with $\langle \mathrm{nf}=2, q=2\rangle$. This effect could be worse when running in parallel, since the L3 cache is shared and different threads would end up competing for the same resource.
 
-\paragraph{Elasticity}
+\subsubsection{Elasticity}
+
+\begin{figure}
+\includegraphics[scale=0.685]{perf-results/elasticity}
+\caption{Performance evaluation for the bilinear form arising in an \textit{elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:elasticity}
+\end{figure}
+
 The results for the elastic model are displayed in Figure~\ref{fig:elasticity}. The main observation is that \texttt{cfO2} never triggers pre-evaluation, although in some occasions it should. To clarify this, consider the test case $\langle \mathrm{nf}=0,\ q=4 \rangle$, in which \texttt{tens/auto} show a considerable speed-up over \texttt{cfO2}. Although pre-evaluation is determined profitable by \texttt{cfO2} in terms of operation count, it is eventually not applied to avoid exceeding $T_H$. However, running the same experiments with $T_H = \operatorname{size}(\mathrm{L3})$ resulted in a dramatic improvement, even higher than that obtained by \texttt{tens}. The reason is that, despite exceeding $T_H$ by roughly 40$\%$, the saving in operation count is so large (5$\times$ in this specific problem) that pre-evaluation would in practice be the winning choice. This suggests that our objective function should be improved to handle the cases in which there is a significant gap between potential cache misses and reduction in operation count.
 
 We also note that:
@@ -737,7 +735,13 @@ We also note that:
 We now consider the test case $\langle \mathrm{nf}=2,\ q=3 \rangle$ to discuss the relationship between achieved performance and operation count, although analogous considerations apply to the other scenarios. It is difficult to estimate the number of flops executed by the code generated by the FEniCS Form Compiler, since loop-invariant code motion is extensively applied by the underlying compiler. The calculation is instead simple in all other cases: while \texttt{cfO2} performs roughly $2 \cdot 10^5$ operations, \texttt{quad}, \texttt{ufls} and \texttt{cfO1} are much closer to $10^6$ operations. In particular, \texttt{ufls} requires 4.3$\times$ more operations than \texttt{cfO2}, whereas the execution time speed-up is only slightly bigger than 2$\times$. The distance between these two values may be attributed to the memory transfer cost -- especially inserting the $3.6 \cdot 10^3$ non-zero entries of the local element matrix -- which, for reasons already discussed, becomes a bottleneck. \texttt{quad}'s operation count is even lower than that of \texttt{ufls} ($84 \cdot 10^4$ instead of $97 \cdot 10^5$), but as explained earlier, the use of indirection arrays dramatically affects the low level efficiency. Despite requiring roughly $10^5$ fewer operations than \texttt{cfO2}, \texttt{tens} is again affected by the poor low level efficiency of the generated code.
 
 
-\paragraph{Hyperelasticity}
+\subsubsection{Hyperelasticity}
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.685]{perf-results/hyperelasticity}}
+\caption{Performance evaluation for the bilinear form arising in a \textit{hyperelastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:hyperelasticity}
+\end{figure}
+
 In the experiments on the hyperelastic model, shown in Figure~\ref{fig:hyperelasticity}, \texttt{cfO2} exhibits the largest gains out of all problem instances considered in this paper. This is a positive result, since it indicates that our transformation algorithm scales well with form complexity. The fact that all code transformation systems (apart from \texttt{tens}) show quite significant speed-ups suggests two points. First, the baseline is highly inefficient. With forms as complex as in the hyperelastic model, a trivial translation of integration routines into code should always be avoided as even the best general-purpose compiler available (the Intel compiler on an Intel platform at maximum optimization level) fails to exploit the structure inherent in the expressions. Second, the strategy for removing spatial and temporal sharing has a tremendous impact. Sharing elimination as performed by \texttt{cfO2} ensures a critical reduction in operation count, which becomes particularly pronounced for higher values of $q$. 
 
 We also tried to relate the achieved performance to the operation counts obtained by each transformation system. We here limit ourselves to consider the case $\langle \mathrm{nf}=0,\ q=4 \rangle$, for which the speed-ups are generally massive. For the original code, at the source level $37 \cdot 10^9$ operations are counted. However, this number is in practice much lower, since by inspection of the assembly code generated by the underlying compiler, it is clear that common sub-expressions elimination and loop-invariant code motion have been applied in aggressive way. The actual operation count, however, is definitely larger than the $10^8$ operations performed by \texttt{ufls}. \texttt{cfO2} brings the operation count down to $3 \cdot 10^7$; that is, more than 3$\times$ lower than \texttt{ufls}. This is completely in line with the drop in execution times, with \texttt{cfO2} outperforming \texttt{ufls} by slightly more than 3$\times$.
@@ -752,7 +756,7 @@ We have developed a theory for the optimization of finite element integration lo
 \label{sec:completeness}
 We have defined sharing elimination and pre-evaluation as high level transformations on top of a specific set of rewrite operators, such as code motion and factorization, and we have used them to construct the transformation space. There are three main limitations in this process. First, we do not have a systematic strategy to optimize sub-expressions which are independent of linear loops. Although we have a mechanism to determine how much computation should be hoisted to the level of the integration (reduction) loop, it is not clear how to effectively improve the heuristics used at step (6) in Algorithm~\ref{algo:sharing-elimination}. Second, lower operation counts may be found by exploiting domain-specific properties, such as redundancies in basis functions; this aspect is completely neglected in this article. Third, with Constraint~\ref{const:Le} we have limited the applicability of code motion. This constraint was essential given the complexity of the problem tackled. 
 
-Another issue raised by the experimentation concerns selecting a proper threshold for Constraint~\ref{const:TH}. To solve this problem would require a more sophisticated cost model, which is an interesting question deserving further research. 
+Another issue raised by the experimentation concerns selecting a proper threshold for Constraint~\ref{const:TH}. Furthermore, in parallel runs, the L3 cache is no longer owned by a single process, so the effects of setting a proper threshold could become even more pronounced. To solve this problem would require more sophisticated cost model and/or objective functions, which is an interesting question deserving further research. 
 
 We also identify two additional possible research directions: a complete classification of forms for which a global optimum is achieved; and a generalization of the methodology to other classes of loop nests, for instance those arising in spectral element methods.
 
