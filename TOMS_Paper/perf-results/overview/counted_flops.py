@@ -1,0 +1,1 @@
+flops = OrderedDict([(('mass', 'original', 0, 1), 30), (('mass', 'coffee', 0, 1), 15), (('mass', 'original', 0, 2), 60), (('mass', 'coffee', 0, 2), 30), (('mass', 'original', 1, 1), 25), (('mass', 'coffee', 1, 1), 20)])
