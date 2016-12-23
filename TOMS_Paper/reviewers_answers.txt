@@ -1,0 +1,211 @@
+Referee: 1
+
+Comments to the Author This paper is overall well written. Examples are very
+illustrative and help understand the article. My only concern is about how
+authors relates their theortical results with numerical performance examples.
+The main focus of this paper is about transformations that reduces FLOPs.
+Authors present elimination and reduction pattern of code and show that there is
+an optimal loop transformation that reduces FLOPs. However, the numeric
+performance results is about "speed-up" not about FLOPs. Also, the speed-up is
+more significant when the polynomial degree is higher. This confuses me either
+vectorization improves the performance or actual FLOPs decreases. My suggestions
+are as follows: 1. It would be better to include actual transformed code and
+original code in the appendix for all computing model (mass, helmholtz,
+elasticity, hyper elasticity). At least I wonder what makes hugh speed up in the
+hyper elastic problem compared to usual mass matrix.  2. Please include actual
+FLOP measurements of input code and transformed code and show some correlation
+with performance.
+
+Referee: 2
+
+Comments to the Author
+
+
+Report on “An algorithm for the optimization of finite element integration
+loops”
+
+The paper is well written, interesting does clearly merit publication.  The
+usage of advanced compiler technology as demonstrated here is clearly novel and
+it brings accelerated performance.
+
+There is one issue that is not covered in the analysis and only briefly
+mentioned in the general discussion: the transfer from memory. I understand that
+it complicates the analysis but the least it should be quantified in the
+numerical experiments. As was shown by Alnæs and Mardal in 2010, TOMS, the
+transfer is significant. This part of the story should also be told as I guess
+the most common user, low-order elements with simple equation, will not notice
+any benefit. This has been an untold story in several FEniCS papers. It is to a
+certain extent discussed already in the paper but it should also be quantified.
+
+
+Referee: 3
+
+Comments to the Author The FEM is widely used in scientific computing and the
+integration to compute the elements (local element matrices)  can often be time
+consuming. This manuscript is about optimizing the finite element integration
+loops and the number of flops therein. The authors propose an approach that is
+shown to be locally optimal. An implementation (in COFFEE) is compared against
+other methods and speedups over the default generated code is demonstrated in
+several cases.
+
+Overall this is a well written and interesting paper, even to non-experts.
+However, as a non-expert, I have several concerns that I think should be
+addressed:
+
+1) The focus is on minimizing flops, but on modern architectures, memory
+accesses are typically more expensive and flops are "almost free". Although
+clearly of theoretical interest, it would be nice to justify that this
+optimization also is important to reduce run time.
+
+2) All experiments and results are run in serial on single core. In practice,
+most computers today are multicore (or manycore) so some discussion about
+extensions to multithreaded case would be appropriate. I recognize a parallel
+implementation is beyond the scope of the current paper.
+
+3) Results: The authors present several charts with speedups on different
+problems, which gives detailed information. However, it would be nice to add a
+figure with aggregate results, such as a scatter plot of all instances or a
+performance profile.
+
+4) The manuscript is already quite long so if possible, do not increase the
+total length (i.e. try find things to tighten or cut).Referee: 1
+
+Comments to the Author This paper is overall well written. Examples are very
+illustrative and help understand the article. My only concern is about how
+authors relates their theortical results with numerical performance examples.
+The main focus of this paper is about transformations that reduces FLOPs.
+Authors present elimination and reduction pattern of code and show that there is
+an optimal loop transformation that reduces FLOPs. However, the numeric
+performance results is about "speed-up" not about FLOPs. Also, the speed-up is
+more significant when the polynomial degree is higher. This confuses me either
+vectorization improves the performance or actual FLOPs decreases. My suggestions
+are as follows: 1. It would be better to include actual transformed code and
+original code in the appendix for all computing model (mass, helmholtz,
+elasticity, hyper elasticity). At least I wonder what makes hugh speed up in the
+hyper elastic problem compared to usual mass matrix.  2. Please include actual
+FLOP measurements of input code and transformed code and show some correlation
+with performance.
+
+Referee: 2
+
+Comments to the Author
+
+
+Report on “An algorithm for the optimization of finite element integration
+loops”
+
+The paper is well written, interesting does clearly merit publication.  The
+usage of advanced compiler technology as demonstrated here is clearly novel and
+it brings accelerated performance.
+
+There is one issue that is not covered in the analysis and only briefly
+mentioned in the general discussion: the transfer from memory. I understand that
+it complicates the analysis but the least it should be quantified in the
+numerical experiments. As was shown by Alnæs and Mardal in 2010, TOMS, the
+transfer is significant. This part of the story should also be told as I guess
+the most common user, low-order elements with simple equation, will not notice
+any benefit. This has been an untold story in several FEniCS papers. It is to a
+certain extent discussed already in the paper but it should also be quantified.
+
+
+Referee: 3
+
+Comments to the Author The FEM is widely used in scientific computing and the
+integration to compute the elements (local element matrices)  can often be time
+consuming. This manuscript is about optimizing the finite element integration
+loops and the number of flops therein. The authors propose an approach that is
+shown to be locally optimal. An implementation (in COFFEE) is compared against
+other methods and speedups over the default generated code is demonstrated in
+several cases.
+
+Overall this is a well written and interesting paper, even to non-experts.
+However, as a non-expert, I have several concerns that I think should be
+addressed:
+
+1) The focus is on minimizing flops, but on modern architectures, memory
+accesses are typically more expensive and flops are "almost free". Although
+clearly of theoretical interest, it would be nice to justify that this
+optimization also is important to reduce run time.
+
+2) All experiments and results are run in serial on single core. In practice,
+most computers today are multicore (or manycore) so some discussion about
+extensions to multithreaded case would be appropriate. I recognize a parallel
+implementation is beyond the scope of the current paper.
+
+3) Results: The authors present several charts with speedups on different
+problems, which gives detailed information. However, it would be nice to add a
+figure with aggregate results, such as a scatter plot of all instances or a
+performance profile.
+
+4) The manuscript is already quite long so if possible, do not increase the
+total length (i.e. try find things to tighten or cut).Referee: 1
+
+Comments to the Author This paper is overall well written. Examples are very
+illustrative and help understand the article. My only concern is about how
+authors relates their theortical results with numerical performance examples.
+The main focus of this paper is about transformations that reduces FLOPs.
+Authors present elimination and reduction pattern of code and show that there is
+an optimal loop transformation that reduces FLOPs. However, the numeric
+performance results is about "speed-up" not about FLOPs. Also, the speed-up is
+more significant when the polynomial degree is higher. This confuses me either
+vectorization improves the performance or actual FLOPs decreases. My suggestions
+are as follows: 1. It would be better to include actual transformed code and
+original code in the appendix for all computing model (mass, helmholtz,
+elasticity, hyper elasticity). At least I wonder what makes hugh speed up in the
+hyper elastic problem compared to usual mass matrix.  2. Please include actual
+FLOP measurements of input code and transformed code and show some correlation
+with performance.
+
+Referee: 2
+
+Comments to the Author
+
+
+Report on “An algorithm for the optimization of finite element integration
+loops”
+
+The paper is well written, interesting does clearly merit publication.  The
+usage of advanced compiler technology as demonstrated here is clearly novel and
+it brings accelerated performance.
+
+There is one issue that is not covered in the analysis and only briefly
+mentioned in the general discussion: the transfer from memory. I understand that
+it complicates the analysis but the least it should be quantified in the
+numerical experiments. As was shown by Alnæs and Mardal in 2010, TOMS, the
+transfer is significant. This part of the story should also be told as I guess
+the most common user, low-order elements with simple equation, will not notice
+any benefit. This has been an untold story in several FEniCS papers. It is to a
+certain extent discussed already in the paper but it should also be quantified.
+
+
+Referee: 3
+
+Comments to the Author The FEM is widely used in scientific computing and the
+integration to compute the elements (local element matrices)  can often be time
+consuming. This manuscript is about optimizing the finite element integration
+loops and the number of flops therein. The authors propose an approach that is
+shown to be locally optimal. An implementation (in COFFEE) is compared against
+other methods and speedups over the default generated code is demonstrated in
+several cases.
+
+Overall this is a well written and interesting paper, even to non-experts.
+However, as a non-expert, I have several concerns that I think should be
+addressed:
+
+1) The focus is on minimizing flops, but on modern architectures, memory
+accesses are typically more expensive and flops are "almost free". Although
+clearly of theoretical interest, it would be nice to justify that this
+optimization also is important to reduce run time.
+
+2) All experiments and results are run in serial on single core. In practice,
+most computers today are multicore (or manycore) so some discussion about
+extensions to multithreaded case would be appropriate. I recognize a parallel
+implementation is beyond the scope of the current paper.
+
+3) Results: The authors present several charts with speedups on different
+problems, which gives detailed information. However, it would be nice to add a
+figure with aggregate results, such as a scatter plot of all instances or a
+performance profile.
+
+4) The manuscript is already quite long so if possible, do not increase the
+total length (i.e. try find things to tighten or cut).
