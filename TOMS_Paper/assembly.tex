@@ -235,7 +235,7 @@ Depending on form and discretization, the relative performance of the two modes,
 
 These two modes are implemented in the FEniCS Form Compiler \cite{FFC-TC}. In this compiler, a heuristic is used to choose the most suitable mode for a given form. It consists of analysing each monomial in the form, counting the number of derivatives and coefficient functions, and checking if this number is greater than a constant found empirically \cite{Fenics}. We will return to the efficacy of this approach in section \ref{sec:perf-results}. One of the objectives of this paper is to produce a system that goes beyond the dichotomy between quadrature and tensor modes. We will reason in terms of loop nests, code motion, and code pre-evaluation, searching the entire implementation space for an optimal synthesis.  
 
-\section{Transformation Space}
+\section{Transformation space}
 \label{sec:optimal-impl}
 In this section, we characterize global and local optimality for finite element integration as well as the space of legal transformations that needs be explored to achieve them. The method by which exploration is performed is discussed in Section~\ref{sec:optimal-synthesis}. 
 
@@ -612,7 +612,7 @@ Throughout the paper we have reiterated the claim that Algorithm~\ref{algo:gamma
 \end{enumerate}
 
 
-\section{Code Generation}
+\section{Code generation}
 \label{sec:codegen}
 Sharing elimination and pre-evaluation, as well as the transformation algorithm, have been implemented in COFFEE, the compiler for finite element integration routines adopted in Firedrake. In this section, we briefly discuss the aspects of the compiler that are relevant for this article.
 
@@ -626,14 +626,14 @@ COFFEE aims to be independent of the high level form compiler. It provides an in
 \label{sec:zeros}
 For several reasons, basis function tables may be block-sparse (e.g., containing zero-valued columns). For example, the FEniCS Form Compiler implements vector-valued functions by adding blocks of zero-valued columns to the corresponding tabulations; this extremely simplifies code generation (particularly, the construction of loop nests), but also affects the performance of the generated code due to the execution of ``useless'' flops (e.g., operations like \texttt{a + 0}). In~\citeN{quadrature1}, a technique to avoid iteration over zero-valued columns based on the use of indirection arrays (e.g. \texttt{A[B[i]]}, in which \texttt{A} is a tabulated basis function and \texttt{B} a map from loop iterations to non-zero columns in A) was proposed. This technique, however, produces non-contiguous memory loads and stores, which nullify the potential benefits of vectorization. COFFEE, instead, handles block-sparse basis function tables by restructuring loops in such a manner that low level optimization (especially vectorization) is only marginally affected. This is based on symbolic execution of the code, which enables a series of checks on array indices and loop bounds which determine the zero-valued blocks which can be skipped without affecting data alignment.
 
-\section{Performance Evaluation}
+\section{Performance evaluation}
 \label{sec:perf-results}
 
 \subsection{Experimental setup}
 
 Experiments were run on a single core of an Intel I7-2600 (Sandy Bridge) CPU, running at 3.4GHz, 32KB L1 cache (private), 256KB L2 cache (private) and 8MB L3 cache (shared). The Intel Turbo Boost and Intel Speed Step technologies were disabled. The Intel \texttt{icc 15.2} compiler was used. The compilation flags used were \texttt{-O3, -xHost}. The compilation flag \texttt{xHost} tells the Intel compiler to generate efficient code for the underlying platform.
 
-The Zenodo system was used to archive all packages used to perform the experiments: Firedrake \cite{lawrence_mitchell_2016_49284}, PETSc \cite{barry_smith_2016_49285}, petsc4py \cite{firedrake_2016_49283}, FIAT \cite{marie_e_rognes_2016_49280}, UFL \cite{martin_sandve_alnaes_2016_49282}, FFC \cite{anders_logg_2016_49276}, PyOP2 \cite{florian_rathgeber_2016_49281} and COFFEE \cite{fabio_luporini_2016_49279}. The experiments can be reproduced using a publicly available benchmark suite~\cite{florian_rathgeber_2016_49290}.
+The Zenodo system was used to archive all packages used to perform the experiments: Firedrake \cite{lawrence_mitchell_2016_49284}, PETSc \cite{barry_smith_2016_49285}, petsc4py \cite{firedrake_2016_49283}, FIAT \cite{marie_e_rognes_2016_49280}, UFL \cite{martin_sandve_alnaes_2016_49282}, FFC \cite{anders_logg_2016_49276}, PyOP2 \cite{florian_rathgeber_2016_49281} and COFFEE \cite{fabio_luporini_2016_49279}. The experiments can be reproduced using a publicly available benchmark suite~\cite{florian_rathgeber_2016_49290}. Further, the generated code is available at \cite{generated_code}.
 
 We analyze the execution time of four real-world bilinear forms of increasing complexity, which comprise the differential operators that are most common in finite element methods. In particular, we study the mass matrix (``\texttt{Mass}'') and the bilinear forms arising in a Helmholtz equation (``\texttt{Helmholtz}''), in an elastic model (``\texttt{Elasticity}''), and in a hyperelastic model (``\texttt{Hyperelasticity}''). The complete specification of these forms is made publicly available\footnote{\url{https://github.com/firedrakeproject/firedrake-bench/blob/experiments/forms/firedrake_forms.py}}. 
 
@@ -660,7 +660,7 @@ Following the methodology adopted in~\citeN{quadrature1}, we vary the following 
 \end{itemize}
 While constants of our study are
 \begin{itemize}
-\item the space of test, trial, and coefficient functions: Lagrange
+\item the test, trial, and coefficient functions belong to the space of (possibly vector-valued) continuous piecewise-defined polynomials of degree $q$
 \item the mesh: tetrahedral with a total of 4374 elements
 \item exact numerical quadrature (we employ the same scheme used in~\citeN{quadrature1}, based on the Gauss-Legendre-Jacobi rule)
 \item double-precision arithmetic
@@ -673,8 +673,9 @@ The rest of the section is organized as follows: we first provide insights into 
 \subsection{High level view}
 Our transformation strategy does not always guarantee minimum execution time. In particular, about 5$\%$ of the test cases (3 out of 56, without counting marginal differences) show that \texttt{cfO2} was not optimal in terms of runtime. The most significant of such test cases is the elastic model with $[q=4,\ \mathrm{nf}=0]$. There are two reasons for this. First, low level optimization can have a significant impact on the actual performance. For example, the aggressive loop unrolling in \texttt{tens} eliminates operations on zeros and reduces the working set size by not storing entire temporaries; on the other hand, preserving the loop structure can maximize the chances of autovectorization. Second, the transformation strategy adopted when $T_H$ is exceeded plays a key role, as we will later elaborate.
 
+The memory transfer has sometimes a non-negligible impact, especially when low order polynomials are used. This is more evident in the simpler bilinear forms (e.g., \texttt{Mass}), when the speed-ups over the baseline are limited. The effect of the memory transfer is quantified, to some extent, in the sections below. For a comprehensive analysis of its cost, the reader is invited to refer to~\cite{extrusion-paper}, a study based upon the same Firedrake technology used in this article.
+
 \subsection{Autovectorization}
- 
 We chose the mesh dimension and the function spaces such that the inner loop sizes would always be a multiple of the machine vector length. This ensured autovectorization in the majority of code variants\footnote{We verified the vectorization of inner loops by looking at both compiler reports and assembly code.}. The biggest exception is \texttt{quad}, due to the presence of indirection arrays in the generated code. In \texttt{tens}, loop nests are fully unrolled, so the standard loop vectorization is not feasible; the compiler reports suggest, however, that block vectorization \cite{SLP-vect} is often triggered. In \texttt{ufls}, \texttt{cfO1}, and \texttt{cfO2} the iteration spaces have identical structure, with loop vectorization being regularly applied.
 
 \subsection{Mass matrix}
@@ -686,7 +687,7 @@ We chose the mesh dimension and the function spaces such that the inner loop siz
 
 We start with the simplest of the bilinear forms investigated, the mass matrix. Results are in Figure~\ref{fig:mass}.
 
-We first notice the lack of improvements when $q=1$. The operation count of \texttt{cfO2} and \texttt{tensor} is roughly 9$\times$ lower than that of the alternatives (tens instead of hundreads operations), but nontheless no gain in execution time is obtained. This is due to the fact that local assembly is memory-bound. For instance, in the simplest case $nf=0$, in addition to the determinant of the Jacobian inverse, \texttt{tens} only requries three unique multiplications to evaluate the local element matrix (26 operations in total), whereas almost a hundred memory accesses are performed. In particular, we have: 12 loads for the vertex coordinates; for each vertex, 1 load to indirectly access its data; for each of the 16 local elements, 4 loads (optimistically) and 1 store to update an entry in the global matrix in compressed sparse row format. This unsurprisingly leads to a very low arithmetic intensity (i.e., $\frac{\text{operation count}}{\text{bytes moved}}$), which collocates the kernels in a memory-bound regime.
+We first notice the lack of improvements when $q=1$. The operation count of \texttt{cfO2} and \texttt{tensor} is roughly 9$\times$ lower than that of the alternatives (tens instead of hundreds operations), but nonetheless no gain in execution time is obtained. This is due to the fact that local assembly is memory-bound. For instance, in the simplest case $nf=0$, in addition to the determinant of the Jacobian inverse, \texttt{tens} only requires three unique multiplications to evaluate the local element matrix (26 operations in total), whereas almost a hundred memory accesses are performed. In particular, we have: 12 loads for the vertex coordinates; for each vertex, 1 load to indirectly access its data; for each of the 16 local elements, 4 loads (optimistically) and 1 store to update an entry in the global matrix in compressed sparse row format. This unsurprisingly leads to a very low arithmetic intensity (i.e., $\frac{\text{operation count}}{\text{bytes moved}}$), which collocates the kernels in a memory-bound regime.
 
 For $q \geq 2$, instead, the transformation systems impact the performance, and \texttt{cfO2} generally shows the highest speed-ups. It is worth noting that \texttt{auto} does not always select the fastest implementation, as it always opts for \texttt{tens}, while for $\mathrm{nf} \geq 2$ \texttt{quad} tends to be preferable. On the other hand, \texttt{cfO2} always makes the optimal decision about whether to apply pre-evaluation or not. Unexpectedly, in spite of the simplicity of the form, the performance of the various code generation systems can differ significantly.
 
@@ -716,7 +717,7 @@ A relevant experiment we additionally performed was relaxing the memory threshol
 \subsection{Elasticity}
 
 \begin{figure}
-\includegraphics[scale=0.685]{perf-results/elasticity}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.685]{perf-results/elasticity}}
 \caption{Performance evaluation for the bilinear form arising in an \textit{elastic} model. The bars represent speed-up over the original (unoptimized) code produced by the FEniCS Form Compiler.}\label{fig:elasticity}
 \end{figure}
 
@@ -745,6 +746,15 @@ We also tried to relate the achieved performance to the operation counts obtaine
 
 Unsurprisingly, the memory transfer impact in the hyperelastic model is less relevant than in all other forms studied. With $\langle \mathrm{nf}=0,\ q=1 \rangle$, \texttt{cfO2} is already 1.4$\times$ faster than the untransformed code, and the gain increases with both $nf$ and $q$.
 
+\subsection{On the correlation between operation count and performance}
+As reiterated throughout the paper, the execution time of a kernel is influenced not only by the operation count, but also by the chosen code generation strategy (e.g., loop unrolling rather than preserving the loop structure). Figure~\ref{fig:flops-correlation} aggregates the \texttt{cfO2} results from the previous sections and displays them as a function of the reduction in executed flops. Besides summarizing the performance improvements achieved in this article, this figure highlights a number of aspects. The speed-ups achieved by \texttt{cfO2} tend to increase with the complexity of the operators and $q$. Further, the pre-multiplying functions have a limited impact in complex operators, and they occasionally have a negative effect in simple and small problems. Finally, this plot shows that even a powerful general-purpose compiler like Intel's is inadequate to fully exploit the structure of non-trivial finite element operators (analogous behaviors were observed with different compilers).
+
+\begin{figure}
+ \makebox[\textwidth][c]{\includegraphics[scale=0.55]{perf-results/overview}}
+\caption{Relationship between operation counts and performance achieved by \texttt{cfO2}.}
+\label{fig:flops-correlation}
+\end{figure}
+
 \section{Conclusions}
 \label{sec:conclusions}
 We have developed a theory for the optimization of finite element integration loop nests. The article details the domain properties which are exploited by our approach (e.g., linearity) and how these translate to transformations at the level of loop nests. All of the algorithms shown in this paper have been implemented in COFFEE, a compiler publicly available fully integrated with the Firedrake framework. The correctness of the transformation algorithm was discussed. The performance results achieved suggest the effectiveness of our methodology. 
@@ -754,6 +764,8 @@ We have developed a theory for the optimization of finite element integration lo
 We have defined sharing elimination and pre-evaluation as high level transformations on top of a specific set of rewrite operators, such as code motion and factorization, and we have used them to construct the transformation space. There are three main limitations in this process. First, we do not have a systematic strategy to optimize sub-expressions which are independent of linear loops. Although we have a mechanism to determine how much computation should be hoisted to the level of the integration (reduction) loop, it is not clear how to effectively improve the heuristics used at step (6) in Algorithm~\ref{algo:sharing-elimination}. Second, lower operation counts may be found by exploiting domain-specific properties, such as redundancies in basis functions; this aspect is completely neglected in this article. Third, with Constraint~\ref{const:Le} we have limited the applicability of code motion. This constraint was essential given the complexity of the problem tackled. 
 
 Another issue raised by the experimentation concerns selecting a proper threshold for Constraint~\ref{const:TH}. Furthermore, in parallel runs, the L3 cache is no longer owned by a single process, so the effects of setting a proper threshold could become even more pronounced. To solve this problem would require more sophisticated cost model and/or objective functions, which is an interesting question deserving further research. 
+
+The transformations and the cost models described in this paper assume that a local assembly kernel is executed sequentially by a single process for each mesh element. In Firedrake, parallelism is always achieved at the mesh level, by distributing element partitions to different processes. However, this strategy could be revisited, for instance, in the case of high order methods (not treated in this article), when the working set to execute an element does not fit in L3 cache. This would require parallelism at the level of the basis functions loops. The cost models should also be extended, since certain rewrite operators (e.g., factorization and generalized code motion) could on one hand reduce the operation count, but at the same time destroy otherwise easily parallelizable computation.
 
 We also identify two additional possible research directions: a complete classification of forms for which a global optimum is achieved; and a generalization of the methodology to other classes of loop nests, for instance those arising in spectral element methods.
 
