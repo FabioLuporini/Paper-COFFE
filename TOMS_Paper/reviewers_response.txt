@@ -1,0 +1,104 @@
+First of all, we would like to thank the referees for their insightful comments,
+which helped improving the paper. In this new version, we have attempted to
+address all of the referees' concerns. We explain how the paper was changed
+below, by considering each of the requests/observations/questions raised by the
+three referees.
+
+Referee: 1
+==========
+
+| This paper is overall well written. Examples are very illustrative and help
+| understand the article. My only concern is about how authors relates their
+| theortical results with numerical performance examples. [...]
+
+| My suggestions are as follows:
+| 1. It would be better to include actual transformed code and original code in
+| the appendix for all computing model (mass, helmholtz, elasticity, hyper
+| elasticity). At least I wonder what makes hugh speed up in the hyper elastic
+| problem compared to usual mass matrix.
+
+The generated code has been uploaded to GitHub and given a DOI through Zenodo.
+This is properly documented in the paper (see Section 7.1 - Experimental setup).
+For reasons of space, it simply was not possible to append code in an appendix.
+
+| 2. Please include actual FLOP measurements of input code and transformed code
+| and show some correlation with performance.
+
+There is a whole new section treating this fundamental aspect (7.8 - On the
+correlation between operation count and performance). Further, a new figure was
+added (Fig. 11): this clearly shows the relationship between the achieved
+speed-ups and FLOPs reductions. We believe that this figure is particularly
+useful, because it shows how well the system presented in the paper scales well
+with the complexity of operators. It also provides a nice summary of the
+performance improvements achieved. In addition to all this, Sections 7.4 through
+7.7 (Mass, Helmholtz, ...) have been extended and now discuss the impact of the
+reduced operation counts in a set of relevant test cases.
+
+Referee: 2
+==========
+
+| The paper is well written, interesting does clearly merit publication.
+| The usage of advanced compiler technology as demonstrated here is clearly
+| novel and it brings accelerated performance.
+
+| There is one issue that is not covered in the analysis and only briefly
+| mentioned in the general discussion: the transfer from memory. I understand
+| that it complicates the analysis but the least it should be quantified in
+| the numerical experiments [...] It is to a certain extent discussed already
+| in the paper but it should also be quantified.
+
+Sections 7.4 through 7.7 now discuss, to some extent, the memory transfer cost.
+We did that only for a small set of (relevant) test cases. We believe that it is
+very difficult to thoroughly study this problem in a paper like ours, based on a
+high dimensional experimentation space. This would probably require its own
+study in a separate paper, introducing specific metrics and showing different
+angles of the performance achieved. For all these reasons, we believe that it is
+just simpler to refer to a paper that, in fact, has performed an analysis
+analogous to what the referee is suggesting: [Bercea et al.  2016].  This is
+referenced in Section 7.2, along with a high level discussion of the memory
+transfer impact.  Notably important, the Bercea paper is based upon the same
+Firedrake technology of our article (in fact, we are amongst its co-authors).
+
+Referee: 3
+==========
+
+| Overall this is a well written and interesting paper, even to non-experts.
+| However, as a non-expert, I have several concerns that I think should be
+| addressed:
+
+| 1) The focus is on minimizing flops, but on modern architectures, memory
+| accesses are typically more expensive and flops are "almost free". Although
+| clearly of theoretical interest, it would be nice to justify that this
+| optimization also is important to reduce run time.
+
+Figures 7, 8, 9, 10 show execution time speed-ups. Hence, we are already showing
+that our work contributes to actually reducing run-times.
+
+| 2) All experiments and results are run in serial on single core. In practice,
+| most computers today are multicore (or manycore) so some discussion about
+| extensions to multithreaded case would be appropriate. I recognize a parallel
+| implementation is beyond the scope of the current paper.
+
+We have added one paragraph in Section 9 and added a few sentences throughout
+the text about this matter. Basically, in Firedrake parallelism is achieved at
+the mesh level (by distributing mesh partitions to processes), while the
+execution of a local assembly kernel is sequential. Clearly this might need to
+be revisited in the case of higher order methods (as we would end up with big
+working sets even for executing just a single element). This is discussed in
+Section 9.
+
+| 3) Results: The authors present several charts with speedups on different
+| problems, which gives detailed information. However, it would be nice to add a
+| figure with aggregate results, such as a scatter plot of all instances or a
+| performance profile.
+
+We agree with the referee about the usefulness of such a chart. We have added a
+scatter plot (Fig. 11) as well as a section explaining what information we can
+extrapolate from it.
+
+| 4) The manuscript is already quite long so if possible, do not increase the
+| total length (i.e. try find things to tighten or cut).
+
+We tried our best, but we feel that we cannot really stay within 27 pages
+without losing essential information. We observe, however, that other TOMS
+papers went even beyond the 27 pages.
