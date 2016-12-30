@@ -1,8 +1,8 @@
 First of all, we would like to thank the referees for their insightful comments,
 which helped improving the paper. In this new version, we have attempted to
-address all of the referees' concerns. We explain how the paper was changed
+address all of the referees' concerns. We explain how the paper has changed
 below, by considering each of the requests/observations/questions raised by the
-three referees.
+three referees individually.
 
 Referee: 1
 ==========
@@ -29,10 +29,10 @@ correlation between operation count and performance). Further, a new figure was
 added (Fig. 11): this clearly shows the relationship between the achieved
 speed-ups and FLOPs reductions. We believe that this figure is particularly
 useful, because it shows how well the system presented in the paper scales well
-with the complexity of operators. It also provides a nice summary of the
-performance improvements achieved. In addition to all this, Sections 7.4 through
-7.7 (Mass, Helmholtz, ...) have been extended and now discuss the impact of the
-reduced operation counts in a set of relevant test cases.
+with the complexity of the operators. It also provides a nice summary of the
+performance improvements achieved. Moreover, Sections 7.4 through 7.7 (Mass,
+Helmholtz, ...) have been extended and now also discuss the impact of the reduced
+operation counts in a set of relevant test cases.
 
 Referee: 2
 ==========
@@ -47,17 +47,16 @@ Referee: 2
 | the numerical experiments [...] It is to a certain extent discussed already
 | in the paper but it should also be quantified.
 
-Sections 7.4 through 7.7 now discuss, to some extent, the memory transfer cost.
-We did that only for a small set of (relevant) test cases. We believe that it is
-very difficult to thoroughly study this problem in a paper like ours, based on a
-high dimensional experimentation space. This would probably require its own
-study in a separate paper, introducing specific metrics and showing different
-angles of the performance achieved. For all these reasons, we believe that it is
-just simpler to refer to a paper that, in fact, has performed an analysis
-analogous to what the referee is suggesting: [Bercea et al.  2016].  This is
+Sections 7.4 through 7.7 now discuss the memory transfer cost, but only in a
+limited set of test cases. We believe that it is very difficult to thoroughly
+study this problem in a paper like ours, being based on a high dimensional
+experimentation space. A complete treatment would probably require a new paper,
+introducing specific metrics and showing different angles of the performance
+achieved.  However, there exists a very recent paper including exactly the type
+of analysis advocated by the referee: [Bercea et al.  2016]. This is now
 referenced in Section 7.2, along with a high level discussion of the memory
-transfer impact.  Notably important, the Bercea paper is based upon the same
-Firedrake technology of our article (in fact, we are amongst its co-authors).
+transfer impact.  It is worth noting that the Bercea paper is based upon the same
+Firedrake technology of our article.
 
 Referee: 3
 ==========
