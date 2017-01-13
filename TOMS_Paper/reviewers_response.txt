@@ -17,9 +17,10 @@ Referee: 1
 | elasticity). At least I wonder what makes hugh speed up in the hyper elastic
 | problem compared to usual mass matrix.
 
-The generated code has been uploaded to GitHub and given a DOI through Zenodo.
-This is properly documented in the paper (see Section 7.1 - Experimental setup).
-For reasons of space, it simply was not possible to append code in an appendix.
+The generated code has been uploaded to GitHub and permanently
+archived with a DOI through Zenodo.  This is properly documented in
+the paper (see Section 7.1 - Experimental setup).  For reasons of
+space, it simply was not possible to append code in an appendix.
 
 | 2. Please include actual FLOP measurements of input code and transformed code
 | and show some correlation with performance.
@@ -47,16 +48,18 @@ Referee: 2
 | the numerical experiments [...] It is to a certain extent discussed already
 | in the paper but it should also be quantified.
 
-Sections 7.4 through 7.7 now discuss the memory transfer cost, but only in a
-limited set of test cases. We believe that it is very difficult to thoroughly
-study this problem in a paper like ours, being based on a high dimensional
-experimentation space. A complete treatment would probably require a new paper,
-introducing specific metrics and showing different angles of the performance
-achieved.  However, there exists a very recent paper including exactly the type
-of analysis advocated by the referee: [Bercea et al.  2016]. This is now
-referenced in Section 7.2, along with a high level discussion of the memory
-transfer impact.  It is worth noting that the Bercea paper is based upon the same
-Firedrake technology of our article.
+Sections 7.4 through 7.7 now discuss the memory transfer cost, but
+only in a limited set of test cases. We believe that it is very
+difficult to thoroughly study this problem in a paper like ours, being
+based on a high dimensional experimentation space. A complete
+treatment would probably require a new paper, introducing specific
+metrics and showing different angles of the performance achieved.
+However, with other coauthors we have very recently published a paper
+including exactly the type of analysis advocated by the referee:
+[Bercea et al.  2016]. This is now referenced in Section 7.2, along
+with a high level discussion of the memory transfer impact.  It is
+worth noting that the Bercea paper is based upon the same Firedrake
+technology of our article.
 
 Referee: 3
 ==========
@@ -98,6 +101,6 @@ extrapolate from it.
 | 4) The manuscript is already quite long so if possible, do not increase the
 | total length (i.e. try find things to tighten or cut).
 
-We tried our best, but we feel that we cannot really stay within 27 pages
-without losing essential information. We observe, however, that other TOMS
-papers went even beyond the 27 pages.
+We tried our best, but we feel that we cannot really stay within 27
+pages without losing essential information. We observe, however, that
+this paper is within the typical range of page lengths in TOMS.
