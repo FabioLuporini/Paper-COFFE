@@ -52,7 +52,7 @@ ax = fig.add_subplot(1, 1, 1)
 ax.set_title("Correlation between flop reductions and achieved speed-ups", fontsize=12, y=1.03)
 # x-axis
 ax.set_xlabel(r'$\frac{\mathtt{baseline}\ \mathregular{flops}}{\mathtt{cfO2}\ \mathregular{flops}}$',
-              fontsize=15, color='black', labelpad=6.5)
+              fontsize=16, color='black', labelpad=6.5)
 ax.set_xlim([0.0, 1.0])
 ax.set_xscale('symlog')
 # y-axis
@@ -63,7 +63,6 @@ cm = brewer2mpl.get_map('Spectral', 'diverging', 4)
 #markers = ['v', '^', '<', '>']
 #markers = ['s', 'o', '+', 'v']
 markers = ['^', 's', 'p', 'o']
-legend_font = FontProperties(size='x-small')
 
 # Add points
 legend_points = []
@@ -90,7 +89,7 @@ for (prob, nf, q), flops_by_mode in mapper.items():
         legend_points.append((handle, ''))
     if nf == 0 and q == 1:
         handle = ax.plot([], [], ms=0, mew=0, lw=0)[0]
-        legend_points.append((handle, '              '))
+        legend_points.append((handle, ' '*2))
     if nf == 0 and prob == 'mass':
         handle = ax.plot([], [], ms=0, mew=0, lw=0)[0]
         legend_points.append((handle, '$\mathrm{q=%d}$' % q))
@@ -98,7 +97,7 @@ for (prob, nf, q), flops_by_mode in mapper.items():
         handle = ax.plot([], [],
                          marker=markers[index],
                          ms=3*q, mew=1, mfc='black', mec='black', lw=0)[0]
-        legend_points.append((handle, '              '))
+        legend_points.append((handle, ' '*9))
 
 
 # Speed-up >= 1 line
@@ -109,6 +108,7 @@ discrete_cm = cm.get_mpl_colormap().from_list('Custom cmap', cm.mpl_colors, len(
 sm = plt.cm.ScalarMappable(cmap=discrete_cm, norm=plt.Normalize(0, 3))
 sm._A = []
 cbar = fig.colorbar(sm, ax=ax)
+cbar.ax.tick_params(labelsize=11.5)
 cbar.set_ticks(np.array([0, 1, 2, 3], dtype=np.int32))
 cbar.set_ticklabels(np.array([r'$\mathrm{nf = 0}$', r'$\mathrm{nf = 1}$',
                               r'$\mathrm{nf = 2}$', r'$\mathrm{nf = 3}$']))
@@ -126,8 +126,8 @@ swap(legend_points, 5, 8)
 swap(legend_points, 7, 8)
 
 probs, qs = zip(*legend_points)
-ax.legend(probs, qs, loc='upper left', ncol=5, prop=legend_font, numpoints=1)
-ax.text(0.96, 20.4, r'$\mathtt{mass}$             $\mathtt{helmholtz}$          $\mathtt{elasticity}$     $\mathtt{hyperelasticity}$', fontsize=8, zorder=10)
+ax.legend(probs, qs, loc='upper left', ncol=5, prop=FontProperties(size=9.6), numpoints=1, fancybox=True, shadow=True)
+ax.text(1.35, 20.1, r'$\mathtt{mass}$           $\mathtt{helmholtz}$      $\mathtt{elasticity}$   $\mathtt{hyperelasticity}$', fontsize=10.5, zorder=10)
 
 plt.tight_layout()
 plt.savefig('overview.pdf')
