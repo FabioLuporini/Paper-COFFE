@@ -49,15 +49,17 @@ for (prob, mode, nf, q), v in flops.items():
 plt.style.use('ggplot')
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
-ax.set_title("Correlation between flop reductions and achieved speed-ups", fontsize=12, y=1.03)
+ax.set_title("Correlation between flop reductions and achieved speed-ups", fontsize=13, y=1.03)
 # x-axis
 ax.set_xlabel(r'$\frac{\mathtt{baseline}\ \mathregular{flops}}{\mathtt{cfO2}\ \mathregular{flops}}$',
-              fontsize=16, color='black', labelpad=6.5)
+              fontsize=18, color='black', labelpad=6.5)
 ax.set_xlim([0.0, 1.0])
 ax.set_xscale('symlog')
 # y-axis
-ax.set_ylabel(r'Speedup relative to baseline', fontsize=12, color='black', labelpad=12.0)
+ax.set_ylabel(r'Speedup relative to baseline', fontsize=13, color='black', labelpad=12.0)
 ax.set_ylim([0.0, 1.0])
+
+ax.tick_params(labelsize=13)
 
 cm = brewer2mpl.get_map('Spectral', 'diverging', 4)
 #markers = ['v', '^', '<', '>']
@@ -108,10 +110,10 @@ discrete_cm = cm.get_mpl_colormap().from_list('Custom cmap', cm.mpl_colors, len(
 sm = plt.cm.ScalarMappable(cmap=discrete_cm, norm=plt.Normalize(0, 3))
 sm._A = []
 cbar = fig.colorbar(sm, ax=ax)
-cbar.ax.tick_params(labelsize=11.5)
+cbar.ax.tick_params(labelsize=14)
 cbar.set_ticks(np.array([0, 1, 2, 3], dtype=np.int32))
-cbar.set_ticklabels(np.array([r'$\mathrm{nf = 0}$', r'$\mathrm{nf = 1}$',
-                              r'$\mathrm{nf = 2}$', r'$\mathrm{nf = 3}$']))
+cbar.set_ticklabels(np.array([r'$\mathrm{nf} = 0$', r'$\mathrm{nf} = 1$',
+                              r'$\mathrm{nf} = 2$', r'$\mathrm{nf} = 3$']))
 
 # Legend
 def swap(l, i, j):
